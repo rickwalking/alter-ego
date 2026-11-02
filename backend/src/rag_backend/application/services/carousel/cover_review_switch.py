@@ -18,7 +18,9 @@ and the approval is never touched.
   (the worker then sends the review again at the new lock version).
 - A lock-version conflict is a logged skip; a replay is ``already_selected``.
 - A failed render, or an approval that landed between the write and the
-  render, rolls the cover back (``rolled_back``, the review sent again).
+  render, rolls the cover back (``rolled_back``, the review sent again). A
+  rollback that cannot run (``rollback_failed``) or a store that raised
+  escalates the held run instead of handing the review back.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverSelection,
     AutoCoverWrite,
     CoverBaseline,
+    FoundCover,
     ProjectAtVersion,
     cover_baseline,
 )
@@ -50,6 +53,7 @@ from rag_backend.domain.constants.cover_autoselect import (
 )
 from rag_backend.domain.constants.cover_review_switch import (
     REASON_AUTO_SELECT_NOT_IN_REVIEW,
+    REASON_AUTO_SELECT_ROLLBACK_FAILED,
     REASON_AUTO_SELECT_ROLLED_BACK,
 )
 from rag_backend.domain.models import CarouselProject
@@ -59,10 +63,12 @@ _MOVED = frozenset({AUTOFIX_STATUS_FIXED, REASON_AUTO_SELECT_ROLLED_BACK})
 
 @dataclass(frozen=True, kw_only=True)
 class ReviewSwitchOutcome:
-    """``AUTOFIX_STATUS_*`` or a ``REASON_*`` refusal, and the render errors."""
+    """``AUTOFIX_STATUS_*`` or a ``REASON_*`` refusal, the render errors, and the
+    lock version after a failed rollback (the escalation's mark)."""
 
     status: str
     render_errors: tuple[str, ...] = ()
+    lock_version: int | None = None
 
 
 class ReviewCoverStore(Protocol):
@@ -82,6 +88,10 @@ class ReviewHold(Protocol):
 
     async def release(self, run_id: UUID, *, changed: bool) -> None:
         """Hand the run back; ``changed`` sends the review again."""
+        ...
+
+    async def escalate(self, run_id: UUID, version: int | None) -> None:
+        """Never hand the review back: slide 1 may show an unreviewed cover."""
         ...
 
 
@@ -118,11 +128,9 @@ def review_choice_refusal(
     return None
 
 
-async def switch_in_review(
-    selection: AutoCoverSelection, target: tuple[ProjectAtVersion, UUID]
-) -> str:
+async def switch_in_review(selection: AutoCoverSelection, target: FoundCover) -> str:
     """``selected`` / ``already_selected``, or the refusal (logged by the caller)."""
-    found, asset_id = target
+    found, asset_id = target.found, target.asset_id
     review = selection.review
     if review is None:
         return REASON_AUTO_SELECT_NOT_IN_REVIEW
@@ -146,15 +154,24 @@ async def switch_in_review(
 async def _held_switch(
     review: ReviewSwitch, write: AutoCoverWrite
 ) -> ReviewSwitchOutcome:
-    """Hold the review, switch, release; an error releases as changed (safe)."""
+    """Hold the review, switch, then release or escalate.
+
+    A failed rollback, or a store that raised (the state is unknown), escalates
+    the held run: no review of a render slide 1 may not match goes out.
+    """
     run_id = await review.hold.hold(write.project_id)
-    changed = True
     try:
         outcome = await review.store.switch_in_review(write)
-        changed = outcome.status in _MOVED
-    finally:
+    except Exception:
         if run_id is not None:
-            await review.hold.release(run_id, changed=changed)
+            await review.hold.escalate(run_id, None)
+        raise
+    if run_id is None:
+        return outcome
+    if outcome.status == REASON_AUTO_SELECT_ROLLBACK_FAILED:
+        await review.hold.escalate(run_id, outcome.lock_version)
+    else:
+        await review.hold.release(run_id, changed=outcome.status in _MOVED)
     return outcome
 
 

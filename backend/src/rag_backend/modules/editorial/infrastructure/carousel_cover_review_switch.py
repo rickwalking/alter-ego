@@ -5,10 +5,11 @@ stages the generated cover, and under the project lock and the lock-version
 CAS writes ``slide_cover`` only while the row still matches: in final review,
 not approved, not released, and slide 1's cover fields unchanged since the
 baseline (read ``FOR UPDATE``, so an owner write that takes no lock is never
-overwritten). The needs-republish marker is stamped with it. It then
+overwritten). It then
 re-renders through the republish renderer, the one the picker's switch uses,
 and re-checks the review: a failed render or an approval that landed
-meanwhile rolls the cover back (``cover_review_rollback``). The
+meanwhile rolls the cover back (``cover_review_rollback``); a rollback that
+cannot run is ``rollback_failed``. The
 workflow, its approval and the release are never touched.
 
 ``reviewing_cover_task`` is the background run of the owner's website
@@ -21,7 +22,6 @@ from __future__ import annotations
 import typing
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +47,7 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_NO_PROJECT,
 )
 from rag_backend.domain.constants.cover_review_switch import (
+    REASON_AUTO_SELECT_ROLLBACK_FAILED,
     REASON_AUTO_SELECT_ROLLED_BACK,
 )
 from rag_backend.domain.models import CarouselProject
@@ -93,18 +94,28 @@ class EditorialReviewCoverStore:
             errors = await render_and_settle(session, command.project_id)
             if not errors and await _still_in_review(session, command.project_id):
                 return ReviewSwitchOutcome(status=AUTOFIX_STATUS_FIXED)
-            await roll_back_cover(
-                session,
-                CoverRollback(
-                    project_id=command.project_id,
-                    switched=stored.cover,
-                    previous=stored.previous,
-                    render_errors=errors,
-                ),
+            rollback = CoverRollback(
+                project_id=command.project_id,
+                switched=stored.cover,
+                previous=stored.previous,
+                render_errors=errors,
             )
+            if await roll_back_cover(session, rollback):
+                return ReviewSwitchOutcome(
+                    status=REASON_AUTO_SELECT_ROLLED_BACK, render_errors=errors
+                )
             return ReviewSwitchOutcome(
-                status=REASON_AUTO_SELECT_ROLLED_BACK, render_errors=errors
+                status=REASON_AUTO_SELECT_ROLLBACK_FAILED,
+                render_errors=errors,
+                lock_version=await _version(session, command.project_id),
             )
+
+
+async def _version(session: AsyncSession, project_id: str) -> int | None:
+    row = await row_for_update(session, project_id)
+    version = int(row.lock_version or 1) if row is not None else None
+    await session.rollback()
+    return version
 
 
 async def _still_in_review(session: AsyncSession, project_id: str) -> bool:
@@ -219,8 +230,10 @@ async def _locked(session: AsyncSession, write: _ReviewWrite) -> _Stored:
 async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     """Write ``slide_cover`` while the locked row still allows it, else roll back.
 
-    The needs-republish marker is stamped in the same commit, so a process that
-    dies before the render leaves the republish sweep to render it.
+    No needs-republish marker is stamped: the republish sweep does not check the
+    approval, so it must never render this cover unreviewed. A process that dies
+    before the render leaves the run held; the worker escalates the outlived
+    hold instead of sending a review.
     """
     row = await row_for_update(session, write.command.project_id)
     if row is None:
@@ -239,7 +252,6 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
         return _Stored(status=refusal)
     previous = found.project.slide_cover
     row.slide_cover = slide_cover_row(write.cover)
-    row.needs_republish_since = datetime.now(UTC)
     await session.commit()
     return _Stored(status=AUTOFIX_STATUS_FIXED, cover=write.cover, previous=previous)
 

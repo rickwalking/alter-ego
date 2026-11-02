@@ -24,9 +24,11 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
 
   Scenario: A failed or overtaken website cover switch is rolled back
     Given the website cover was written to slide 1
-    When the render fails, or an approval lands before the render finishes
+    When the render fails in any way, or an approval lands before the render finishes
     Then slide 1 goes back to its previous cover and the skip reason is rolled_back
     And the Telegram review is sent again
+    But when the rollback cannot get the lock in time the reason is rollback_failed
+    And the run is escalated instead of being handed back to the owner
 
   Scenario: The Telegram review is held while slide 1 changes
     Given an autopilot run waits for the owner's Telegram review of the carousel
@@ -50,6 +52,26 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     When the owner taps publish on it
     Then nothing is approved
 
+  Scenario: A typed publish time answers the review it was asked from
+    Given the owner tapped "Outro horário" on a review and slide 1 changed since
+    When the owner types a time
+    Then nothing is approved or scheduled, and a hold or a new review drops the open time reply
+
+  Scenario: The approve compares and sets at the tapped revision
+    Given the lock version moves after the tap was checked
+    When the approve runs
+    Then its compare-and-set uses the tapped revision and is refused
+
+  Scenario: Concurrent notice ledger writes never erase a recorded review
+    Given two writers read the run's ledger and save different records at once
+    When both commit
+    Then both records are in the ledger
+
+  Scenario: A Telegram GrokBot cover tap on an approved carousel is refused clearly
+    Given the cover switch refuses because the carousel is approved or published
+    When the worker applies the owner's GrokBot cover choice
+    Then the review reopens with the reason cover_requires_review
+
   Scenario: The current Telegram review or reminder still publishes and schedules
     Given the tapped review or reminder was sent for the current lock version
     When the owner publishes now or picks a slot
@@ -65,10 +87,11 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     When the worker ticks
     Then it steps the next active run instead
 
-  Scenario: A Telegram review hold that outlives its task is dropped
+  Scenario: A Telegram review hold that outlives its task is escalated
     Given a run was held for a website cover and the task never released it
     When the worker sees the hold after its time limit
-    Then the hold is dropped and the review is sent at the current lock version
+    Then the run is escalated and no review is sent, since slide 1 may not match the render
+    And no needs-republish marker lets the republish sweep render the cover unreviewed
 
   Scenario: A cover the owner chose while the job ran wins on a completed carousel
     Given the owner picked another slide 1 while the generation ran

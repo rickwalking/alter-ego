@@ -107,6 +107,14 @@ class ProjectAtVersion:
 
 
 @dataclass(frozen=True, kw_only=True)
+class FoundCover:
+    """The project read at a gate and the succeeded generation's asset."""
+
+    found: ProjectAtVersion
+    asset_id: UUID
+
+
+@dataclass(frozen=True, kw_only=True)
 class AutoCoverWrite:
     """Store ``asset_id`` as slide 1's cover at ``expected_version``."""
 
@@ -229,15 +237,18 @@ class AutoCoverSelector:
         if selection.review is not None and found.project.status == (
             CarouselStatus.COMPLETED
         ):
-            switched = await _switch_in_review(selection, (found, asset_id))
+            target = FoundCover(found=found, asset_id=asset_id)
+            switched = await _switch_in_review(selection, target)
             return _settle_review(selection, switched)
-        return await self._select_paused(selection, (found, asset_id))
+        return await self._select_paused(
+            selection, FoundCover(found=found, asset_id=asset_id)
+        )
 
     async def _select_paused(
-        self, selection: AutoCoverSelection, target: tuple[ProjectAtVersion, UUID]
+        self, selection: AutoCoverSelection, target: FoundCover
     ) -> str:
         """The owner-choice rules, then the write, on a carousel paused at a gate."""
-        found, asset_id = target
+        found, asset_id = target.found, target.asset_id
         refusal = choice_refusal(found.project, selection.baseline, asset_id)
         if refusal == OUTCOME_AUTO_SELECT_ALREADY:
             return _log(selection, refusal)
@@ -278,9 +289,7 @@ class AutoCoverSelector:
             waited += self._polling.interval_seconds
 
 
-async def _switch_in_review(
-    selection: AutoCoverSelection, target: tuple[ProjectAtVersion, UUID]
-) -> str:
+async def _switch_in_review(selection: AutoCoverSelection, target: FoundCover) -> str:
     from rag_backend.application.services.carousel.cover_review_switch import (
         switch_in_review,
     )
@@ -302,6 +311,7 @@ __all__ = [
     "AutoCoverStore",
     "AutoCoverWrite",
     "CoverBaseline",
+    "FoundCover",
     "ProjectAtVersion",
     "choice_refusal",
     "cover_baseline",

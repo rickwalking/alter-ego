@@ -15,6 +15,7 @@ from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverSelector,
     AutoCoverWrite,
     CoverBaseline,
+    FoundCover,
     ProjectAtVersion,
 )
 from rag_backend.application.services.carousel.cover_review_switch import (
@@ -36,6 +37,7 @@ from rag_backend.domain.constants.cover_review_switch import (
     REASON_AUTO_SELECT_APPROVED,
     REASON_AUTO_SELECT_NOT_IN_REVIEW,
     REASON_AUTO_SELECT_PUBLISHED,
+    REASON_AUTO_SELECT_ROLLBACK_FAILED,
     REASON_AUTO_SELECT_ROLLED_BACK,
 )
 from rag_backend.domain.models import CarouselStatus
@@ -113,9 +115,9 @@ class TestReviewSwitch:
         assert _reasons(logs) == [REASON_AUTO_SELECT_CONFLICT]
         assert hold.released == [(RUN, False)]
 
-    # Scenario: The Telegram review is held while slide 1 changes
+    # Scenario: A failed or overtaken website cover switch is rolled back
     @pytest.mark.asyncio
-    async def test_a_store_crash_releases_as_changed(self) -> None:
+    async def test_a_store_crash_keeps_the_review_held(self) -> None:
         hold = Hold()
         review = ReviewSwitch(store=ReviewStore(error=RuntimeError("boom")), hold=hold)
         selector, selection = selecting(Reads(in_review()), review)
@@ -123,7 +125,22 @@ class TestReviewSwitch:
         with pytest.raises(RuntimeError, match="boom"):
             await selector.select(selection)
 
-        assert hold.released == [(RUN, True)]
+        assert hold.released == []
+        assert hold.escalated == [(RUN, None)]
+
+    # Scenario: A failed or overtaken website cover switch is rolled back
+    @pytest.mark.asyncio
+    async def test_a_failed_rollback_escalates_instead_of_releasing(self) -> None:
+        failed = ReviewSwitchOutcome(
+            status=REASON_AUTO_SELECT_ROLLBACK_FAILED, lock_version=9
+        )
+        hold = Hold()
+        review = ReviewSwitch(store=ReviewStore(outcome=failed), hold=hold)
+        selector, selection = selecting(Reads(in_review()), review)
+
+        assert await selector.select(selection) == REASON_AUTO_SELECT_ROLLBACK_FAILED
+        assert hold.released == []
+        assert hold.escalated == [(RUN, 9)]
 
     # Scenario: A website cover switches a completed carousel in final review
     @pytest.mark.asyncio
@@ -241,6 +258,8 @@ class TestReviewSwitch:
         )
         found = ProjectAtVersion(project=in_review(), lock_version=7)
 
-        result = await switch_in_review(selection, (found, ASSET))
+        result = await switch_in_review(
+            selection, FoundCover(found=found, asset_id=ASSET)
+        )
 
         assert result == REASON_AUTO_SELECT_NOT_IN_REVIEW
