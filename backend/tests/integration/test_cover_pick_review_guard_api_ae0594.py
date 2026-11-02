@@ -1,7 +1,9 @@
 """The picker guard and the website cover switch, over HTTP.
 
-Feature: tests/features/website_cover_review_switch_ae0594.feature. The real
-app over SQLite; the republish render and the GrokBot offer are stubbed.
+Feature: tests/features/website_cover_review_switch_ae0594.feature and
+tests/features/reopen_review_on_cover_switch_ae0597.feature. The real app over
+SQLite (no checkpointer, so only the row's review is reopened); the republish
+render and the GrokBot offer are stubbed.
 """
 
 from __future__ import annotations
@@ -56,24 +58,30 @@ async def _pick(
     return response.status_code, response.json().get("detail"), calls
 
 
+_APPROVED: dict[str, object] = {
+    "workflow_status": "approved_for_publish",
+    "current_phase": "final_review",
+    "phase_status": "approved",
+}
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "values",
     [
-        {"workflow_status": "approved_for_publish"},
         {"workflow_status": "approved_for_publish", "is_public": True},
         {"is_public": True},
     ],
 )
-async def test_pick_on_an_approved_or_published_carousel_is_refused(
+async def test_pick_on_a_published_carousel_is_refused(
     client: AsyncClient,
     asset_dirs: Path,
     monkeypatch: pytest.MonkeyPatch,
     values: dict[str, object],
 ) -> None:
     """409 ``cover_switch_requires_review`` and nothing is rendered."""
-    # Scenario: The picker refuses an approved carousel
     # Scenario: The picker refuses a published carousel
+    # Scenario: A published carousel never changes
     status, detail, calls = await _pick(client, values, monkeypatch)
 
     assert status == 409
@@ -82,11 +90,40 @@ async def test_pick_on_an_approved_or_published_carousel_is_refused(
 
 
 @pytest.mark.integration
+async def test_pick_on_an_approved_carousel_reopens_its_review(
+    client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """200: the pick lands, re-renders, and the carousel is a draft in review."""
+    # Scenario: A cover switch reopens the review of an approved carousel
+    calls = install_renders(monkeypatch)
+    first = await upload_photo(client, RED)
+    second = await upload_photo(client, BLUE)
+    project_id = await project(client, first["id"])
+    await set_project(project_id, **_APPROVED)
+
+    response = await client.put(
+        f"/api/carousels/{project_id}/cover",
+        json={"asset_id": second["id"], "expected_version": 4},
+    )
+
+    assert response.status_code == 200, response.text
+    assert len(calls) == 1
+    model = await _model(project_id)
+    assert model.hook_asset_id == second["id"]
+    assert model.workflow_status == "draft"
+    assert (model.current_phase, model.phase_status) == (
+        "final_review",
+        "awaiting_human",
+    )
+    assert model.is_public is False
+
+
+@pytest.mark.integration
 async def test_pick_on_a_carousel_in_review_still_switches(
     client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A draft carousel in final review is switched as before."""
-    # Scenario: The picker refuses an approved carousel
+    # Scenario: A carousel waiting for its first approval switches and stays in review
     status, _detail, calls = await _pick(
         client, {"workflow_status": "draft"}, monkeypatch
     )
@@ -138,19 +175,35 @@ async def _bind(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    "values", [{"workflow_status": "approved_for_publish"}, {"is_public": True}]
-)
-async def test_hook_photo_on_an_approved_or_published_carousel_is_refused(
-    client: AsyncClient, asset_dirs: Path, values: dict[str, object]
+async def test_hook_photo_on_a_published_carousel_is_refused(
+    client: AsyncClient, asset_dirs: Path
 ) -> None:
     """``PUT /hook-photo`` follows the picker's rule: 409 and nothing written."""
-    # Scenario: The picker refuses an approved carousel
-    project_id, detail, status = await _bind(client, values)
+    # Scenario: The picker refuses a published carousel
+    project_id, detail, status = await _bind(client, {"is_public": True})
 
     assert status == 409
     assert detail == ERR_COVER_SWITCH_REQUIRES_REVIEW
     assert (await _model(project_id)).needs_republish_since is None
+
+
+@pytest.mark.integration
+async def test_hook_photo_on_an_approved_carousel_reopens_its_review(
+    client: AsyncClient, asset_dirs: Path
+) -> None:
+    """The photo is bound, the marker set and the approval dropped, kept by the
+    later full-row write."""
+    # Scenario: A cover switch reopens the review of an approved carousel
+    project_id, _detail, status = await _bind(client, _APPROVED)
+
+    assert status == 200
+    model = await _model(project_id)
+    assert model.needs_republish_since is not None
+    assert model.workflow_status == "draft"
+    assert (model.current_phase, model.phase_status) == (
+        "final_review",
+        "awaiting_human",
+    )
 
 
 @pytest.mark.integration

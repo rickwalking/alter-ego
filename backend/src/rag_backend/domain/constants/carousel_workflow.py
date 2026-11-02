@@ -17,7 +17,9 @@ re-validate, store the fresh report); a design revise may send the workflow back
 content only. The design recovery hint is emitted with a still-blocking design
 re-interrupt, since direct edits or a send-back resolve violations and a plain revise
 does not; the frontend maps it to i18n copy. Content drafting concurrency is bounded
-because endpoint rate limits are unknown.
+because endpoint rate limits are unknown. ``reopen_review`` is an internal resume of
+the approved hold (never a route action): a changed slide 1 drops the approval and
+the graph waits at the final review again.
 """
 
 PHASE_BRIEF = "brief"
@@ -59,6 +61,7 @@ REVIEW_ACTION_APPROVE = "approve"
 REVIEW_ACTION_REJECT = "reject"
 REVIEW_ACTION_REVISE = "revise"
 REVIEW_ACTION_EDIT = "edit"
+REVIEW_ACTION_REOPEN = "reopen_review"
 
 WORKFLOW_STATUS_APPROVED_FOR_PUBLISH = "approved_for_publish"
 

@@ -1,15 +1,17 @@
-"""Slide 1 of an approved or published carousel never changes.
+"""Slide 1 of a published carousel never changes; an approved one is reopened.
 
-Changing slide 1 renders the slides again. Doing that on a carousel the owner
-already approved (a scheduled one included) would leave it publishable with
-an image the owner never saw; on a released carousel the public slides would
-change at once. Until the review can be reopened, both are refused: the
-picker answers ``cover_switch_requires_review`` and a generated cover stays a
-picker option.
+Changing slide 1 renders the slides again. On a released carousel the public
+slides would change at once, so it is refused: the picker answers
+``cover_switch_requires_review`` and a generated cover stays a picker option.
 
-Every slide-1 writer that re-renders asks ``cover_switch_refusal`` before and
-again under the project lock (``SlideCoverSwitchService``, the review switch
-store), so the rule is lifted in one place once reopening the review exists.
+Pedro's decision (2026-11-02): on an approved carousel (a scheduled one
+included) the switch drops the approval instead, in the same transaction as
+the slide-1 write (``ReviewReopener``): the carousel is back in final review,
+awaiting human, and only a fresh approve restores the approval, so nothing
+publishes an image the owner never saw. ``reopen_refusal`` and
+``reopens_review`` are asked before and again under the project lock by
+every slide-1 writer. ``cover_switch_refusal`` (approved or released) is the
+render guard's rule: a render never changes slide 1 of an approved carousel.
 """
 
 from __future__ import annotations
@@ -18,6 +20,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_FINAL_REVIEW,
+    PHASE_STATUS_AWAITING_HUMAN,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.cover_review_switch import (
@@ -49,10 +53,10 @@ def review_state_of(project: CarouselProject, workflow_status: str) -> ReviewSta
 
 
 def cover_switch_refusal(state: ReviewState) -> str | None:
-    """Why slide 1 must not change without a new approval, if any.
+    """Why a render must not change slide 1 (the render guard), if any.
 
-    Released (``is_public``) is published; every Instagram post also needs the
-    approval, which nothing drops afterwards.
+    Released (``is_public``) is published; an approved carousel keeps the
+    slide 1 it was approved with until a switch drops the approval.
     """
     if state.is_public:
         return REASON_AUTO_SELECT_PUBLISHED
@@ -61,9 +65,44 @@ def cover_switch_refusal(state: ReviewState) -> str | None:
     return None
 
 
+def reopen_refusal(state: ReviewState) -> str | None:
+    """Why slide 1 must not change at all: only a released carousel."""
+    if state.is_public:
+        return REASON_AUTO_SELECT_PUBLISHED
+    return None
+
+
+def reopens_review(state: ReviewState) -> bool:
+    """True when a slide-1 change must drop the approval (approved, not public)."""
+    return (
+        not state.is_public
+        and state.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+    )
+
+
+class ReviewReopener(Protocol):
+    """Drops the approval of a carousel whose slide 1 is changing."""
+
+    async def reopen(self, project_id: str) -> None:
+        """The checkpoint waits at the final review again, then the row is a
+        draft at ``final_review / awaiting_human`` (flush; the caller commits
+        with the slide-1 write)."""
+        ...
+
+
+def show_reopened(project: CarouselProject) -> None:
+    """Put the reopened review on the entity a later full-row write uses."""
+    project.current_phase = PHASE_FINAL_REVIEW
+    project.phase_status = PHASE_STATUS_AWAITING_HUMAN
+
+
 __all__ = [
+    "ReviewReopener",
     "ReviewState",
     "ReviewStateSource",
     "cover_switch_refusal",
+    "reopen_refusal",
+    "reopens_review",
     "review_state_of",
+    "show_reopened",
 ]

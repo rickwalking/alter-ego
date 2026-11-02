@@ -2,16 +2,19 @@
 
 ``EditorialReviewCoverStore`` re-checks the carousel on a fresh session,
 stages the generated cover, and under the project lock and the lock-version
-CAS writes ``slide_cover`` only while the row still matches: in final review,
-not approved, not released, and slide 1's cover fields unchanged since the
-baseline (read ``FOR UPDATE``, so an owner write that takes no lock is never
-overwritten), stamping the needs-republish marker with it: approval is
-refused while the marker is set, so nothing is approved between the write and
-a settled render. It then re-renders through the republish pipeline under the
-build lock, re-checking the review first; a failed render rolls the cover back
-and renders the previous one (``cover_review_rollback``), and a rollback that
-cannot settle is ``rollback_failed`` (the marker stays). The workflow, its
-approval and the release are never touched.
+CAS writes ``slide_cover`` only while the row still matches: in final review
+(waiting, or approved there), not released, and slide 1's cover fields
+unchanged since the baseline (read ``FOR UPDATE``, so an owner write that
+takes no lock is never overwritten), stamping the needs-republish marker with
+it: approval is refused while the marker is set, so nothing is approved
+between the write and a settled render. An approved carousel's approval is
+dropped in that same commit (``ApprovalReopen``, Pedro's decision
+2026-11-02); without a checkpoint reopener it is refused as approved. It then
+re-renders through the republish pipeline under the build lock, re-checking
+the review first; a failed render rolls the cover back and renders the
+previous one (``cover_review_rollback``; the approval stays dropped), and a
+rollback that cannot settle is ``rollback_failed`` (the marker stays). The
+release is never touched.
 
 ``reviewing_cover_task`` is the background run of the owner's website
 generation: the generated-cover selection, with the review switch for a completed
@@ -40,6 +43,10 @@ from rag_backend.application.services.carousel.cover_review_switch import (
     review_choice_refusal,
     review_refusal,
 )
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    reopens_review,
+    review_state_of,
+)
 from rag_backend.domain.constants.carousel_autofix import (
     AUTOFIX_STATUS_CONFLICT,
     AUTOFIX_STATUS_FIXED,
@@ -49,6 +56,7 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_NO_PROJECT,
 )
 from rag_backend.domain.constants.cover_review_switch import (
+    REASON_AUTO_SELECT_APPROVED,
     REASON_AUTO_SELECT_ROLLBACK_FAILED,
     REASON_AUTO_SELECT_ROLLED_BACK,
 )
@@ -69,6 +77,10 @@ from rag_backend.modules.editorial.infrastructure.cover_review_rollback import (
     roll_back_cover,
     row_for_update,
 )
+from rag_backend.modules.editorial.infrastructure.review_reopen import (
+    ApprovalReopen,
+    CheckpointReopener,
+)
 
 if typing.TYPE_CHECKING:
     from rag_backend.application.services.carousel.cover_generation import (
@@ -79,10 +91,14 @@ SessionFactory = Callable[[], AsyncSession]
 
 
 class EditorialReviewCoverStore:
-    """``ReviewCoverStore`` with a fresh session per switch."""
+    """``ReviewCoverStore`` with a fresh session per switch; ``checkpoint``
+    reopens an approved carousel's review (None: an approved one is refused)."""
 
-    def __init__(self, sessions: SessionFactory) -> None:
+    def __init__(
+        self, sessions: SessionFactory, checkpoint: CheckpointReopener | None = None
+    ) -> None:
         self._sessions = sessions
+        self._checkpoint = checkpoint
 
     async def switch_in_review(self, command: AutoCoverWrite) -> ReviewSwitchOutcome:
         """Re-check, stage, the locked write, the re-render, then the re-check.
@@ -91,14 +107,17 @@ class EditorialReviewCoverStore:
         back (``rolled_back``).
         """
         async with self._sessions() as session:
-            stored = await _write(session, command)
+            stored = await _write(session, _ReviewCommand(command, self._checkpoint))
             if stored.status != AUTOFIX_STATUS_FIXED or stored.cover is None:
                 return ReviewSwitchOutcome(status=stored.status)
             errors = await render_and_settle(
                 session, RenderTarget(project_id=command.project_id, in_review=True)
             )
+            reopened = stored.reopened
             if not errors:
-                return ReviewSwitchOutcome(status=AUTOFIX_STATUS_FIXED)
+                return ReviewSwitchOutcome(
+                    status=AUTOFIX_STATUS_FIXED, reopened=reopened
+                )
             rollback = CoverRollback(
                 project_id=command.project_id,
                 switched=stored.cover,
@@ -107,12 +126,15 @@ class EditorialReviewCoverStore:
             )
             if await roll_back_cover(session, rollback):
                 return ReviewSwitchOutcome(
-                    status=REASON_AUTO_SELECT_ROLLED_BACK, render_errors=errors
+                    status=REASON_AUTO_SELECT_ROLLED_BACK,
+                    render_errors=errors,
+                    reopened=reopened,
                 )
             return ReviewSwitchOutcome(
                 status=REASON_AUTO_SELECT_ROLLBACK_FAILED,
                 render_errors=errors,
                 lock_version=await _version(session, command.project_id),
+                reopened=reopened,
             )
 
 
@@ -142,23 +164,43 @@ async def _load(session: AsyncSession, project_id: str) -> ProjectAtVersion | No
 
 @dataclass(frozen=True, kw_only=True)
 class _Stored:
-    """The write's status; on success the cover written and the one before it."""
+    """The write's status; on success the cover written, the one before it,
+    and whether the approval was dropped with it."""
 
     status: str
     cover: SlideCover | None = None
     previous: SlideCover | None = None
+    reopened: bool = False
 
 
-async def _write(session: AsyncSession, command: AutoCoverWrite) -> _Stored:
-    found = await _load(session, command.project_id)
+@dataclass(frozen=True)
+class _ReviewCommand:
+    """The website's write and the checkpoint reopen of an approved carousel."""
+
+    write: AutoCoverWrite
+    checkpoint: CheckpointReopener | None
+
+
+def _refusal(found: ProjectAtVersion, command: _ReviewCommand) -> str | None:
+    """The review refusal, the owner's choice, or approved with no reopener."""
+    refusal = review_refusal(found) or review_choice_refusal(
+        found.project, command.write.baseline, command.write.asset_id
+    )
+    if refusal is not None or command.checkpoint is not None:
+        return refusal
+    if reopens_review(review_state_of(found.project, found.workflow_status)):
+        return REASON_AUTO_SELECT_APPROVED
+    return None
+
+
+async def _write(session: AsyncSession, command: _ReviewCommand) -> _Stored:
+    found = await _load(session, command.write.project_id)
     if found is None:
         return _Stored(status=REASON_AUTO_SELECT_NO_PROJECT)
-    refusal = review_refusal(found) or review_choice_refusal(
-        found.project, command.baseline, command.asset_id
-    )
+    refusal = _refusal(found, command)
     if refusal is not None:
         return _Stored(status=refusal)
-    cover = await _generated_cover(session, command)
+    cover = await _generated_cover(session, command.write)
     if cover is None or not await _stage(session, (found.project, cover)):
         return _Stored(status=REASON_AUTO_SELECT_ASSET_GONE)
     return await _locked(session, _ReviewWrite(command=command, cover=cover))
@@ -195,7 +237,7 @@ async def _stage(
 
 @dataclass(frozen=True, kw_only=True)
 class _ReviewWrite:
-    command: AutoCoverWrite
+    command: _ReviewCommand
     cover: SlideCover
 
 
@@ -208,8 +250,8 @@ async def _locked(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     )
 
     target = LockedWrite(
-        project_id=write.command.project_id,
-        expected_version=write.command.expected_version,
+        project_id=write.command.write.project_id,
+        expected_version=write.command.write.expected_version,
     )
     try:
         return await write_locked(session, target, lambda: _store(session, write))
@@ -226,7 +268,8 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     for the republish sweep, which renders the carousel while approval is still
     refused; the held Telegram review is escalated by the worker.
     """
-    row = await row_for_update(session, write.command.project_id)
+    project_id = write.command.write.project_id
+    row = await row_for_update(session, project_id)
     if row is None:
         await session.rollback()
         return _Stored(status=REASON_AUTO_SELECT_NO_PROJECT)
@@ -235,25 +278,42 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
         lock_version=int(row.lock_version or 1),
         workflow_status=str(row.workflow_status or ""),
     )
-    refusal = review_refusal(found) or review_choice_refusal(
-        found.project, write.command.baseline, write.command.asset_id
-    )
+    refusal = _refusal(found, write.command)
     if refusal is not None:
         await session.rollback()
         return _Stored(status=refusal)
+    reopened = await _reopen(session, write.command, found)
     previous = found.project.slide_cover
     row.slide_cover = slide_cover_row(write.cover)
     row.needs_republish_since = datetime.now(UTC)
     await session.commit()
-    return _Stored(status=AUTOFIX_STATUS_FIXED, cover=write.cover, previous=previous)
+    return _Stored(
+        status=AUTOFIX_STATUS_FIXED,
+        cover=write.cover,
+        previous=previous,
+        reopened=reopened,
+    )
+
+
+async def _reopen(
+    session: AsyncSession, command: _ReviewCommand, found: ProjectAtVersion
+) -> bool:
+    """Drop an approved carousel's approval in this transaction (True)."""
+    state = review_state_of(found.project, found.workflow_status)
+    if command.checkpoint is None or not reopens_review(state):
+        return False
+    await ApprovalReopen(session, command.checkpoint).reopen(command.write.project_id)
+    return True
 
 
 @dataclass(frozen=True, kw_only=True)
 class CoverReviewTarget:
-    """The carousel as the request loaded it and the review hold to use."""
+    """The carousel as the request loaded it, the review hold to use, and the
+    checkpoint reopen of an approved carousel (None: it is refused)."""
 
     project: CarouselProject
     hold: ReviewHold
+    checkpoint: CheckpointReopener | None = None
 
 
 def reviewing_cover_task(
@@ -271,7 +331,8 @@ def reviewing_cover_task(
         generation_id=run.generation.id,
         baseline=cover_baseline(target.project),
         review=ReviewSwitch(
-            store=EditorialReviewCoverStore(get_session_maker()), hold=target.hold
+            store=EditorialReviewCoverStore(get_session_maker(), target.checkpoint),
+            hold=target.hold,
         ),
     )
     return with_cover_selection(cover_generation_task(wiring, run), selection)

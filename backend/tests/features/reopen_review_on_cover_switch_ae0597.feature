@@ -60,3 +60,13 @@ Feature: A cover switch reopens the final review of an approved carousel (AE-059
     Given an approved carousel whose switch render failed
     When the cover is rolled back
     Then the carousel stays a draft in final review and the review is sent again
+
+  Scenario: A carousel waiting for its first approval switches and stays in review
+    Given a completed carousel waiting in final review, never approved
+    When slide 1 changes through the picker
+    Then the switch lands and the carousel stays a draft in final review
+
+  Scenario: A switch that cannot reopen the review refuses an approved carousel
+    Given a cover switch wired without the checkpoint reopen
+    When it meets an approved carousel
+    Then it is refused as approved and nothing is written or rendered

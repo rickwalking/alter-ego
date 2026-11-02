@@ -201,7 +201,7 @@ class _Offer:
 
 @pytest.mark.unit
 class TestTelegramCoverRefusal:
-    # Scenario: A Telegram GrokBot cover tap on an approved carousel is refused clearly
+    # Scenario: A Telegram GrokBot cover tap on a published carousel is refused clearly
     @pytest.mark.asyncio
     async def test_the_refusal_reopens_the_review_with_its_own_reason(self) -> None:
         world = _world()

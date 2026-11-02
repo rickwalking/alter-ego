@@ -173,7 +173,7 @@ async def still_in_review(session: AsyncSession, project_id: str) -> bool:
         ProjectAtVersion,
     )
     from rag_backend.application.services.carousel.cover_review_switch import (
-        review_refusal,
+        render_refusal,
     )
 
     row = await row_for_update(session, project_id)
@@ -186,7 +186,7 @@ async def still_in_review(session: AsyncSession, project_id: str) -> bool:
         workflow_status=str(row.workflow_status or ""),
     )
     await session.rollback()
-    return review_refusal(found) is None
+    return render_refusal(found) is None
 
 
 async def _restore_waiting(session: AsyncSession, rollback: CoverRollback) -> str:

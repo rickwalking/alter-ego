@@ -202,6 +202,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_slide_fix import (
 )
 from rag_backend.modules.editorial.infrastructure.cover_review_state import (
     EditorialReviewState,
+    lock_carousel_row,
 )
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
@@ -220,6 +221,11 @@ from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
 from rag_backend.modules.editorial.infrastructure.pov_inputs import (
     PovInputsAcl,
     as_uuid,
+)
+from rag_backend.modules.editorial.infrastructure.review_reopen import (
+    ApprovalReopen,
+    CheckpointReopener,
+    WorkflowCheckpointReopener,
 )
 from rag_backend.modules.editorial.infrastructure.run_trace_scope import (
     open_run_trace_scope,
@@ -266,6 +272,7 @@ __all__ = [
     "AclPublicReleaseAdapter",
     "AclReviewerAssignmentAdapter",
     "ApprovalPort",
+    "ApprovalReopen",
     "ApprovalState",
     "AutoCoverOutcome",
     "AutomationResume",
@@ -281,6 +288,7 @@ __all__ = [
     "CarouselSlide",
     "CarouselStatus",
     "CarouselTheme",
+    "CheckpointReopener",
     "CoverImageRequest",
     "CoverReviewTarget",
     "CoverRunWiring",
@@ -324,6 +332,7 @@ __all__ = [
     "SourceSynthesisEngine",
     "StartWorkflowCommand",
     "StoredCoverImage",
+    "WorkflowCheckpointReopener",
     "WorkflowEngine",
     "WorkflowStateView",
     "as_uuid",
@@ -345,6 +354,7 @@ __all__ = [
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
+    "lock_carousel_row",
     "open_run_trace_scope",
     "project_queue_metadata",
     "read_project_owner_id",

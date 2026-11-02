@@ -15,6 +15,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
 from rag_backend.agents.carousel_content_park import manual_fixes_park_updates
+from rag_backend.agents.carousel_review_reopen import reopen_review_updates
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -41,6 +42,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_IN_PROGRESS,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REJECT,
+    REVIEW_ACTION_REOPEN,
     REVIEW_ACTION_REVISE,
     SEND_BACK_TARGET_PHASE_KEY,
     STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
@@ -160,6 +162,8 @@ def review_updates_from_response(
     edit_updates = _edited_slide_updates(review, state, phase)
     if action == REVIEW_ACTION_APPROVE:
         return {**edit_updates, "phase_status": PHASE_STATUS_APPROVED}
+    if action == REVIEW_ACTION_REOPEN:
+        return reopen_review_updates()
     if action not in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}:
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
     updates: dict[str, object] = {

@@ -28,6 +28,7 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.events.factory import get_event_publisher
+from rag_backend.modules.editorial.public import WorkflowCheckpointReopener
 
 
 def build_editorial_workflow_service(request: Request) -> EditorialWorkflowService:
@@ -53,10 +54,16 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
     )
 
 
+def checkpoint_reopener(request: Request) -> WorkflowCheckpointReopener:
+    """Reopens an approved carousel's final review on this app's checkpointer."""
+    return WorkflowCheckpointReopener(lambda: build_editorial_workflow_service(request))
+
+
 __all__ = [
     "build_editorial_workflow_service",
     "build_editorial_workflow_state_response",
     "bump_resume_lock_version",
+    "checkpoint_reopener",
     "ensure_no_artifact_mutation_in_progress",
     "ensure_resume_not_in_progress",
     "ensure_resume_reviewer_access",

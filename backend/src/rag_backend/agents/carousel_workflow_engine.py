@@ -25,6 +25,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_APPROVED_HOLD,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
+    REVIEW_ACTION_REOPEN,
 )
 from rag_backend.domain.constants.content_feedback import (
     LOG_CONTENT_ARTIFACTS_PARKED,
@@ -35,6 +36,8 @@ from rag_backend.domain.constants.workflow_state_fields import (
 from rag_backend.domain.models.carousel_run import ensure_checkpoint_commit_allowed
 
 logger = structlog.get_logger()
+
+_ACTION_KEY = "action"
 
 _REVIEW_INTERRUPT_KEYS = (
     "outline",
@@ -272,6 +275,27 @@ class CarouselWorkflowEngine:
         if not pending_next:
             return False
         await self._app.aupdate_state(config, values, as_node=None)
+        return True
+
+    async def reopen_final_review(self, project_id: str) -> bool:
+        """Send an approved carousel's graph back to the final-review interrupt.
+
+        Only a thread parked at ``approved_hold`` is resumed (``reopen_review``):
+        the approval is dropped in the graph state and ``final_review``
+        interrupts again, with no phase re-run. Any other thread (already in
+        review, finished, absent, or no checkpointer) is left alone: False.
+        """
+        if self._app.checkpointer is None:
+            return False
+        await ensure_checkpoint_commit_allowed(project_id)
+        config = self._run_config(project_id)
+        snapshot = await self._app.aget_state(config)
+        pending_next = (getattr(snapshot, "next", ()) or ()) if snapshot else ()
+        if not pending_next or str(pending_next[0]) != PHASE_APPROVED_HOLD:
+            return False
+        await self._app.ainvoke(
+            Command(resume={_ACTION_KEY: REVIEW_ACTION_REOPEN}), config=config
+        )
         return True
 
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:

@@ -1,6 +1,8 @@
-"""The picker refuses an approved, scheduled or published carousel, on Postgres.
+"""The picker refuses a published carousel, on Postgres.
 
-Feature: tests/features/website_cover_review_switch_ae0594.feature. The real
+Feature: tests/features/website_cover_review_switch_ae0594.feature and
+tests/features/reopen_review_on_cover_switch_ae0597.feature (wired without a
+checkpoint reopen, an approved or scheduled carousel is still refused). The real
 picker (``cover_pick_service``: library, generated covers, the cover switch
 and the editorial approval read); the render is recorded. Skipped without a
 Postgres ``DATABASE_URL`` (CI sets one).
@@ -87,12 +89,26 @@ def dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     get_settings.cache_clear()
 
 
-async def _pick(built: Harness, project_id: str, photo: str) -> str:
+class _Checkpoint:
+    """Records the checkpoint reopens (no LangGraph thread in these tests)."""
+
+    def __init__(self) -> None:
+        self.reopened: list[str] = []
+
+    async def reopen(self, project_id: str) -> bool:
+        self.reopened.append(project_id)
+        return True
+
+
+async def _pick(
+    built: Harness, project_id: str, photo: str, checkpoint: _Checkpoint | None = None
+) -> str:
     """Pick library photo ``photo`` at the seeded lock version."""
     async with built.sessions()() as session:
         project = await CarouselAutomationAcl(session).load_project(project_id)
         assert project is not None
-        result = await cover_pick_service(session, _NoOffer()).pick(
+        service = cover_pick_service(session, _NoOffer(), checkpoint)
+        result = await service.pick(
             CoverPickCommand(
                 project=project,
                 asset_id=UUID(photo),
@@ -106,6 +122,19 @@ async def _refused(built: Harness, project_id: str, photos: list[str]) -> None:
     with pytest.raises(CoverPickError) as refused:
         await _pick(built, project_id, photos[1])
     assert refused.value.code == ERR_COVER_SWITCH_REQUIRES_REVIEW
+    await _unchanged(built, project_id, photos)
+
+
+async def _refused_by_the_switch(
+    built: Harness, project_id: str, photos: list[str]
+) -> None:
+    """The switch, wired without a checkpoint reopen, refuses under the lock."""
+    status = await _pick(built, project_id, photos[1])
+    assert status == ERR_COVER_SWITCH_REQUIRES_REVIEW
+    await _unchanged(built, project_id, photos)
+
+
+async def _unchanged(built: Harness, project_id: str, photos: list[str]) -> None:
     model = await row(built, project_id)
     assert model.hook_asset_id == photos[0]
     assert model.slide_cover is None
@@ -118,13 +147,13 @@ async def _refused(built: Harness, project_id: str, photos: list[str]) -> None:
 async def test_picker_refuses_an_approved_carousel(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Approved for publishing: refused, nothing written or rendered."""
-    # Scenario: The picker refuses an approved carousel
+    """Approved, no checkpoint reopen wired: refused, nothing written or rendered."""
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos = await seed(built, dirs, **_APPROVED)
 
-        await _refused(built, project_id, photos)
+        await _refused_by_the_switch(built, project_id, photos)
 
 
 @requires_postgres
@@ -132,14 +161,14 @@ async def test_picker_refuses_an_approved_carousel(
 async def test_picker_refuses_a_scheduled_carousel(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """An autopilot run waiting for its publish time: refused."""
-    # Scenario: The picker refuses a scheduled carousel
+    """Scheduled, no checkpoint reopen wired: refused."""
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos = await seed(built, dirs, **_APPROVED)
         await seed_run(built, project_id, AutopilotRunState.SCHEDULED)
 
-        await _refused(built, project_id, photos)
+        await _refused_by_the_switch(built, project_id, photos)
 
 
 @requires_postgres
@@ -162,7 +191,7 @@ async def test_picker_still_switches_a_carousel_in_review(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Waiting for its first approval: the pick switches and re-renders."""
-    # Scenario: The picker refuses an approved carousel
+    # Scenario: A carousel waiting for its first approval switches and stays in review
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos = await seed(built, dirs)
@@ -177,11 +206,12 @@ async def test_picker_still_switches_a_carousel_in_review(
 
 @requires_postgres
 @pytest.mark.asyncio
-async def test_an_approval_before_the_locked_write_is_refused(
+async def test_an_approval_before_the_locked_write_is_dropped(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The picker read a draft; an approval lands first: refused under the lock."""
-    # Scenario: An approval that lands while the picker switches is refused
+    """The picker read a draft; an approval lands first: the locked write sees it
+    and drops it with the new slide 1."""
+    # Scenario: An approval that lands while the picker switches is dropped with the write
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos = await seed(built, dirs)
@@ -202,15 +232,19 @@ async def test_an_approval_before_the_locked_write_is_refused(
             await original(self, project, asset)
 
         monkeypatch.setattr(EditorialCoverLibrary, "stage", _approve_then_stage)
+        checkpoint = _Checkpoint()
 
-        assert await _pick(built, project_id, photos[1]) == (
-            ERR_COVER_SWITCH_REQUIRES_REVIEW
+        assert await _pick(built, project_id, photos[1], checkpoint) == (
+            AUTOFIX_STATUS_FIXED
         )
 
         model = await row(built, project_id)
-        assert model.hook_asset_id == photos[0]
-        assert model.lock_version == 3
-        assert built.renders == []
+        assert model.hook_asset_id == photos[1]
+        assert model.lock_version == 4
+        assert model.workflow_status == "draft"
+        assert model.phase_status == "awaiting_human"
+        assert checkpoint.reopened == [project_id]
+        assert built.renders == [None]
 
 
 @requires_postgres

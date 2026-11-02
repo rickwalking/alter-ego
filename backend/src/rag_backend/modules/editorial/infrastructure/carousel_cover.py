@@ -38,6 +38,9 @@ if TYPE_CHECKING:
         SlideCoverSwitchResult,
         SlideCoverSwitchService,
     )
+    from rag_backend.modules.editorial.infrastructure.review_reopen import (
+        CheckpointReopener,
+    )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -61,12 +64,15 @@ class StoredCoverImage:
 
 @dataclass(frozen=True, kw_only=True)
 class CoverSwitchRequest:
-    """A finished carousel, the lock version read, and the cover to show."""
+    """A finished carousel, the lock version read, the cover to show, and the
+    checkpoint reopen of an approved carousel (None: an approved one is
+    refused)."""
 
     session: AsyncSession
     project_id: str
     expected_version: int
     cover: SlideCover | None
+    checkpoint: CheckpointReopener | None = None
 
 
 async def store_cover_image(request: CoverImageRequest) -> StoredCoverImage:
@@ -221,8 +227,14 @@ class WriteOwnerRenderMarker:
         )
 
 
-def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService:
-    """The cover switch of one session: project stager + republish renderer."""
+def slide_cover_switch_service(
+    session: AsyncSession, checkpoint: CheckpointReopener | None = None
+) -> SlideCoverSwitchService:
+    """The cover switch of one session: project stager + republish renderer.
+
+    With ``checkpoint`` an approved carousel's review is reopened by the
+    switch; without it an approved carousel is refused.
+    """
     from rag_backend.application.services.carousel.slide_cover_switch import (
         SlideCoverSwitchDeps,
         SlideCoverSwitchService,
@@ -236,7 +248,11 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
     from rag_backend.modules.editorial.infrastructure.cover_review_state import (
         EditorialReviewState,
     )
+    from rag_backend.modules.editorial.infrastructure.review_reopen import (
+        ApprovalReopen,
+    )
 
+    reopener = None if checkpoint is None else ApprovalReopen(session, checkpoint)
     return SlideCoverSwitchService(
         SlideCoverSwitchDeps(
             db=session,
@@ -245,6 +261,7 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
             renderer=RepublishRenderer(session),
             review=EditorialReviewState(session),
             marker=WriteOwnerRenderMarker(session),
+            reopener=reopener,
         )
     )
 
@@ -255,7 +272,7 @@ async def switch_slide_cover(request: CoverSwitchRequest) -> SlideCoverSwitchRes
         SlideCoverSwitchCommand,
     )
 
-    service = slide_cover_switch_service(request.session)
+    service = slide_cover_switch_service(request.session, request.checkpoint)
     return await service.switch(
         SlideCoverSwitchCommand(
             project_id=request.project_id,

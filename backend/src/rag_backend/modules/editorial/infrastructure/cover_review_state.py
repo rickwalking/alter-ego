@@ -2,7 +2,10 @@
 
 The two columns are selected directly (never through the session's identity
 map), so a check under the project lock sees what is committed now, not the
-row the request loaded earlier.
+row the request loaded earlier. ``lock_carousel_row`` holds the row for a
+publisher's transaction, so it reads the approval and releases the carousel
+before any slide-1 switch (which writes the row under its compare-and-set)
+can land, or after it.
 """
 
 from __future__ import annotations
@@ -38,4 +41,14 @@ class EditorialReviewState:
         )
 
 
-__all__ = ["EditorialReviewState"]
+async def lock_carousel_row(session: AsyncSession, project_id: str) -> bool:
+    """``SELECT ... FOR UPDATE`` (refreshed) until the caller commits; False
+    when the carousel is gone."""
+    from rag_backend.modules.editorial.infrastructure.cover_review_rollback import (
+        row_for_update,
+    )
+
+    return await row_for_update(session, project_id) is not None
+
+
+__all__ = ["EditorialReviewState", "lock_carousel_row"]

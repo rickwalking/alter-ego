@@ -439,6 +439,10 @@ class EditorialWorkflowService:
         """True when a re-drive has a pending node to re-run."""
         return await self._orchestrator.engine.is_parked(project_id)
 
+    async def reopen_final_review(self, project_id: str) -> bool:
+        """Send an approved carousel back to the final-review interrupt."""
+        return await self._orchestrator.engine.reopen_final_review(project_id)
+
     async def redrive_pending_phase(
         self,
         project_id: str,

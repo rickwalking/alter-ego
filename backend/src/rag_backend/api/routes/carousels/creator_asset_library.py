@@ -67,6 +67,7 @@ from rag_backend.domain.constants.creator_asset import (
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import User
+from rag_backend.modules.autopilot import cover_review_hold
 
 from .creator_assets import (
     CreatorAssetContext,
@@ -79,6 +80,7 @@ from .creator_assets import (
     normalize_upload_mime,
     to_creator_asset_response,
 )
+from .editorial_workflow_routes_support import checkpoint_reopener
 from .hook_photo_guard import prepare_slide_one_change
 
 router = APIRouter()
@@ -263,12 +265,16 @@ async def select_hook_photo(
 ) -> HookPhotoResponse:
     """Use one of the owner's photos on slide 1 of a POV carousel.
 
-    Refused (409) on an approved or released carousel; a completed one is
-    marked for a re-render first (``hook_photo_guard``).
+    Refused (409) on a released carousel; a completed one is marked for a
+    re-render first, and an approved one has its review reopened, after which
+    its autopilot run is sent back for a new Telegram review
+    (``hook_photo_guard``).
     """
     project_id = UUID(request.path_params["project_id"])
     project = await load_owned_project(library.context, project_id)
-    await prepare_slide_one_change(library.session, project)
+    reopened = await prepare_slide_one_change(
+        library.session, project, checkpoint_reopener(request)
+    )
     try:
         updated = await library.service.select_hook_photo(
             HookPhotoCommand(
@@ -280,6 +286,8 @@ async def select_hook_photo(
         )
     except CreatorAssetValidationError as error:
         raise map_validation_error(error) from error
+    if reopened:
+        await cover_review_hold().reopened(str(project_id))
     return HookPhotoResponse(project_id=updated.id, hook_asset_id=body.creator_asset_id)
 
 

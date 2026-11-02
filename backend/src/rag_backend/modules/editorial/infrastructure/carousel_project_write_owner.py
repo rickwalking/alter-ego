@@ -46,6 +46,9 @@ from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
+    PHASE_FINAL_REVIEW,
+    PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
 )
 from rag_backend.domain.models import CarouselStatus
@@ -137,6 +140,22 @@ class CarouselProjectWriteOwner:
         if project is None:
             return
         project.needs_republish_since = datetime.now(UTC)
+        await self._session.flush()
+
+    async def reopen_final_review(self, project_id: str) -> None:
+        """Drop the approval: a draft waiting in final review (flush only).
+
+        Staged in the SAME transaction as the slide-1 write that caused it, so
+        no publish path ever sees the new slide 1 still approved.
+        """
+        project = await self._session.get(
+            CarouselProjectModel, project_id, with_for_update=True
+        )
+        if project is None:
+            return
+        project.workflow_status = CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+        project.current_phase = PHASE_FINAL_REVIEW
+        project.phase_status = PHASE_STATUS_AWAITING_HUMAN
         await self._session.flush()
 
     async def clear_needs_republish(
