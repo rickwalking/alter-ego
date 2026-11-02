@@ -57,10 +57,16 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     When the owner approves on the website or on Telegram
     Then both approves are refused and the carousel stays a draft
 
+  Scenario: Approves at earlier gates ignore a pending re-render
+    Given a carousel at its content gate carries the needs-republish marker
+    When the owner approves the gate on the website or on Telegram
+    Then the approve is not refused for the marker
+
   Scenario: A render never changes slide 1's cover on an approved carousel
     Given an approved or released carousel whose active artifacts recorded another cover
     When the republish service, the sweep, a slide edit or a manual republish renders it
     Then the render is refused with cover_change_requires_review and the slides stay
+    And the sweep logs it once and retries only after the carousel changes
 
   Scenario: A typed publish time answers the review it was asked from
     Given the owner tapped "Outro horário" on a review and slide 1 changed since

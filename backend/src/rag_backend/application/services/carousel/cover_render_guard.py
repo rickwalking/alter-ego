@@ -18,8 +18,6 @@ carousel, and approval is refused while a switch's render is pending).
 
 from __future__ import annotations
 
-import json
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
@@ -30,8 +28,6 @@ from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_CHANGE_REQUIRES_REVIEW,
 )
 from rag_backend.domain.models import CarouselProject
-
-_MANIFEST_COVER_KEY = "slide_one_cover"
 
 
 def cover_identity(project: CarouselProject) -> str:
@@ -45,6 +41,11 @@ def cover_identity(project: CarouselProject) -> str:
 
 def recorded_cover(project: CarouselProject) -> str | None:
     """The cover the active artifact version recorded; None without a record."""
+    from pydantic import ValidationError
+
+    from rag_backend.application.services.carousel.artifact_manifest import (
+        CarouselArtifactManifestPayload,
+    )
     from rag_backend.application.services.carousel.artifact_path_resolver import (
         resolve_manifest_path,
     )
@@ -53,13 +54,12 @@ def recorded_cover(project: CarouselProject) -> str | None:
     if path is None or not path.is_file():
         return None
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        payload = CarouselArtifactManifestPayload.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValidationError):
         return None
-    if not isinstance(payload, dict):
-        return None
-    value = payload.get(_MANIFEST_COVER_KEY)
-    return value if isinstance(value, str) else None
+    return payload.slide_one_cover
 
 
 async def unreviewed_cover_refusal(

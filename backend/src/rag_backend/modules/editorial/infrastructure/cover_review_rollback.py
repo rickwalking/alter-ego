@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import typing
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import select
@@ -135,6 +136,7 @@ async def render_and_settle(
         CarouselProjectWriteOwner,
     )
 
+    rendered_from = datetime.now(UTC)
     try:
         async with republish_build_lock(
             engine_from_session(session), target.project_id
@@ -151,7 +153,7 @@ async def render_and_settle(
         return (f"{type(exc).__name__}: {exc}",)
     if not errors:
         await CarouselProjectWriteOwner(session).clear_needs_republish(
-            target.project_id
+            target.project_id, rendered_from
         )
     return errors
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
@@ -163,19 +164,16 @@ def ensure_resume_not_in_progress(
 
 
 async def ensure_rendered_before_approve(db: AsyncSession, project_id: str) -> None:
-    """Refuse an approve while a re-render of the carousel is still pending."""
-    from sqlalchemy import select
-
-    from rag_backend.infrastructure.database.models.carousel import (
-        CarouselProjectModel,
-    )
-
-    pending = await db.scalar(
-        select(CarouselProjectModel.needs_republish_since).where(
-            CarouselProjectModel.id == project_id
+    """Refuse a final-review approve while a re-render is still pending."""
+    found = (
+        await db.execute(
+            select(
+                CarouselProjectModel.needs_republish_since,
+                CarouselProjectModel.current_phase,
+            ).where(CarouselProjectModel.id == project_id)
         )
-    )
-    if pending is None:
+    ).one_or_none()
+    if found is None or found[0] is None or found[1] != PHASE_FINAL_REVIEW:
         return
     raise CarouselConflictError(
         CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
@@ -218,10 +216,11 @@ async def validate_resume_workflow_gates(
     """Validate revision cap and persona score before accepting resume.
 
     The revision-cap conflict names the charged phase (the target on a send-back), which
-    the typed 409 client copy reads. An approve while the carousel's slides wait for
-    a re-render (the needs-republish marker: a slide-1 cover switch or a slide edit
-    not rendered yet) is refused as ``build_in_progress``: the approval would be for
-    artifacts that do not show the carousel's content.
+    the typed 409 client copy reads. A final-review approve while the carousel's
+    slides wait for a re-render (the needs-republish marker: a slide-1 cover switch
+    or a slide edit not rendered yet) is refused as ``build_in_progress``: it would
+    approve artifacts that do not show the carousel's content. Approves at earlier
+    gates are unaffected.
     """
     if body.action == REVIEW_ACTION_APPROVE:
         await ensure_rendered_before_approve(ctx.db, ctx.project_id)

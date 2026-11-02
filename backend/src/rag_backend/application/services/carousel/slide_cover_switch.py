@@ -7,8 +7,11 @@ bind another library photo as the slide-1 photo (``hook_photo``).
 1. stage the cover file where the slides render (before anything is written,
    so a render never meets a missing file);
 2. under the per-project lock, take the lock-version CAS and store
-   ``slide_cover`` (a new lock version = a fresh review revision);
-3. re-render through the republish path (hero images reused).
+   ``slide_cover`` (a new lock version = a fresh review revision), stamping
+   the needs-republish marker in the same commit (approval is refused until a
+   render settles);
+3. re-render through the republish path (hero images reused) and, once it
+   succeeded, clear the marker (compare-and-clear: a newer stamp is kept).
 
 A held lock or a moved version is a conflict: nothing is written and the
 caller retries on the next tick. With a ``review`` source the write re-reads
@@ -19,6 +22,7 @@ the approval under the lock: an approved or published carousel is refused
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -51,6 +55,18 @@ class CoverRenderer(Protocol):
     async def render(self, project_id: str) -> tuple[str, ...]: ...
 
 
+class RenderMarker(Protocol):
+    """The needs-republish marker: stamped with a slide-1 write, cleared after."""
+
+    async def mark(self, project_id: str) -> None:
+        """Stamp the marker in the current transaction (the caller commits)."""
+        ...
+
+    async def clear(self, project_id: str, rendered_from: datetime) -> None:
+        """Clear it unless it was stamped after ``rendered_from``; commit."""
+        ...
+
+
 class CoverStager(Protocol):
     """Copy the cover file into the project's render tree."""
 
@@ -67,6 +83,7 @@ class SlideCoverSwitchDeps:
     stager: CoverStager
     renderer: CoverRenderer
     review: ReviewStateSource | None = None
+    marker: RenderMarker | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,7 +140,11 @@ class SlideCoverSwitchService:
         except _SwitchRefusedError:
             await self._deps.db.rollback()
             return SlideCoverSwitchResult(status=ERR_COVER_SWITCH_REQUIRES_REVIEW)
+        rendered_from = datetime.now(UTC)
         errors = await self._deps.renderer.render(command.project_id)
+        marker = self._deps.marker
+        if marker is not None and not errors:
+            await marker.clear(command.project_id, rendered_from)
         return SlideCoverSwitchResult(status=AUTOFIX_STATUS_FIXED, render_errors=errors)
 
     async def _write(self, command: SlideCoverSwitchCommand) -> None:
@@ -136,6 +157,8 @@ class SlideCoverSwitchService:
             project.hook_asset_id = command.hook_photo.asset_id
             project.hook_asset_staged_path = command.hook_photo.staged_path
         await self._deps.repo.update_project(project)
+        if self._deps.marker is not None:
+            await self._deps.marker.mark(command.project_id)
         await self._deps.db.commit()
 
     async def _refuse_unreviewed(self, project_id: str) -> None:
@@ -151,6 +174,7 @@ __all__ = [
     "CoverRenderer",
     "CoverStager",
     "HookPhotoChoice",
+    "RenderMarker",
     "SlideCoverSwitchCommand",
     "SlideCoverSwitchDeps",
     "SlideCoverSwitchResult",

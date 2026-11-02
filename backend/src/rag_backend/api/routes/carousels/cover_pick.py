@@ -63,7 +63,6 @@ from rag_backend.domain.models.carousel_conflict import (
 from rag_backend.modules.autopilot import project_cover_offer
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
-    CarouselProjectWriteOwner,
     cover_pick_service,
 )
 
@@ -171,8 +170,8 @@ async def pick_cover(
 ) -> CoverPickResponse:
     """Stage, store under the lock-version CAS, then republish slides + PDFs.
 
-    The fresh artifacts reflect every pending copy edit too, so the needs-republish
-    marker is cleared as a republish does.
+    The switch stamps the needs-republish marker with the new slide 1 and clears
+    it (compare-and-clear) once its render settled, as a republish does.
     """
     command = CoverPickCommand(
         project=ctx.project,
@@ -185,7 +184,6 @@ async def pick_cover(
         raise _refused(error) from error
     _raise_unless_switched(result)
     project_id = str(ctx.project.id)
-    await CarouselProjectWriteOwner(ctx.db).clear_needs_republish(project_id)
     await ctx.db.commit()
     updated = await CarouselAutomationAcl(ctx.db).load_project(project_id)
     return CoverPickResponse(

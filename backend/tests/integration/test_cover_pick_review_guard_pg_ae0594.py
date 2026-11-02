@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -46,8 +47,12 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
 from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
     EditorialCoverLibrary,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
+    RepublishRenderer,
+)
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
+    CarouselProjectWriteOwner,
     cover_pick_service,
 )
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
@@ -272,3 +277,53 @@ async def _approved_after_publish(built: Harness, project_id: str) -> None:
             .values(workflow_status="approved_for_publish", lock_version=4)
         )
         await other.commit()
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_a_pick_marks_slide_one_until_its_render_settles(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The marker is set with the pick and cleared only after the render."""
+    # Scenario: No approval lands while a cover switch is between write and render
+    async with isolated_schema(tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id, photos = await seed(built, dirs)
+        during: list[datetime | None] = []
+
+        async def _render(_self: RepublishRenderer, pid: str) -> tuple[str, ...]:
+            during.append((await row(built, pid)).needs_republish_since)
+            return ()
+
+        monkeypatch.setattr(RepublishRenderer, "render", _render)
+
+        assert await _pick(built, project_id, photos[1]) == AUTOFIX_STATUS_FIXED
+
+        assert during and during[0] is not None
+        assert (await row(built, project_id)).needs_republish_since is None
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_a_marker_stamped_during_a_render_survives_its_clear(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Compare-and-clear: a newer stamp than the render's start is kept."""
+    # Scenario: No approval lands while a cover switch is between write and render
+    async with isolated_schema(tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id, _ = await seed(built, dirs)
+        rendered_from = datetime.now(UTC)
+        async with built.sessions()() as session:
+            owner = CarouselProjectWriteOwner(session)
+            await owner.mark_needs_republish(project_id)
+            await session.commit()
+            await owner.clear_needs_republish(project_id, rendered_from)
+
+        assert (await row(built, project_id)).needs_republish_since is not None
+
+        async with built.sessions()() as session:
+            await CarouselProjectWriteOwner(session).clear_needs_republish(
+                project_id, datetime.now(UTC)
+            )
+        assert (await row(built, project_id)).needs_republish_since is None

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.editorial.infrastructure import cover_review_rollback
 from tests.integration.cover_generation_support import (
     BLUE,
@@ -120,3 +121,54 @@ async def test_route_switches_a_completed_carousel_in_final_review(
     assert cover["asset_id"] == rows[0]["result_asset_id"]
     assert cover["kind"] == "ai_image"
     assert calls == [project_id]
+
+
+async def _bind(
+    client: AsyncClient, values: dict[str, object]
+) -> tuple[str, object, int]:
+    first = await upload_photo(client, RED)
+    second = await upload_photo(client, BLUE)
+    project_id = await project(client, first["id"])
+    await set_project(project_id, **values)
+    response = await client.put(
+        f"/api/carousels/{project_id}/hook-photo",
+        json={"creator_asset_id": second["id"]},
+    )
+    return project_id, response.json().get("detail"), response.status_code
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "values", [{"workflow_status": "approved_for_publish"}, {"is_public": True}]
+)
+async def test_hook_photo_on_an_approved_or_published_carousel_is_refused(
+    client: AsyncClient, asset_dirs: Path, values: dict[str, object]
+) -> None:
+    """``PUT /hook-photo`` follows the picker's rule: 409 and nothing written."""
+    # Scenario: The picker refuses an approved carousel
+    project_id, detail, status = await _bind(client, values)
+
+    assert status == 409
+    assert detail == ERR_COVER_SWITCH_REQUIRES_REVIEW
+    assert (await _model(project_id)).needs_republish_since is None
+
+
+@pytest.mark.integration
+async def test_hook_photo_on_a_completed_carousel_waits_for_a_render(
+    client: AsyncClient, asset_dirs: Path
+) -> None:
+    """A completed carousel in review is marked, so approval waits for a render."""
+    # Scenario: No approval lands while a cover switch is between write and render
+    project_id, _detail, status = await _bind(client, {"workflow_status": "draft"})
+
+    assert status == 200
+    assert (await _model(project_id)).needs_republish_since is not None
+
+
+async def _model(project_id: str) -> CarouselProjectModel:
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    async with get_session_maker()() as session:
+        model = await session.get(CarouselProjectModel, project_id)
+        assert model is not None
+        return model

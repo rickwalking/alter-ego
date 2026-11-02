@@ -11,18 +11,26 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import update
 from structlog.testing import capture_logs
 
+from rag_backend.application.services.carousel.artifact_build_support import (
+    build_manifest,
+    write_manifest,
+)
+from rag_backend.application.services.carousel.artifact_build_types import (
+    ArtifactBuildRequest,
+)
 from rag_backend.application.services.carousel.artifact_manifest import (
     CarouselArtifactManifest,
 )
 from rag_backend.application.services.carousel.cover_render_guard import (
-    cover_identity,
     unreviewed_cover_refusal,
 )
 from rag_backend.application.services.carousel.editorial_finalize import (
@@ -32,6 +40,9 @@ from rag_backend.domain.constants.artifact_build import (
     ARTIFACT_MANIFEST_FILENAME,
     ARTIFACT_VERSIONS_DIR,
 )
+from rag_backend.domain.constants.carousel_slide_edit import (
+    LOG_EVENT_REPUBLISH_COVER_REFUSED,
+)
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_CHANGE_REQUIRES_REVIEW,
 )
@@ -40,6 +51,7 @@ from rag_backend.infrastructure.database.carousel_republish_sweeper import (
     CarouselRepublishSweeperConfig,
     CarouselRepublishSweeperRepository,
 )
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.editorial.public import CarouselAutomationAcl
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
 from tests.integration.website_cover_review_pg_support import (
@@ -65,13 +77,34 @@ def dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     get_settings.cache_clear()
 
 
-def _manifest(output_dir: Path, recorded: str | None) -> None:
-    version_root = output_dir / ARTIFACT_VERSIONS_DIR / _VERSION
-    version_root.mkdir(parents=True)
-    payload: dict[str, object] = {"artifact_version": _VERSION}
-    if recorded is not None:
-        payload["slide_one_cover"] = recorded
-    (version_root / ARTIFACT_MANIFEST_FILENAME).write_text(json.dumps(payload))
+async def _built_manifest(built: Harness, project_id: str) -> CarouselArtifactManifest:
+    """The manifest the real build writes for the carousel as it is now."""
+    async with built.sessions()() as session:
+        project = await CarouselAutomationAcl(session).load_project(project_id)
+    assert project is not None and project.output_dir
+    staging = Path(project.output_dir) / "staging"
+    staging.mkdir(parents=True, exist_ok=True)
+    request = ArtifactBuildRequest(
+        project=project, slides=[], source_lock_version=3, prior_artifact_version=None
+    )
+    return build_manifest(request, _VERSION, staging)
+
+
+async def _manifest(built: Harness, project_id: str, recorded: str | None) -> Path:
+    """Write the active version's manifest recording ``recorded`` (None: legacy)."""
+    manifest = replace(
+        await _built_manifest(built, project_id), slide_one_cover=recorded
+    )
+    model = await row(built, project_id)
+    version_root = Path(str(model.output_dir)) / ARTIFACT_VERSIONS_DIR / _VERSION
+    version_root.mkdir(parents=True, exist_ok=True)
+    path = version_root / ARTIFACT_MANIFEST_FILENAME
+    write_manifest(path, manifest)
+    if recorded is None:
+        payload = json.loads(path.read_text())
+        payload.pop("slide_one_cover")
+        path.write_text(json.dumps(payload))
+    return path
 
 
 async def _carousel(
@@ -82,6 +115,16 @@ async def _carousel(
         built, dirs, output_dir=str(output_dir), artifact_version=_VERSION, **values
     )
     return project_id, photos, output_dir
+
+
+async def _set_version(built: Harness, project_id: str, version: int) -> None:
+    async with built.sessions()() as session:
+        await session.execute(
+            update(CarouselProjectModel)
+            .where(CarouselProjectModel.id == project_id)
+            .values(lock_version=version)
+        )
+        await session.commit()
 
 
 async def _refusal(built: Harness, project_id: str) -> str | None:
@@ -103,7 +146,7 @@ async def test_finalize_refuses_a_changed_cover_on_an_approved_carousel(
         project_id, _, output_dir = await _carousel(
             built, dirs, {"workflow_status": _APPROVED}
         )
-        _manifest(output_dir, str(uuid4()))
+        await _manifest(built, project_id, str(uuid4()))
 
         async with built.sessions()() as session:
             result = await finalize_carousel_after_images_approval(session, project_id)
@@ -118,7 +161,7 @@ async def test_finalize_refuses_a_changed_cover_on_an_approved_carousel(
 async def test_the_sweep_refuses_a_changed_cover_on_an_approved_carousel(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A marked approved carousel whose cover changed is never rendered by the sweep."""
+    """Never rendered by the sweep, and retried only once the row changes."""
     # Scenario: A render never changes slide 1's cover on an approved carousel
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
@@ -128,18 +171,27 @@ async def test_the_sweep_refuses_a_changed_cover_on_an_approved_carousel(
             dirs,
             {"workflow_status": _APPROVED, "needs_republish_since": marked},
         )
-        _manifest(output_dir, str(uuid4()))
+        await _manifest(built, project_id, str(uuid4()))
         sweeper = CarouselRepublishSweeperRepository(
             CarouselRepublishSweeperConfig(min_age_seconds=0)
         )
 
         with capture_logs() as logs:
-            async with built.sessions()() as session:
-                assert await sweeper.sweep(session) == 0
+            for _ in range(3):
+                async with built.sessions()() as session:
+                    assert await sweeper.sweep(session) == 0
 
         assert (await row(built, project_id)).needs_republish_since is not None
         refused = [e for e in logs if e["event"] == "editorial_finalize_cover_refused"]
         assert [e["error"] for e in refused] == [ERR_COVER_CHANGE_REQUIRES_REVIEW]
+        flagged = [e for e in logs if e["event"] == LOG_EVENT_REPUBLISH_COVER_REFUSED]
+        assert [e["log_level"] for e in flagged] == ["error"]
+
+        await _set_version(built, project_id, 9)
+        with capture_logs() as later:
+            async with built.sessions()() as session:
+                await sweeper.sweep(session)
+        assert [e for e in later if e["event"] == "editorial_finalize_cover_refused"]
 
 
 @requires_postgres
@@ -154,13 +206,13 @@ async def test_the_guard_only_refuses_a_changed_cover_on_approved_or_public(
         same_id, photos, same_dir = await _carousel(
             built, dirs, {"workflow_status": _APPROVED}
         )
-        _manifest(same_dir, photos[0])
+        await _manifest(built, same_id, photos[0])
         draft_id, _, draft_dir = await _carousel(built, dirs, {})
-        _manifest(draft_dir, str(uuid4()))
+        await _manifest(built, draft_id, str(uuid4()))
         legacy_id, _, legacy_dir = await _carousel(built, dirs, {"is_public": True})
-        _manifest(legacy_dir, None)
+        await _manifest(built, legacy_id, None)
         public_id, _, public_dir = await _carousel(built, dirs, {"is_public": True})
-        _manifest(public_dir, str(uuid4()))
+        await _manifest(built, public_id, str(uuid4()))
 
         assert await _refusal(built, same_id) is None
         assert await _refusal(built, draft_id) is None
@@ -173,28 +225,13 @@ async def test_the_guard_only_refuses_a_changed_cover_on_approved_or_public(
 async def test_a_build_records_the_cover_it_rendered(
     dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The manifest field round-trips and a build records the slide-1 cover."""
+    """The real manifest build and writer record slide 1's cover in the JSON."""
     # Scenario: A render never changes slide 1's cover on an approved carousel
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos, _ = await _carousel(built, dirs, {})
-        async with built.sessions()() as session:
-            project = await CarouselAutomationAcl(session).load_project(project_id)
-        assert project is not None
+        path = Path(str((await row(built, project_id)).output_dir)) / "m.json"
 
-        assert cover_identity(project) == photos[0]
-        manifest = CarouselArtifactManifest(
-            project_id=project_id,
-            artifact_version=_VERSION,
-            presentation_policy_version="v1",
-            presentation_policy_checksum=None,
-            template_version="t",
-            renderer_contract_version="r",
-            exporter_contract_version="e",
-            source_lock_version=3,
-            expected_slide_numbers=(1,),
-            pt_source_hash="p",
-            en_source_hash="e",
-            slide_one_cover=cover_identity(project),
-        )
-        assert manifest.to_payload().slide_one_cover == photos[0]
+        write_manifest(path, await _built_manifest(built, project_id))
+
+        assert json.loads(path.read_text())["slide_one_cover"] == photos[0]

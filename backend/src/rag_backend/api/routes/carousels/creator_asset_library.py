@@ -51,6 +51,9 @@ from rag_backend.application.services.carousel.creator_asset_service import (
 from rag_backend.application.services.carousel.creator_asset_validation import (
     CreatorAssetValidationError,
 )
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+)
 from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_MAX_BYTES,
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
@@ -76,6 +79,7 @@ from .creator_assets import (
     normalize_upload_mime,
     to_creator_asset_response,
 )
+from .hook_photo_guard import prepare_slide_one_change
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -245,7 +249,11 @@ async def delete_library_photo(
 
 @router.put(
     "/{project_id}/hook-photo",
-    responses={**_RESPONSES, 404: {"description": ERR_CAROUSEL_NOT_FOUND}},
+    responses={
+        **_RESPONSES,
+        404: {"description": ERR_CAROUSEL_NOT_FOUND},
+        409: {"description": ERR_COVER_SWITCH_REQUIRES_REVIEW},
+    },
 )
 @limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
 async def select_hook_photo(
@@ -253,9 +261,14 @@ async def select_hook_photo(
     body: CreatorAssetSelectRequest,
     library: Annotated[_Library, Depends(_library)],
 ) -> HookPhotoResponse:
-    """Use one of the owner's photos on slide 1 of a POV carousel."""
+    """Use one of the owner's photos on slide 1 of a POV carousel.
+
+    Refused (409) on an approved or released carousel; a completed one is
+    marked for a re-render first (``hook_photo_guard``).
+    """
     project_id = UUID(request.path_params["project_id"])
     project = await load_owned_project(library.context, project_id)
+    await prepare_slide_one_change(library.session, project)
     try:
         updated = await library.service.select_hook_photo(
             HookPhotoCommand(

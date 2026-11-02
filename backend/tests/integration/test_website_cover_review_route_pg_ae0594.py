@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -25,10 +26,11 @@ from rag_backend.domain.constants.carousel_conflicts import (
     CONFLICT_CODE_VERSION_CONFLICT,
 )
 from rag_backend.domain.constants.carousel_workflow import (
-    ERR_RESUME_ALREADY_IN_PROGRESS,
+    ERR_RESUME_RENDER_PENDING,
     PHASE_FINAL_REVIEW,
     PHASE_STATUS_AWAITING_HUMAN,
 )
+from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models import User, UserRole
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.config import Base
@@ -201,7 +203,7 @@ async def test_an_approve_between_the_write_and_the_render_is_refused(
             )
             seen.append((response.status_code, response.text))
             async with rig.built.sessions()() as other:
-                with pytest.raises(ValueError, match=ERR_RESUME_ALREADY_IN_PROGRESS):
+                with pytest.raises(ValueError, match=ERR_RESUME_RENDER_PENDING):
                     await run_automation_phase(
                         AutomationRun(
                             engine=_UnusedEngine(),
@@ -225,3 +227,39 @@ async def test_an_approve_between_the_write_and_the_render_is_refused(
         assert model.workflow_status == "draft"
         assert model.needs_republish_since is None
         assert model.lock_version == 4
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_an_earlier_gate_approve_ignores_the_render_marker(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pending re-render only blocks the final-review approve."""
+    # Scenario: Approves at earlier gates ignore a pending re-render
+    async with _app(monkeypatch) as rig:
+        project_id, _ = await seed(
+            rig.built,
+            dirs,
+            status="drafting",
+            current_phase="content",
+            needs_republish_since=datetime.now(UTC),
+        )
+        await _hand_to_the_caller(rig, project_id)
+
+        response = await rig.client.post(
+            f"/api/carousels/{project_id}/workflow/resume",
+            json={"action": "approve", "expected_version": 99},
+        )
+        async with rig.built.sessions()() as other:
+            with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
+                await run_automation_phase(
+                    AutomationRun(
+                        engine=_UnusedEngine(),
+                        session=other,
+                        project_id=project_id,
+                        expected_version=99,
+                        action="approve",
+                    )
+                )
+
+        assert CONFLICT_CODE_BUILD_IN_PROGRESS not in response.text

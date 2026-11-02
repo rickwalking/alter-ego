@@ -43,6 +43,7 @@ from rag_backend.modules.autopilot.application.schedule_steps import (
     SCHEDULE_REFUSED_STEP,
     SCHEDULED_PUBLISH_NOW_STEP,
     UNSCHEDULE_STEP,
+    ApproveRefusal,
     reschedule_command,
     schedule_command,
 )
@@ -107,7 +108,6 @@ from rag_backend.modules.autopilot.webhook_constants import (
     KIND_APPROVE,
     TEXT_ALREADY,
     TEXT_APPROVE_FAILED,
-    TEXT_APPROVE_REFUSED,
     TEXT_APPROVED,
 )
 
@@ -217,7 +217,9 @@ class PublishChoiceActions:
             return
         status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
-            await self._refused(update, run, APPROVE_REFUSED_STEP)
+            await self._refused(
+                update, run, ApproveRefusal(step=APPROVE_REFUSED_STEP, status=status)
+            )
             return
         await self._release(update, run)
 
@@ -322,24 +324,24 @@ class PublishChoiceActions:
             return
         status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
-            await self._refused(update, run, SCHEDULE_REFUSED_STEP)
+            await self._refused(
+                update, run, ApproveRefusal(step=SCHEDULE_REFUSED_STEP, status=status)
+            )
             return
         text = scheduled_text(choice.at, choice.reason)
         await self._replies.answer(update, ANSWER_SCHEDULED)
         await self._show(update, text, scheduled_keyboard(run.run_id))
 
     async def _refused(
-        self, update: WebhookUpdate, run: AutopilotRun, step: OwnerStep
+        self, update: WebhookUpdate, run: AutopilotRun, refusal: ApproveRefusal
     ) -> None:
         """Refused approve: the tapped review stays open (a typed time: text only)."""
-        await self._apply(run.run_id, step)
+        await self._apply(run.run_id, refusal.step)
         await self._replies.answer(update, TEXT_APPROVE_FAILED)
         if not update.callback_id:
-            await self._replies.tell(update, TEXT_APPROVE_REFUSED)
+            await self._replies.tell(update, refusal.text)
             return
-        await self._replies.edit(
-            update, TEXT_APPROVE_REFUSED, review_keyboard(run.run_id)
-        )
+        await self._replies.edit(update, refusal.text, review_keyboard(run.run_id))
 
     async def _show(
         self, update: WebhookUpdate, text: str, keyboard: InlineKeyboard

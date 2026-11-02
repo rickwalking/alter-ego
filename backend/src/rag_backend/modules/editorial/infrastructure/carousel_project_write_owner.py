@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.workflow_state import (
@@ -139,17 +140,29 @@ class CarouselProjectWriteOwner:
         project.needs_republish_since = datetime.now(UTC)
         await self._session.flush()
 
-    async def clear_needs_republish(self, project_id: str) -> None:
-        """Clear the republish marker and commit (single owner).
+    async def clear_needs_republish(
+        self, project_id: str, rendered_from: datetime
+    ) -> None:
+        """Clear the republish marker if the render started after it; commit.
 
-        Commit lives here (not in the infrastructure/database sweeper) so the
+        Compare-and-clear: a marker stamped after ``rendered_from`` (a write that
+        landed while the render ran) is kept for the next render. Commit lives
+        here (not in the infrastructure/database sweeper) so the
         ddd:adapter-commit boundary holds — adapters flush, owners commit.
         """
-        project = await self._session.get(CarouselProjectModel, project_id)
-        if project is None:
-            return
-        project.needs_republish_since = None
+        await self._session.execute(
+            update(CarouselProjectModel)
+            .where(
+                CarouselProjectModel.id == project_id,
+                CarouselProjectModel.needs_republish_since <= rendered_from,
+            )
+            .values(needs_republish_since=None)
+            .execution_options(synchronize_session=False)
+        )
         await self._session.commit()
+        stored = await self._session.get(CarouselProjectModel, project_id)
+        if stored is not None:
+            await self._session.refresh(stored)
 
     async def bump_resume_lock_version(
         self,
