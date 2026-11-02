@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
@@ -78,21 +77,10 @@ async def unreviewed_cover_refusal(
 
 
 async def _review_state(db: AsyncSession, project_id: str) -> ReviewState | None:
-    from rag_backend.infrastructure.database.models.carousel import (
-        CarouselProjectModel as Row,
-    )
+    """The committed approval and release, through the editorial facade."""
+    from rag_backend.modules.editorial.public import EditorialReviewState
 
-    found = (
-        await db.execute(
-            select(Row.workflow_status, Row.is_public).where(Row.id == project_id)
-        )
-    ).one_or_none()
-    if found is None:
-        return None
-    return ReviewState(
-        workflow_status=str(found.workflow_status or ""),
-        is_public=bool(found.is_public),
-    )
+    return await EditorialReviewState(db).review_state(project_id)
 
 
 __all__ = ["cover_identity", "recorded_cover", "unreviewed_cover_refusal"]

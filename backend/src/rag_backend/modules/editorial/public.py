@@ -200,6 +200,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_slide_fix import (
     SlideFixSlideReport,
     run_slide_fix,
 )
+from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+    EditorialReviewState,
+)
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
     AclOptimisticLockingAdapter,
@@ -287,6 +290,7 @@ __all__ = [
     "EditorialPorts",
     "EditorialProject",
     "EditorialProjectView",
+    "EditorialReviewState",
     "EditorialService",
     "EditorialWorkflow",
     "EditorialWorkflowEngine",
