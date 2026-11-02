@@ -11,10 +11,12 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
+from rag_backend.modules.editorial.infrastructure import cover_review_rollback
 from tests.integration.cover_generation_support import (
     BLUE,
     RED,
@@ -99,7 +101,14 @@ async def test_route_switches_a_completed_carousel_in_final_review(
     """``POST /cover-generations`` composes the review switch: slide 1 moves."""
     # Scenario: A website cover switches a completed carousel in final review
     install_fake_editor(monkeypatch)
-    calls = install_renders(monkeypatch)
+    install_renders(monkeypatch)
+    calls: list[str] = []
+
+    async def _finalize(_session: AsyncSession, project_id: str) -> tuple[str, ...]:
+        calls.append(project_id)
+        return ()
+
+    monkeypatch.setattr(cover_review_rollback, "_finalize", _finalize)
     photo = await upload_photo(client, RED)
     project_id = await project(client, photo["id"])
     await set_project(project_id, current_phase="final_review", workflow_status="draft")

@@ -251,29 +251,43 @@ Answers to the three questions below:
   review window) and stores its start time in the queued rework's feedback;
   an unchanged release restores `awaiting_owner` with the same anchor. The
   runner skips a run with an active hold and steps the next active run.
-- **Render failure, process death, approval during the switch:** every render
-  failure, whatever its type, is a render error. After the render the store
-  re-checks the review under a fresh locked read; a failed render, or an
-  approval/run that landed between the write and the render, restores the
-  previous cover under the lock and the CAS, retrying the lock for a bounded
-  time (30 x 4 s), only while slide 1 still holds exactly the switched value
-  (an owner's later value is kept), re-rendering after an approval. Restored is
-  `rolled_back` (review sent again); a restore that never gets the lock is
-  `rollback_failed`, logged as an error, and the held run is **escalated**
-  (`website_cover_unsafe`, lock version marked) instead of handed back, so no
-  review of a render slide 1 may not match goes out. A store that raises
-  leaves the run held. The write and the render cannot share one project lock
-  (the republish takes it on its own connection); the re-check after the
-  render closes that gap.
-- **No needs-republish marker (decision):** the republish sweep re-renders
-  every marked completed row without checking the approval, so a marker
-  stamped with the cover could put an unseen cover on an approved carousel.
-  The switch therefore stamps none. A process that dies mid-switch leaves the
-  run held; when the hold outlives its 15-minute limit the worker
-  **escalates** it (`website_cover_interrupted`) instead of sending a review.
-  Known limit: a website-only carousel (no autopilot run) whose process dies
-  between the write and the render keeps the new `slide_cover` with the old
-  artifacts until the owner picks a cover again.
+- **Invariant: no approval between the cover write and a settled render
+  (mechanism, third review):** the locked write stamps the existing
+  `needs_republish_since` marker in the same commit as `slide_cover`. Both
+  approve paths refuse an approve while the marker is set: the website resume
+  route (`ensure_rendered_before_approve`, typed 409 `build_in_progress`) and
+  the run-owned path the Telegram approve uses (`run_automation_phase`,
+  `resume_already_in_progress`). The CAS makes it atomic: an approve whose
+  version predates the write loses its CAS, one read after it sees the marker.
+  Only a settled render clears the marker (the switch's own render, the
+  rollback's re-render, or the republish sweep), so a crash, a deploy
+  cancelling the task, or a failed rollback leaves approval refused until the
+  sweep renders the carousel, and the held Telegram run is escalated by the
+  worker (hold expiry), never released to approval. The marker also covers a
+  slide-text edit not yet republished: an approve then waits for its render
+  (a few minutes at most, the sweep's guarantee).
+- **Render under the build lock, review re-checked:** the switch renders
+  through the republish pipeline inside `republish_build_lock`, re-checking
+  `review_refusal` first, so a render never lands on an approved or released
+  carousel. Any render failure (every exception type) rolls the cover back:
+  the restore waits for the lock (30 x 4 s), compares the whole slide-1 value
+  (an owner's later value is kept), and the restored cover is **always**
+  rendered again; a restore that never gets the lock or a re-render that fails
+  is `rollback_failed` (logged as an error, marker kept, held run escalated
+  with `website_cover_unsafe`). Cancellation is never swallowed; it leaves the
+  hold and the marker, both recoverable as above.
+- **Defense in depth at every render:** each artifact build records the cover
+  slide 1 was rendered with (`slide_one_cover` in the artifact manifest JSON
+  file: the `slide_cover` asset id, else the bound photo; no database schema
+  change). The shared finalize step (`export_and_complete_carousel`, used by
+  the republish service, the sweep, a slide edit's republish, a manual
+  republish and the switch) refuses to render an approved or released
+  carousel whose current cover differs from the one the active version
+  recorded (`cover_change_requires_review`); the carousel keeps its artifacts.
+  An active version built before this change has no record and there is no
+  other stored trace of the cover a render used, so such a version is not
+  compared (the switch never writes to approved carousels and approval is
+  refused while a switch's render is pending, which closes that gap).
 - **Notice ledger writes are serialized:** every writer passes the ledger it
   read (`SaveNoticeLog.base`); `SqlNoticeLogStore.save` reads the row
   `FOR UPDATE` and applies only that writer's change (three-way merge), so a
@@ -361,6 +375,18 @@ lines, `NoReviewHold` moved to the test fakes, typed test helpers, the
 frontend test scenario fixed, the unchanged release keeps the 72-hour
 anchor. Existing approve/schedule test fixtures now tap a recorded review
 (message 9 at revision 4), as a real tap does.
+
+### 2026-11-02 (third review: invariant at the approval and render points)
+
+Approval refused while the needs-republish marker is set (website route and
+the Telegram approve path), the marker stamped with the cover and cleared only
+by a settled render; the switch renders under the build lock with the review
+re-checked; the rollback always re-renders the restored cover and reports
+`rollback_failed` when that fails; every artifact build records slide 1's
+cover and every render of an approved or public carousel refuses a different
+one; cancellation leaves a recoverable state; clearer unsafe-state text. Merge
+nits: a pending change applies only when nobody changed it meanwhile, attempt
+counts merge as increments.
 
 ### 2026-11-02 (second review fixes)
 

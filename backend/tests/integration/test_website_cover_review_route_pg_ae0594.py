@@ -17,12 +17,15 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from langgraph.checkpoint.memory import InMemorySaver
 from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import rag_backend.infrastructure.database.config as db_config
 from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_BUILD_IN_PROGRESS,
     CONFLICT_CODE_VERSION_CONFLICT,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    ERR_RESUME_ALREADY_IN_PROGRESS,
     PHASE_FINAL_REVIEW,
     PHASE_STATUS_AWAITING_HUMAN,
 )
@@ -30,6 +33,13 @@ from rag_backend.domain.models import User, UserRole
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_cover_review_switch,
+)
+from rag_backend.modules.editorial.infrastructure.cover_review_rollback import (
+    RenderTarget,
+)
+from rag_backend.modules.editorial.public import AutomationRun, run_automation_phase
 from tests.integration.conftest import auth_headers_for, create_test_user
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
 from tests.integration.website_cover_review_pg_support import (
@@ -157,3 +167,61 @@ async def test_approve_route_with_the_version_read_before_the_switch_is_409(
             json={"action": "approve", "expected_version": 4},
         )
         assert fresh.status_code == 202, fresh.text
+
+
+class _UnusedEngine:
+    """The approve is refused before the workflow engine is ever used."""
+
+    def __getattr__(self, name: str) -> None:
+        raise AssertionError(name)
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_an_approve_between_the_write_and_the_render_is_refused(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After the write, before the render: the website and Telegram approves fail."""
+    # Scenario: No approval lands while a cover switch is between write and render
+    async with _app(monkeypatch) as rig:
+        project_id, photos = await seed(rig.built, dirs)
+        await _at_final_review(rig, project_id)
+        task = await website_task(rig.built, project_id, photos[0])
+        await _hand_to_the_caller(rig, project_id)
+        seen: list[tuple[int, str]] = []
+
+        original = carousel_cover_review_switch.render_and_settle
+
+        async def _approve_then_render(
+            session: AsyncSession, target: RenderTarget
+        ) -> tuple[str, ...]:
+            response = await rig.client.post(
+                f"/api/carousels/{target.project_id}/workflow/resume",
+                json={"action": "approve", "expected_version": 4},
+            )
+            seen.append((response.status_code, response.text))
+            async with rig.built.sessions()() as other:
+                with pytest.raises(ValueError, match=ERR_RESUME_ALREADY_IN_PROGRESS):
+                    await run_automation_phase(
+                        AutomationRun(
+                            engine=_UnusedEngine(),
+                            session=other,
+                            project_id=target.project_id,
+                            expected_version=4,
+                            action="approve",
+                        )
+                    )
+            return await original(session, target)
+
+        monkeypatch.setattr(
+            carousel_cover_review_switch, "render_and_settle", _approve_then_render
+        )
+        await task()
+
+        assert len(seen) == 1
+        assert seen[0][0] == 409
+        assert CONFLICT_CODE_BUILD_IN_PROGRESS in seen[0][1]
+        model = await row(rig.built, project_id)
+        assert model.workflow_status == "draft"
+        assert model.needs_republish_since is None
+        assert model.lock_version == 4

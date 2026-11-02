@@ -18,6 +18,7 @@ from rag_backend.modules.autopilot.domain.notice_log import (
     AttemptRecord,
     NoticeLog,
     ReviewRecord,
+    StoredPending,
 )
 
 _T = TypeVar("_T", bound=Hashable)
@@ -38,21 +39,40 @@ def merge_change(current: NoticeLog, change: LedgerChange) -> NoticeLog:
         reviews=_by_key(current.reviews, (base.reviews, new.reviews), _revision),
         reminders=_items(current.reminders, (base.reminders, new.reminders)),
         statuses=_items(current.statuses, (base.statuses, new.statuses)),
-        attempts=_by_key(current.attempts, (base.attempts, new.attempts), _key),
+        attempts=_attempts(current.attempts, (base.attempts, new.attempts)),
         message_ids=_items(current.message_ids, (base.message_ids, new.message_ids)),
-        pending=new.pending if new.pending != base.pending else current.pending,
+        pending=_pending(current, change),
         reminder_messages=_items(
             current.reminder_messages, (base.reminder_messages, new.reminder_messages)
         ),
     )
 
 
+def _pending(current: NoticeLog, change: LedgerChange) -> StoredPending | None:
+    """The writer's pending change, unless another writer changed it meanwhile."""
+    if change.new.pending == change.base.pending:
+        return current.pending
+    if current.pending != change.base.pending:
+        return current.pending
+    return change.new.pending
+
+
+def _attempts(
+    current: tuple[AttemptRecord, ...],
+    diff: tuple[tuple[AttemptRecord, ...], tuple[AttemptRecord, ...]],
+) -> tuple[AttemptRecord, ...]:
+    """Failure counts merge as increments, so concurrent failures all count."""
+    base = {item.key: item.count for item in diff[0]}
+    counts = {item.key: item.count for item in current}
+    for item in diff[1]:
+        delta = item.count - base.get(item.key, 0)
+        if delta:
+            counts[item.key] = counts.get(item.key, 0) + delta
+    return tuple(AttemptRecord(key=key, count=count) for key, count in counts.items())
+
+
 def _revision(review: ReviewRecord) -> int:
     return review.revision
-
-
-def _key(attempt: AttemptRecord) -> str:
-    return attempt.key
 
 
 def _items(
@@ -67,6 +87,7 @@ def _items(
 
 
 _R = TypeVar("_R", ReviewRecord, AttemptRecord)
+"""A record keyed in the ledger (reviews by revision)."""
 
 
 def _by_key(

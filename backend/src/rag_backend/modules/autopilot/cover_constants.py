@@ -104,8 +104,9 @@ REASON_COVER_REVIEW_KEPT = "website_cover_kept"
 REASON_COVER_REVIEW_UNSAFE = "website_cover_unsafe"
 REASON_COVER_REVIEW_INTERRUPTED = "website_cover_interrupted"
 TEXT_COVER_REVIEW_UNSAFE = (
-    "🖼️ A capa gerada no site não pôde ser aplicada nem desfeita com segurança. "
-    "Abra o carrossel no dashboard e confira o slide 1 antes de aprovar."
+    "🖼️ A troca da capa gerada no site não terminou: o slide 1 ainda não foi "
+    "renderizado com segurança. A aprovação fica bloqueada até os slides serem "
+    "renderizados de novo; confira o slide 1 no dashboard."
 )
 TEXT_COVER_REVIEW_INTERRUPTED = (
     "🖼️ A troca da capa gerada no site foi interrompida. Abra o carrossel no "

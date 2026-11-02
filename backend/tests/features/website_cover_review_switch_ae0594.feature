@@ -24,11 +24,11 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
 
   Scenario: A failed or overtaken website cover switch is rolled back
     Given the website cover was written to slide 1
-    When the render fails in any way, or an approval lands before the render finishes
-    Then slide 1 goes back to its previous cover and the skip reason is rolled_back
+    When the render fails in any way, or the carousel left the review before the render
+    Then slide 1 goes back to its previous cover, is rendered again, and the reason is rolled_back
     And the Telegram review is sent again
-    But when the rollback cannot get the lock in time the reason is rollback_failed
-    And the run is escalated instead of being handed back to the owner
+    But when the restore cannot get the lock or its re-render fails the reason is rollback_failed
+    And the run is escalated, and the needs-republish marker keeps approval refused
 
   Scenario: The Telegram review is held while slide 1 changes
     Given an autopilot run waits for the owner's Telegram review of the carousel
@@ -51,6 +51,16 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     Given a tap comes from a message that is none of the run's reviews or reminders
     When the owner taps publish on it
     Then nothing is approved
+
+  Scenario: No approval lands while a cover switch is between write and render
+    Given the website cover was written to slide 1 and its render has not settled
+    When the owner approves on the website or on Telegram
+    Then both approves are refused and the carousel stays a draft
+
+  Scenario: A render never changes slide 1's cover on an approved carousel
+    Given an approved or released carousel whose active artifacts recorded another cover
+    When the republish service, the sweep, a slide edit or a manual republish renders it
+    Then the render is refused with cover_change_requires_review and the slides stay
 
   Scenario: A typed publish time answers the review it was asked from
     Given the owner tapped "Outro horário" on a review and slide 1 changed since
@@ -91,7 +101,7 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     Given a run was held for a website cover and the task never released it
     When the worker sees the hold after its time limit
     Then the run is escalated and no review is sent, since slide 1 may not match the render
-    And no needs-republish marker lets the republish sweep render the cover unreviewed
+    And the needs-republish marker keeps approval refused until the republish sweep renders it
 
   Scenario: A cover the owner chose while the job ran wins on a completed carousel
     Given the owner picked another slide 1 while the generation ran

@@ -39,7 +39,10 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
     TopicCandidateModel,
 )
-from rag_backend.modules.editorial.infrastructure import carousel_owner_autofix
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_owner_autofix,
+    cover_review_rollback,
+)
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
     CoverReviewTarget,
@@ -108,11 +111,18 @@ def harness(engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> Harness:
     built = Harness(engine=engine)
     monkeypatch.setattr(db_config, "get_session_maker", built.sessions)
 
-    async def _render(_self: object, project_id: str) -> tuple[str, ...]:
+    async def _render(
+        _self: carousel_owner_autofix.RepublishRenderer, project_id: str
+    ) -> tuple[str, ...]:
+        built.renders.append(await run_facts(built, project_id))
+        return ()
+
+    async def _finalize(_session: AsyncSession, project_id: str) -> tuple[str, ...]:
         built.renders.append(await run_facts(built, project_id))
         return ()
 
     monkeypatch.setattr(carousel_owner_autofix.RepublishRenderer, "render", _render)
+    monkeypatch.setattr(cover_review_rollback, "_finalize", _finalize)
     from rag_backend.modules.autopilot.infrastructure import instagram_gateway
 
     def _record(name: str) -> Callable[..., Awaitable[object]]:

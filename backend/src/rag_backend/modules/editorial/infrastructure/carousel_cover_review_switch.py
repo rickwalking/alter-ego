@@ -5,12 +5,13 @@ stages the generated cover, and under the project lock and the lock-version
 CAS writes ``slide_cover`` only while the row still matches: in final review,
 not approved, not released, and slide 1's cover fields unchanged since the
 baseline (read ``FOR UPDATE``, so an owner write that takes no lock is never
-overwritten). It then
-re-renders through the republish renderer, the one the picker's switch uses,
-and re-checks the review: a failed render or an approval that landed
-meanwhile rolls the cover back (``cover_review_rollback``); a rollback that
-cannot run is ``rollback_failed``. The
-workflow, its approval and the release are never touched.
+overwritten), stamping the needs-republish marker with it: approval is
+refused while the marker is set, so nothing is approved between the write and
+a settled render. It then re-renders through the republish pipeline under the
+build lock, re-checking the review first; a failed render rolls the cover back
+and renders the previous one (``cover_review_rollback``), and a rollback that
+cannot settle is ``rollback_failed`` (the marker stays). The workflow, its
+approval and the release are never touched.
 
 ``reviewing_cover_task`` is the background run of the owner's website
 generation: the generated-cover selection, with the review switch for a completed
@@ -22,6 +23,7 @@ from __future__ import annotations
 import typing
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,6 +64,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover_generation impo
 )
 from rag_backend.modules.editorial.infrastructure.cover_review_rollback import (
     CoverRollback,
+    RenderTarget,
     render_and_settle,
     roll_back_cover,
     row_for_update,
@@ -91,8 +94,10 @@ class EditorialReviewCoverStore:
             stored = await _write(session, command)
             if stored.status != AUTOFIX_STATUS_FIXED or stored.cover is None:
                 return ReviewSwitchOutcome(status=stored.status)
-            errors = await render_and_settle(session, command.project_id)
-            if not errors and await _still_in_review(session, command.project_id):
+            errors = await render_and_settle(
+                session, RenderTarget(project_id=command.project_id, in_review=True)
+            )
+            if not errors:
                 return ReviewSwitchOutcome(status=AUTOFIX_STATUS_FIXED)
             rollback = CoverRollback(
                 project_id=command.project_id,
@@ -116,21 +121,6 @@ async def _version(session: AsyncSession, project_id: str) -> int | None:
     version = int(row.lock_version or 1) if row is not None else None
     await session.rollback()
     return version
-
-
-async def _still_in_review(session: AsyncSession, project_id: str) -> bool:
-    """No approval, release or run overtook the switch (a fresh locked read)."""
-    row = await row_for_update(session, project_id)
-    if row is None:
-        await session.rollback()
-        return False
-    found = ProjectAtVersion(
-        project=row.to_entity(),
-        lock_version=int(row.lock_version or 1),
-        workflow_status=str(row.workflow_status or ""),
-    )
-    await session.rollback()
-    return review_refusal(found) is None
 
 
 async def _load(session: AsyncSession, project_id: str) -> ProjectAtVersion | None:
@@ -230,10 +220,11 @@ async def _locked(session: AsyncSession, write: _ReviewWrite) -> _Stored:
 async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     """Write ``slide_cover`` while the locked row still allows it, else roll back.
 
-    No needs-republish marker is stamped: the republish sweep does not check the
-    approval, so it must never render this cover unreviewed. A process that dies
-    before the render leaves the run held; the worker escalates the outlived
-    hold instead of sending a review.
+    The needs-republish marker is stamped in the same commit: approval is
+    refused while it is set (website route and Telegram), and only a settled
+    render clears it. A process that dies before the render leaves the marker
+    for the republish sweep, which renders the carousel while approval is still
+    refused; the held Telegram review is escalated by the worker.
     """
     row = await row_for_update(session, write.command.project_id)
     if row is None:
@@ -252,6 +243,7 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
         return _Stored(status=refusal)
     previous = found.project.slide_cover
     row.slide_cover = slide_cover_row(write.cover)
+    row.needs_republish_since = datetime.now(UTC)
     await session.commit()
     return _Stored(status=AUTOFIX_STATUS_FIXED, cover=write.cover, previous=previous)
 

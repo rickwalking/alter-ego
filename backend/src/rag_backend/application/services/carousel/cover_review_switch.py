@@ -157,7 +157,10 @@ async def _held_switch(
     """Hold the review, switch, then release or escalate.
 
     A failed rollback, or a store that raised (the state is unknown), escalates
-    the held run: no review of a render slide 1 may not match goes out.
+    the held run: no review of a render slide 1 may not match goes out. A
+    cancelled task (a deploy) is not caught: the hold stays for the worker to
+    escalate and the needs-republish marker keeps approval refused until the
+    republish sweep renders the carousel.
     """
     run_id = await review.hold.hold(write.project_id)
     try:
