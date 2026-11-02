@@ -227,34 +227,64 @@ Answers to the three questions below:
      review at the current version is always safe).
 - **Worker** (`ReworkStep`): a `website_cover` rework waits (tick returns 0)
   until released; a hold older than 15 minutes (a restart killed the task) is
-  dropped and the final-review stop re-sends the review.
+  escalated (see below), never re-sent.
 - **Telegram taps are bound to their revision** (`PublishChoiceActions`,
   `FinalReviewApproval`, `review_revision_guard`): every review keyboard and
   every reminder message is recorded per revision in the notice ledger (the
   JSON `telegram_message_ids` column, no schema change). Approve, publish now
   and the schedule buttons on an `awaiting_owner` run resolve the tapped
   message's revision; an unknown message or a revision that is not the
-  carousel's current lock version answers "Esta revisão foi substituída" and
-  changes nothing, and when no review was sent yet for the current version the
-  run goes `awaiting_owner -> reworking` (`review_outdated`) so the worker sends
-  it. The editorial approve runs its CAS at the tapped revision, never at the
-  version read now. A typed time answers the newest recorded review. An already
-  approved carousel (a cancelled schedule) needs no approve and is not
-  checked: its slide 1 cannot change.
+  carousel's current lock version changes nothing. The answer is accurate: a
+  newer review is in the chat ("use a mensagem de revisão mais recente"); no
+  review was sent yet for the current version, so the run goes `awaiting_owner
+  -> reworking` (`review_outdated`, its 72-hour anchor kept) and the worker
+  sends it ("chega numa nova mensagem"); or the current review's delivery is
+  exhausted, so the owner is pointed at the dashboard (no bounce). The editorial
+  approve runs its CAS at the tapped revision, never at the version read now.
+  A typed time ("Outro horário") answers the revision of the message where
+  "Outro horário" was tapped: that revision is stored with the pending reply
+  (JSON ledger) and the approve CASes at it; a hold or a newly recorded review
+  drops an open time reply. A refused typed time gets text only (no buttons on
+  an unrecorded message). An already approved carousel (a cancelled schedule)
+  needs no approve and is not checked: its slide 1 cannot change.
 - **Hold bookkeeping:** the hold keeps the run's `updated_at` (the 72-hour
   review window) and stores its start time in the queued rework's feedback;
   an unchanged release restores `awaiting_owner` with the same anchor. The
   runner skips a run with an active hold and steps the next active run.
-- **Render failure, process death, approval during the switch:** the locked
-  write stamps `needs_republish_since` with the cover, so a process that dies
-  before the render leaves the republish sweep to render it. After the render
-  the store re-checks the review under a fresh locked read; a failed render,
-  or an approval/run that landed between the write and the render, restores
-  the previous cover under the lock and the CAS (re-rendering after an
-  approval), clears the marker and reports `rolled_back` (the Telegram review
-  is sent again). The write and the render cannot share one project lock (the
-  republish takes the same lock on its own connection), so the re-check after
-  the render closes that gap instead.
+- **Render failure, process death, approval during the switch:** every render
+  failure, whatever its type, is a render error. After the render the store
+  re-checks the review under a fresh locked read; a failed render, or an
+  approval/run that landed between the write and the render, restores the
+  previous cover under the lock and the CAS, retrying the lock for a bounded
+  time (30 x 4 s), only while slide 1 still holds exactly the switched value
+  (an owner's later value is kept), re-rendering after an approval. Restored is
+  `rolled_back` (review sent again); a restore that never gets the lock is
+  `rollback_failed`, logged as an error, and the held run is **escalated**
+  (`website_cover_unsafe`, lock version marked) instead of handed back, so no
+  review of a render slide 1 may not match goes out. A store that raises
+  leaves the run held. The write and the render cannot share one project lock
+  (the republish takes it on its own connection); the re-check after the
+  render closes that gap.
+- **No needs-republish marker (decision):** the republish sweep re-renders
+  every marked completed row without checking the approval, so a marker
+  stamped with the cover could put an unseen cover on an approved carousel.
+  The switch therefore stamps none. A process that dies mid-switch leaves the
+  run held; when the hold outlives its 15-minute limit the worker
+  **escalates** it (`website_cover_interrupted`) instead of sending a review.
+  Known limit: a website-only carousel (no autopilot run) whose process dies
+  between the write and the render keeps the new `slide_cover` with the old
+  artifacts until the owner picks a cover again.
+- **Notice ledger writes are serialized:** every writer passes the ledger it
+  read (`SaveNoticeLog.base`); `SqlNoticeLogStore.save` reads the row
+  `FOR UPDATE` and applies only that writer's change (three-way merge), so a
+  stale writer never erases a recorded review or reminder.
+- **Telegram GrokBot cover tap refused by the guard** maps to
+  `CoverSwitchStatus.REQUIRES_REVIEW` (`cover_requires_review`), not "file
+  missing".
+- **Telegram "Corrigir" on an approved carousel:** checked, already safe. The
+  tap needs the run in `awaiting_owner`, and the queued fix only runs while the
+  editorial is at `final_review / awaiting_human`; an approved carousel is at
+  `approved`, so the rework is dropped and nothing is repaired.
 - **Picker guard under the lock:** `SlideCoverSwitchService` re-reads the
   approval and release (`EditorialReviewState`, a direct column select, never
   the cached row) after the CAS under the project lock; an approved or
@@ -331,6 +361,17 @@ lines, `NoReviewHold` moved to the test fakes, typed test helpers, the
 frontend test scenario fixed, the unchanged release keeps the 72-hour
 anchor. Existing approve/schedule test fixtures now tap a recorded review
 (message 9 at revision 4), as a real tap does.
+
+### 2026-11-02 (second review fixes)
+
+B1: the typed time answers the tapped revision (stored with the pending
+reply), dropped on a hold or a new review. B2: catch-all render errors, a
+bounded waiting restore with its real result, escalation on a failed rollback
+or an outlived hold, no needs-republish marker, whole-value rollback compare.
+Should-fixes: serialized ledger writes (row lock + three-way merge), a test of
+the approve CAS at the tapped revision, no bounce for an exhausted review and
+no window reset, accurate refusal texts and no unrecorded keyboards, the
+GrokBot cover refusal reason, typed command objects instead of tuples.
 
 ## Files Touched
 
