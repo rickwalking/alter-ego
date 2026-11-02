@@ -31,6 +31,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_BUILD_IN_PROGRESS,
     CONFLICT_CODE_MUTATION_IN_PROGRESS,
     CONFLICT_CODE_REVISION_CAP_EXCEEDED,
     CONFLICT_CODE_RUN_IN_PROGRESS,
@@ -161,6 +162,26 @@ def ensure_resume_not_in_progress(
     )
 
 
+async def ensure_rendered_before_approve(db: AsyncSession, project_id: str) -> None:
+    """Refuse an approve while a re-render of the carousel is still pending."""
+    from sqlalchemy import select
+
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    pending = await db.scalar(
+        select(CarouselProjectModel.needs_republish_since).where(
+            CarouselProjectModel.id == project_id
+        )
+    )
+    if pending is None:
+        return
+    raise CarouselConflictError(
+        CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
+    )
+
+
 async def ensure_no_artifact_mutation_in_progress(
     db: AsyncSession,
     project_id: str,
@@ -197,8 +218,13 @@ async def validate_resume_workflow_gates(
     """Validate revision cap and persona score before accepting resume.
 
     The revision-cap conflict names the charged phase (the target on a send-back), which
-    the typed 409 client copy reads.
+    the typed 409 client copy reads. An approve while the carousel's slides wait for
+    a re-render (the needs-republish marker: a slide-1 cover switch or a slide edit
+    not rendered yet) is refused as ``build_in_progress``: the approval would be for
+    artifacts that do not show the carousel's content.
     """
+    if body.action == REVIEW_ACTION_APPROVE:
+        await ensure_rendered_before_approve(ctx.db, ctx.project_id)
     if workflow_state is None:
         return
     if body.action == REVIEW_ACTION_REVISE:
