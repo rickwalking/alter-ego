@@ -51,6 +51,9 @@ from rag_backend.domain.constants.carousel_cover_pick import (
     COVER_PICK_STATUS_SWITCHED,
     ERR_COVER_PICK_ASSET_NOT_ALLOWED,
 )
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_conflict import (
@@ -60,7 +63,6 @@ from rag_backend.domain.models.carousel_conflict import (
 from rag_backend.modules.autopilot import project_cover_offer
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
-    CarouselProjectWriteOwner,
     cover_pick_service,
 )
 
@@ -103,13 +105,19 @@ async def get_cover_pick_context(
 
 
 def _refused(error: CoverPickError) -> HTTPException:
+    """409 for an approved or published carousel (its state); 422 otherwise."""
+    if error.code == ERR_COVER_SWITCH_REQUIRES_REVIEW:
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.code)
     return HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=error.code
     )
 
 
 def _raise_unless_switched(result: SlideCoverSwitchResult) -> None:
-    """Conflict → 409; a vanished cover → 422; a failed re-render → 422/409."""
+    """Conflict or approved meanwhile → 409; a vanished cover → 422; a failed
+    re-render → 422/409."""
+    if result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW:
+        raise _refused(CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW))
     if result.status == AUTOFIX_STATUS_CONFLICT:
         raise CarouselConflictError(
             CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)
@@ -162,8 +170,8 @@ async def pick_cover(
 ) -> CoverPickResponse:
     """Stage, store under the lock-version CAS, then republish slides + PDFs.
 
-    The fresh artifacts reflect every pending copy edit too, so the needs-republish
-    marker is cleared as a republish does.
+    The switch stamps the needs-republish marker with the new slide 1 and clears
+    it (compare-and-clear) once its render settled, as a republish does.
     """
     command = CoverPickCommand(
         project=ctx.project,
@@ -176,7 +184,6 @@ async def pick_cover(
         raise _refused(error) from error
     _raise_unless_switched(result)
     project_id = str(ctx.project.id)
-    await CarouselProjectWriteOwner(ctx.db).clear_needs_republish(project_id)
     await ctx.db.commit()
     updated = await CarouselAutomationAcl(ctx.db).load_project(project_id)
     return CoverPickResponse(

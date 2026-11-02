@@ -28,6 +28,7 @@ from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_GOAL
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_NOTHING_TO_REDRIVE,
     ERR_RESUME_ALREADY_IN_PROGRESS,
+    ERR_RESUME_RENDER_PENDING,
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
@@ -379,6 +380,7 @@ _REFUSALS: dict[str, ResumeStatus] = {
     ERR_VERSION_CONFLICT: ResumeStatus.VERSION_CONFLICT,
     ERR_REVISION_CAP_EXCEEDED: ResumeStatus.REVISION_CAP,
     ERR_RESUME_ALREADY_IN_PROGRESS: ResumeStatus.IN_PROGRESS,
+    ERR_RESUME_RENDER_PENDING: ResumeStatus.RENDER_PENDING,
     ERR_NOTHING_TO_REDRIVE: ResumeStatus.NOT_PARKED,
 }
 

@@ -7,21 +7,24 @@ id, and attempt count. Message ids are always kept in ``ids``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rag_backend.modules.autopilot.notify_constants import (
     LEDGER_ALBUM,
     LEDGER_ATTEMPTS,
     LEDGER_IDS,
     LEDGER_KEYBOARD,
+    LEDGER_REMINDER_IDS,
     LEDGER_REMINDERS,
     LEDGER_REVIEWS,
     LEDGER_STATUSES,
 )
+from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_PENDING_PHASE
 from rag_backend.modules.autopilot.webhook_constants import (
     LEDGER_PENDING,
     LEDGER_PENDING_OWNER,
     LEDGER_PENDING_PHASE,
+    LEDGER_PENDING_REVISION,
 )
 
 
@@ -32,6 +35,14 @@ class ReviewRecord:
     revision: int
     album_ids: tuple[int, ...]
     keyboard_id: int | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class ReminderRecord:
+    """One nudge message, sent for review ``revision`` (it carries the buttons)."""
+
+    revision: int
+    message_id: int
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,6 +59,7 @@ class StoredPending:
 
     owner_chat_id: str
     phase: str
+    revision: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -60,6 +72,7 @@ class NoticeLog:
     attempts: tuple[AttemptRecord, ...] = ()
     message_ids: tuple[int, ...] = ()
     pending: StoredPending | None = None
+    reminder_messages: tuple[ReminderRecord, ...] = ()
 
 
 def notice_log_is_empty(log: NoticeLog) -> bool:
@@ -73,14 +86,7 @@ def notice_log_is_empty(log: NoticeLog) -> bool:
 
 def set_pending(log: NoticeLog, pending: StoredPending | None) -> NoticeLog:
     """Replace the pending rework phase without dropping delivered notices."""
-    return NoticeLog(
-        reviews=log.reviews,
-        reminders=log.reminders,
-        statuses=log.statuses,
-        attempts=log.attempts,
-        message_ids=log.message_ids,
-        pending=pending,
-    )
+    return replace(log, pending=pending)
 
 
 def find_review(log: NoticeLog, revision: int) -> ReviewRecord | None:
@@ -113,16 +119,23 @@ def reminder_revision(log: NoticeLog) -> int:
 
 
 def record_review(log: NoticeLog, review: ReviewRecord) -> NoticeLog:
-    """Replace any partial review for the same revision and append its ids."""
+    """Replace any partial review for the same revision and append its ids.
+
+    A publish-time reply still open for an older review is dropped: it answered
+    a render the new review replaces.
+    """
     kept = tuple(item for item in log.reviews if item.revision != review.revision)
-    return NoticeLog(
+    return replace(
+        log,
         reviews=(*kept, review),
-        reminders=log.reminders,
-        statuses=log.statuses,
-        attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, _review_ids(review)),
-        pending=log.pending,
+        pending=None if is_time_reply(log.pending) else log.pending,
     )
+
+
+def is_time_reply(pending: StoredPending | None) -> bool:
+    """True for a pending publish-time reply ("Outro horário")."""
+    return pending is not None and pending.phase == SCHEDULE_PENDING_PHASE
 
 
 def record_status(log: NoticeLog, event_id: str, message_id: int) -> NoticeLog:
@@ -130,28 +143,24 @@ def record_status(log: NoticeLog, event_id: str, message_id: int) -> NoticeLog:
     statuses = log.statuses
     if event_id not in statuses:
         statuses = (*statuses, event_id)
-    return NoticeLog(
-        reviews=log.reviews,
-        reminders=log.reminders,
+    return replace(
+        log,
         statuses=statuses,
-        attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, (message_id,)),
-        pending=log.pending,
     )
 
 
 def record_reminder(log: NoticeLog, revision: int, message_id: int) -> NoticeLog:
-    """Remember one nudge for ``revision``."""
+    """Remember one nudge for ``revision`` and its message (its buttons act)."""
     reminders = log.reminders
     if revision not in reminders:
         reminders = (*reminders, revision)
-    return NoticeLog(
-        reviews=log.reviews,
+    sent = ReminderRecord(revision=revision, message_id=message_id)
+    return replace(
+        log,
         reminders=reminders,
-        statuses=log.statuses,
-        attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, (message_id,)),
-        pending=log.pending,
+        reminder_messages=(*log.reminder_messages, sent),
     )
 
 
@@ -159,14 +168,7 @@ def bump_attempt(log: NoticeLog, key: str) -> NoticeLog:
     """Count one failed send. Does not add a message id."""
     count = attempt_count(log, key) + 1
     kept = tuple(item for item in log.attempts if item.key != key)
-    return NoticeLog(
-        reviews=log.reviews,
-        reminders=log.reminders,
-        statuses=log.statuses,
-        attempts=(*kept, AttemptRecord(key=key, count=count)),
-        message_ids=log.message_ids,
-        pending=log.pending,
-    )
+    return replace(log, attempts=(*kept, AttemptRecord(key=key, count=count)))
 
 
 def dump_log(log: NoticeLog) -> dict[str, object]:
@@ -178,10 +180,14 @@ def dump_log(log: NoticeLog) -> dict[str, object]:
             LEDGER_KEYBOARD: review.keyboard_id,
         }
     attempts = {item.key: item.count for item in log.attempts}
+    reminder_ids: dict[str, list[int]] = {}
+    for sent in log.reminder_messages:
+        reminder_ids.setdefault(str(sent.revision), []).append(sent.message_id)
     payload: dict[str, object] = {
         LEDGER_IDS: list(log.message_ids),
         LEDGER_REVIEWS: reviews,
         LEDGER_REMINDERS: list(log.reminders),
+        LEDGER_REMINDER_IDS: reminder_ids,
         LEDGER_STATUSES: list(log.statuses),
         LEDGER_ATTEMPTS: attempts,
     }
@@ -189,6 +195,7 @@ def dump_log(log: NoticeLog) -> dict[str, object]:
         payload[LEDGER_PENDING] = {
             LEDGER_PENDING_OWNER: log.pending.owner_chat_id,
             LEDGER_PENDING_PHASE: log.pending.phase,
+            LEDGER_PENDING_REVISION: log.pending.revision,
         }
     return payload
 
@@ -210,7 +217,23 @@ def _from_object(raw: dict[str, object]) -> NoticeLog:
         attempts=_attempts(raw.get(LEDGER_ATTEMPTS)),
         message_ids=_ints(raw.get(LEDGER_IDS)),
         pending=_pending(raw.get(LEDGER_PENDING)),
+        reminder_messages=_reminder_messages(raw.get(LEDGER_REMINDER_IDS)),
     )
+
+
+def _reminder_messages(raw: object) -> tuple[ReminderRecord, ...]:
+    if not isinstance(raw, dict):
+        return ()
+    found: list[ReminderRecord] = []
+    for key, value in raw.items():
+        revision = _key_int(key)
+        if revision is None:
+            continue
+        found.extend(
+            ReminderRecord(revision=revision, message_id=message_id)
+            for message_id in _ints(value)
+        )
+    return tuple(found)
 
 
 def _pending(raw: object) -> StoredPending | None:
@@ -222,7 +245,11 @@ def _pending(raw: object) -> StoredPending | None:
         return None
     if not isinstance(phase, str) or not phase:
         return None
-    return StoredPending(owner_chat_id=owner, phase=phase)
+    return StoredPending(
+        owner_chat_id=owner,
+        phase=phase,
+        revision=_optional_int(raw.get(LEDGER_PENDING_REVISION)),
+    )
 
 
 def _reviews(raw: object) -> tuple[ReviewRecord, ...]:

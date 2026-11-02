@@ -334,7 +334,7 @@ def _callback(update_id: int, data: str) -> dict[str, object]:
             "id": f"cb-{update_id}",
             "from": {"id": 42},
             "data": data,
-            "message": {"message_id": 3, "chat": {"id": 42}},
+            "message": {"message_id": 9, "chat": {"id": 42}},
         },
     }
 

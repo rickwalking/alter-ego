@@ -15,6 +15,7 @@ editorial facade loads while the ORM registry is still initialising).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -195,6 +196,31 @@ class _ProjectStager:
         return await stage_slide_cover(self._session, project)
 
 
+class WriteOwnerRenderMarker:
+    """``RenderMarker`` through the carousel write owner."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def mark(self, project_id: str) -> None:
+        """Stamp the needs-republish marker (flush; the caller commits)."""
+        from rag_backend.modules.editorial.infrastructure import (
+            CarouselProjectWriteOwner,
+        )
+
+        await CarouselProjectWriteOwner(self._session).mark_needs_republish(project_id)
+
+    async def clear(self, project_id: str, rendered_from: datetime) -> None:
+        """Compare-and-clear the marker and commit."""
+        from rag_backend.modules.editorial.infrastructure import (
+            CarouselProjectWriteOwner,
+        )
+
+        await CarouselProjectWriteOwner(self._session).clear_needs_republish(
+            project_id, rendered_from
+        )
+
+
 def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService:
     """The cover switch of one session: project stager + republish renderer."""
     from rag_backend.application.services.carousel.slide_cover_switch import (
@@ -207,6 +233,9 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
     from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
         RepublishRenderer,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+        EditorialReviewState,
+    )
 
     return SlideCoverSwitchService(
         SlideCoverSwitchDeps(
@@ -214,6 +243,8 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
             repo=PostgresCarouselRepository(session=session),
             stager=_ProjectStager(session),
             renderer=RepublishRenderer(session),
+            review=EditorialReviewState(session),
+            marker=WriteOwnerRenderMarker(session),
         )
     )
 

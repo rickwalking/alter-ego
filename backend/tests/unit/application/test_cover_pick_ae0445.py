@@ -28,6 +28,7 @@ from rag_backend.application.services.carousel.cover_pick import (
     CoverPickService,
     current_cover_asset,
 )
+from rag_backend.application.services.carousel.cover_switch_guard import ReviewState
 from rag_backend.application.services.carousel.owner_autofix_lock import LockedWrite
 from rag_backend.application.services.carousel.slide_cover_switch import (
     HookPhotoChoice,
@@ -102,11 +103,25 @@ def _project(**changes: object) -> CarouselProject:
     return project
 
 
+class DraftReview:
+    """A carousel waiting for its first approval."""
+
+    @staticmethod
+    async def review_state(project_id: str) -> ReviewState | None:
+        del project_id
+        return ReviewState(workflow_status="draft", is_public=False)
+
+
 def _service(
     library: _Library, offers: _Offers | None = None
 ) -> tuple[CoverPickService, _Switcher]:
     switcher = _Switcher()
-    deps = CoverPickDeps(library=library, offers=offers or _Offers(), switcher=switcher)
+    deps = CoverPickDeps(
+        library=library,
+        offers=offers or _Offers(),
+        switcher=switcher,
+        review=DraftReview(),
+    )
     return CoverPickService(deps), switcher
 
 

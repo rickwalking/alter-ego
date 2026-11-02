@@ -43,7 +43,8 @@ class ResumeStatus(StrEnum):
     """Outcome of one approve or revise.
 
     ``IN_PROGRESS``: a run is already in flight. ``NOT_PARKED``: a re-drive found no
-    parked node. Neither changes anything.
+    parked node. ``RENDER_PENDING``: a final-review approve while the slides wait
+    for a re-render. None changes anything.
     """
 
     APPLIED = "applied"
@@ -52,6 +53,7 @@ class ResumeStatus(StrEnum):
     PROVIDER_OUTAGE = "provider_outage"
     IN_PROGRESS = "in_progress"
     NOT_PARKED = "not_parked"
+    RENDER_PENDING = "render_pending"
 
 
 @dataclass(frozen=True, kw_only=True)

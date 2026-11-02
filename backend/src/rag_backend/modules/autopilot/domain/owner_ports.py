@@ -12,11 +12,16 @@ from rag_backend.modules.autopilot.domain.models import TelegramUpdate
 
 @dataclass(frozen=True, kw_only=True)
 class PendingRework:
-    """The phase the owner picked, waiting for their next text message."""
+    """The phase the owner picked, waiting for their next text message.
+
+    ``revision`` is the review revision of the tapped message that asked for the
+    text (a typed publish time answers that review, never a newer one).
+    """
 
     owner_chat_id: str
     run_id: UUID
     phase: str
+    revision: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

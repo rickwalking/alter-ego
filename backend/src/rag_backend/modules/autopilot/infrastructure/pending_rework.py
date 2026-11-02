@@ -41,9 +41,15 @@ class SqlPendingReworkStore:
         run = await self._runs.get(pending.run_id)
         if run is None:
             return
-        stored = StoredPending(owner_chat_id=pending.owner_chat_id, phase=pending.phase)
+        stored = StoredPending(
+            owner_chat_id=pending.owner_chat_id,
+            phase=pending.phase,
+            revision=pending.revision,
+        )
         log = set_pending(run.notice_log, stored)
-        await self._notices.save(SaveNoticeLog(run_id=run.run_id, log=log))
+        await self._notices.save(
+            SaveNoticeLog(run_id=run.run_id, log=log, base=run.notice_log)
+        )
 
     async def take(self, owner_chat_id: str) -> PendingRework | None:
         """Return and clear the pending phase for this owner."""
@@ -58,11 +64,14 @@ class SqlPendingReworkStore:
 
     async def _clear(self, run: AutopilotRun, found: StoredPending) -> PendingRework:
         cleared = set_pending(run.notice_log, None)
-        await self._notices.save(SaveNoticeLog(run_id=run.run_id, log=cleared))
+        await self._notices.save(
+            SaveNoticeLog(run_id=run.run_id, log=cleared, base=run.notice_log)
+        )
         return PendingRework(
             owner_chat_id=found.owner_chat_id,
             run_id=run.run_id,
             phase=found.phase,
+            revision=found.revision,
         )
 
 

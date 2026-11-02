@@ -5,8 +5,11 @@ the carousel's generations; ``POST /{id}/cover-generations`` checks the
 request (confirmed, owner only, own photos or none, caps), records a pending
 generation and runs the Grok Bot job in a tracked background task (202). A
 succeeded result becomes slide 1's cover while the carousel is still before
-the owner's review and no cover was chosen; otherwise it is picked like any
-other cover through ``PUT /{id}/cover``.
+the owner's review and no cover was chosen. On a completed carousel waiting
+for its first approval it switches slide 1, re-renders, and the carousel stays
+in final review; this layer composes the autopilot's hold of the Telegram
+review, so that review is sent again. On an approved, scheduled or published
+carousel it is only a picker option (``PUT /{id}/cover``).
 """
 
 from __future__ import annotations
@@ -48,11 +51,13 @@ from rag_backend.domain.constants.rate_limits import (
 )
 from rag_backend.domain.models import CarouselProject, User
 from rag_backend.domain.models.cover_generation import CoverGeneration
+from rag_backend.modules.autopilot import cover_review_hold
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
+    CoverReviewTarget,
     cover_generation_service,
     cover_run_wiring,
-    selecting_cover_task,
+    reviewing_cover_task,
 )
 from rag_backend.modules.image_bridge import ImageBridgeConfigError
 
@@ -186,8 +191,9 @@ async def start_cover_generation(
         run = await ctx.service.start(command)
     except CoverGenerationError as error:
         raise _http_error(error) from error
+    target = CoverReviewTarget(project=ctx.project, hold=cover_review_hold())
     schedule_cover_generation(
-        selecting_cover_task(wiring, run, ctx.project), str(run.generation.id)
+        reviewing_cover_task(wiring, run, target), str(run.generation.id)
     )
     return _generation(run.generation)
 

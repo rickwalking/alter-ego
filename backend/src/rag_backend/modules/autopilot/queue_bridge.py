@@ -223,6 +223,7 @@ async def _revive_once(session: AsyncSession, run: AutopilotRun) -> bool:
                 SaveNoticeLog(
                     run_id=queued_id,
                     log=replace(queued.notice_log, statuses=statuses),
+                    base=queued.notice_log,
                 )
             )
     await session.commit()

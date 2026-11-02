@@ -139,16 +139,26 @@ class CarouselProjectWriteOwner:
         project.needs_republish_since = datetime.now(UTC)
         await self._session.flush()
 
-    async def clear_needs_republish(self, project_id: str) -> None:
-        """Clear the republish marker and commit (single owner).
+    async def clear_needs_republish(
+        self, project_id: str, rendered_from: datetime
+    ) -> None:
+        """Clear the republish marker if the render started after it; commit.
 
-        Commit lives here (not in the infrastructure/database sweeper) so the
+        Compare-and-clear: a marker stamped after ``rendered_from`` (a write that
+        landed while the render ran) is kept for the next render. Commit lives
+        here (not in the infrastructure/database sweeper) so the
         ddd:adapter-commit boundary holds — adapters flush, owners commit.
         """
-        project = await self._session.get(CarouselProjectModel, project_id)
-        if project is None:
-            return
-        project.needs_republish_since = None
+        project = await self._session.get(
+            CarouselProjectModel,
+            project_id,
+            with_for_update=True,
+            populate_existing=True,
+        )
+        if project is not None and _stamped_by(
+            project.needs_republish_since, rendered_from
+        ):
+            project.needs_republish_since = None
         await self._session.commit()
 
     async def bump_resume_lock_version(
@@ -173,3 +183,12 @@ class CarouselProjectWriteOwner:
 
 
 __all__ = ["CarouselProjectWriteOwner"]
+
+
+def _stamped_by(marker: datetime | None, rendered_from: datetime) -> bool:
+    """True when a set marker predates the render (SQLite reads it back naive)."""
+    if marker is None:
+        return False
+    if marker.tzinfo is None:
+        marker = marker.replace(tzinfo=UTC)
+    return marker <= rendered_from

@@ -3,8 +3,10 @@
 ``EditorialCoverLibrary`` reads the owner's slide-1 photos (role ``hook``,
 stored file present) and stages one where a project's slides render;
 ``cover_pick_service`` builds the picker over it, the given GrokBot offer
-source, the covers Grok generated for the carousel, and the cover switch
-(lock-version CAS + republish).
+source, the covers Grok generated for the carousel, the cover switch
+(lock-version CAS + republish) and ``EditorialReviewState``, the approval the
+picker and the switch check before an approved or published carousel would be
+re-rendered.
 
 The ORM, repositories and the carousel services are imported lazily (the
 editorial facade loads while the ORM registry is still initialising).
@@ -78,12 +80,16 @@ def cover_pick_service(
     from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
         EditorialGeneratedCovers,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+        EditorialReviewState,
+    )
 
     return CoverPickService(
         CoverPickDeps(
             library=EditorialCoverLibrary(session),
             offers=offers,
             switcher=slide_cover_switch_service(session),
+            review=EditorialReviewState(session),
             generated=EditorialGeneratedCovers(session),
         )
     )

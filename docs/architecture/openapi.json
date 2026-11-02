@@ -15500,7 +15500,7 @@
     },
     "/api/carousels/{project_id}/cover": {
       "put": {
-        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.\n\nThe fresh artifacts reflect every pending copy edit too, so the needs-republish\nmarker is cleared as a republish does.",
+        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.\n\nThe switch stamps the needs-republish marker with the new slide 1 and clears\nit (compare-and-clear) once its render settled, as a republish does.",
         "operationId": "pick_cover_api_carousels__project_id__cover_put",
         "parameters": [
           {
@@ -16121,7 +16121,7 @@
     },
     "/api/carousels/{project_id}/hook-photo": {
       "put": {
-        "description": "Use one of the owner's photos on slide 1 of a POV carousel.",
+        "description": "Use one of the owner's photos on slide 1 of a POV carousel.\n\nRefused (409) on an approved or released carousel; a completed one is\nmarked for a re-render first (``hook_photo_guard``).",
         "operationId": "select_hook_photo_api_carousels__project_id__hook_photo_put",
         "requestBody": {
           "content": {
@@ -16152,6 +16152,9 @@
           },
           "404": {
             "description": "Carousel project not found"
+          },
+          "409": {
+            "description": "cover_switch_requires_review"
           },
           "422": {
             "content": {

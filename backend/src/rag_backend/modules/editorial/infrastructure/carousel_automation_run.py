@@ -26,7 +26,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_NOTHING_TO_REDRIVE,
     ERR_RESUME_ALREADY_IN_PROGRESS,
+    ERR_RESUME_RENDER_PENDING,
+    PHASE_FINAL_REVIEW,
     PHASE_STATUS_IN_PROGRESS,
+    REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
     RUN_ACTION_REDRIVE,
 )
@@ -56,14 +59,18 @@ class AutomationRun:
 class _RowFacts:
     phase_status: str
     topic: str
+    render_pending: bool = False
 
 
 async def run_automation_phase(run: AutomationRun) -> None:
     """Commit the run start, then run the phase inline with run ownership.
 
     Raises ``ValueError`` before any work: ``resume_already_in_progress``
-    when a run is in flight, ``version_conflict`` when the CAS loses, and
-    ``revision_cap_exceeded`` for a revise over the cap. A failure inside the
+    when a run is in flight, ``resume_render_pending`` when a final-review
+    approve meets a pending re-render (the needs-republish marker of a cover
+    switch or a slide edit),
+    ``version_conflict`` when the CAS loses, and ``revision_cap_exceeded`` for
+    a revise over the cap. A failure inside the
     phase does not raise: the run wrapper marks the row ``failed`` and
     publishes ``run.finished``, as for the HTTP resume.
     """
@@ -74,6 +81,8 @@ async def run_automation_phase(run: AutomationRun) -> None:
     facts = await _row_facts(run.session, run.project_id)
     if facts.phase_status == PHASE_STATUS_IN_PROGRESS:
         raise ValueError(ERR_RESUME_ALREADY_IN_PROGRESS)
+    if run.action == REVIEW_ACTION_APPROVE and facts.render_pending:
+        raise ValueError(ERR_RESUME_RENDER_PENDING)
     await _ensure_revision_room(run, facts.topic)
     owner = CarouselProjectWriteOwner(run.session)
     await owner.bump_resume_lock_version(run.project_id, run.expected_version)
@@ -118,14 +127,21 @@ async def _row_facts(session: AsyncSession, project_id: str) -> _RowFacts:
     )
 
     result = await session.execute(
-        select(CarouselProjectModel.phase_status, CarouselProjectModel.topic).where(
-            CarouselProjectModel.id == project_id
-        )
+        select(
+            CarouselProjectModel.phase_status,
+            CarouselProjectModel.topic,
+            CarouselProjectModel.needs_republish_since,
+            CarouselProjectModel.current_phase,
+        ).where(CarouselProjectModel.id == project_id)
     )
     row = result.one_or_none()
     if row is None:
         return _RowFacts(phase_status="", topic="")
-    return _RowFacts(phase_status=str(row[0] or ""), topic=str(row[1] or ""))
+    return _RowFacts(
+        phase_status=str(row[0] or ""),
+        topic=str(row[1] or ""),
+        render_pending=row[2] is not None and row[3] == PHASE_FINAL_REVIEW,
+    )
 
 
 async def _ensure_revision_room(run: AutomationRun, title: str) -> None:

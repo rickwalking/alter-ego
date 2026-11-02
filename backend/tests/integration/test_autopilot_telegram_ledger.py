@@ -90,7 +90,9 @@ async def test_notice_log_round_trips_without_moving_updated_at(
         NoticeLog(),
         ReviewRecord(revision=4, album_ids=(10, 11), keyboard_id=12),
     )
-    await SqlNoticeLogStore(db_session).save(SaveNoticeLog(run_id=run.run_id, log=log))
+    await SqlNoticeLogStore(db_session).save(
+        SaveNoticeLog(run_id=run.run_id, log=log, base=before.notice_log)
+    )
     stored = await repo.get(run.run_id)
     assert stored is not None
     assert stored.notice_log.reviews[0].keyboard_id == 12
@@ -169,7 +171,7 @@ async def test_recent_events_skip_bad_ids_and_non_object_payloads(
     assert mine[1].payload == {"revision": 4}
     assert mine[0].created_at.tzinfo is not None
     await SqlNoticeLogStore(db_session).save(
-        SaveNoticeLog(run_id=uuid4(), log=NoticeLog())
+        SaveNoticeLog(run_id=uuid4(), log=NoticeLog(), base=NoticeLog())
     )
 
 

@@ -3,6 +3,12 @@
 Shared by publish-now and scheduling. A carousel whose workflow is
 already ``approved_for_publish`` (a schedule the owner cancelled) is not
 approved a second time.
+
+The approve is bound to the revision of the message the owner tapped: the
+editorial resume runs its lock-version compare-and-set at that revision, so a
+review or reminder sent for an older render (slide 1 changed since, the new
+review maybe not delivered yet) never approves the current one.
+``current_revision`` lets the caller refuse before any run state moves.
 """
 
 from __future__ import annotations
@@ -38,17 +44,33 @@ class FinalReviewApproval:
     release_port: CarouselReleaser
     carousels: CarouselPublishSource | None = None
 
-    async def approve(self, run: AutopilotRun) -> ResumeStatus:
-        """Approve final review once. Already approved counts as applied."""
+    async def current_revision(self, run: AutopilotRun) -> int | None:
+        """The revision an approve must answer now; None when no approve is needed.
+
+        An already approved carousel needs no approve (its slide 1 cannot change).
+        """
+        project_id = run.carousel_project_id or ""
+        if await self._already_approved(project_id):
+            return None
+        return (await self.editorial.read_gate(project_id)).lock_version
+
+    async def approve(
+        self, run: AutopilotRun, revision: int | None = None
+    ) -> ResumeStatus:
+        """Approve final review once, at ``revision``. Already approved is applied.
+
+        Without ``revision`` (no tapped message) the current lock version is used.
+        """
         project_id = run.carousel_project_id or ""
         if await self._already_approved(project_id):
             return ResumeStatus.APPLIED
-        snapshot = await self.editorial.read_gate(project_id)
+        if revision is None:
+            revision = (await self.editorial.read_gate(project_id)).lock_version
         result = await self.editorial.resume(
             ResumeCommand(
                 project_id=project_id,
                 action=REVIEW_ACTION_APPROVE,
-                expected_version=snapshot.lock_version,
+                expected_version=revision,
                 feedback="",
                 phase=GATE_FINAL_REVIEW,
             )

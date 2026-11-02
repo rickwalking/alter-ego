@@ -155,6 +155,10 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover_generation impo
 from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
     cover_pick_service,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_review_switch import (
+    CoverReviewTarget,
+    reviewing_cover_task,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
     GateRepairReport,
     OwnerAutofixReport,
@@ -195,6 +199,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_slide_fix import (
     SlideFixRequest,
     SlideFixSlideReport,
     run_slide_fix,
+)
+from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+    EditorialReviewState,
 )
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
@@ -275,6 +282,7 @@ __all__ = [
     "CarouselStatus",
     "CarouselTheme",
     "CoverImageRequest",
+    "CoverReviewTarget",
     "CoverRunWiring",
     "CoverSwitchRequest",
     "EditorialAdapters",
@@ -282,6 +290,7 @@ __all__ = [
     "EditorialPorts",
     "EditorialProject",
     "EditorialProjectView",
+    "EditorialReviewState",
     "EditorialService",
     "EditorialWorkflow",
     "EditorialWorkflowEngine",
@@ -341,6 +350,7 @@ __all__ = [
     "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",
+    "reviewing_cover_task",
     "run_automation_phase",
     "run_gate_repair",
     "run_owner_autofix",

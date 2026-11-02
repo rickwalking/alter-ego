@@ -10,6 +10,9 @@ cover through ``POST /api/autopilot/assets`` and names it on a topic
 - An unused cover may be attached for 6 hours; then the sweep deletes it.
 - Telegram callback ``ap:cv:<run>`` uses the cover and ``ap:cvoff:<run>`` drops it.
 - The rework marker the worker tick reads fits ``REWORK_PHASE_LENGTH``.
+- A website cover switching slide 1 while the run waits for the owner's review
+  holds the run in ``reworking`` (``COVER_REVIEW_HOLD_PHASE``; the worker waits,
+  at most ``COVER_REVIEW_HOLD_MAX_SECONDS``) until the switch is done.
 - A slide-1 switch that was stored but whose re-render failed is escalated, not done.
 - The thesis-time cover photo is sent once per run (a notice-ledger key).
 """
@@ -84,11 +87,45 @@ TEXT_COVER_SWITCHING = "🖼️ Trocando a capa do slide 1. A revisão volta em 
 COVER_REWORK_PHASE = "owner_cover"
 REASON_COVER_SWITCH = "owner_cover_switch"
 REASON_COVER_MISSING = "cover_file_missing"
+REASON_COVER_REQUIRES_REVIEW = "cover_requires_review"
+TEXT_COVER_REQUIRES_REVIEW = (
+    "🖼️ Este carrossel já foi aprovado ou publicado: a capa do slide 1 não muda "
+    "sem uma nova revisão."
+)
 REASON_COVER_RENDER_FAILED = "cover_render_failed"
 TEXT_COVER_RENDER_FAILED = (
     "🖼️ A troca da capa do slide 1 não renderizou. Os slides não mudaram; "
     "abra o carrossel no dashboard e gere de novo."
 )
+COVER_REVIEW_HOLD_PHASE = "website_cover"
+COVER_REVIEW_HOLD_MAX_SECONDS = 15 * 60.0
+REASON_COVER_REVIEW_HOLD = "website_cover_switch"
+REASON_COVER_REVIEW_KEPT = "website_cover_kept"
+REASON_COVER_REVIEW_UNSAFE = "website_cover_unsafe"
+REASON_COVER_REVIEW_INTERRUPTED = "website_cover_interrupted"
+TEXT_COVER_REVIEW_UNSAFE = (
+    "🖼️ A troca da capa gerada no site não terminou: o slide 1 ainda não foi "
+    "renderizado com segurança. A aprovação fica bloqueada até os slides serem "
+    "renderizados de novo; confira o slide 1 no dashboard."
+)
+TEXT_COVER_REVIEW_INTERRUPTED = (
+    "🖼️ A troca da capa gerada no site foi interrompida. Abra o carrossel no "
+    "dashboard e confira o slide 1 antes de aprovar."
+)
+ANSWER_REVIEW_REPLACED = "Esta revisão está desatualizada"
+TEXT_REVIEW_REPLACED = (
+    "🖼️ Esta revisão está desatualizada: o carrossel mudou depois dela. "
+    "Use a mensagem de revisão mais recente."
+)
+TEXT_REVIEW_RESENDING = (
+    "🖼️ Esta revisão está desatualizada: o carrossel mudou depois dela. "
+    "A revisão atual vai chegar numa nova mensagem."
+)
+TEXT_REVIEW_ON_WEBSITE = (
+    "🖼️ Esta revisão está desatualizada e a atual não pôde ser enviada aqui. "
+    "Revise e aprove o carrossel no dashboard."
+)
+REASON_REVIEW_OUTDATED = "review_outdated"
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
 COVER_SCOPE_THESIS = "thesis"
 
@@ -112,6 +149,7 @@ __all__ = [
     "ANSWER_COVER_OFF",
     "ANSWER_COVER_ON",
     "ANSWER_COVER_SAME",
+    "ANSWER_REVIEW_REPLACED",
     "BUTTON_COVER_OFF_NEWS",
     "BUTTON_COVER_OFF_POV",
     "BUTTON_COVER_ON",
@@ -123,6 +161,8 @@ __all__ = [
     "COVER_ASSET_ID_MAX_CHARS",
     "COVER_MAX_AGE_HOURS",
     "COVER_NOTICE_KEY",
+    "COVER_REVIEW_HOLD_MAX_SECONDS",
+    "COVER_REVIEW_HOLD_PHASE",
     "COVER_REWORK_PHASE",
     "COVER_SCOPE_THESIS",
     "COVER_SOURCE_URL_MAX_CHARS",
@@ -157,8 +197,14 @@ __all__ = [
     "REASON_COVER_ASSET_USED",
     "REASON_COVER_MISSING",
     "REASON_COVER_RENDER_FAILED",
+    "REASON_COVER_REQUIRES_REVIEW",
+    "REASON_COVER_REVIEW_HOLD",
+    "REASON_COVER_REVIEW_INTERRUPTED",
+    "REASON_COVER_REVIEW_KEPT",
+    "REASON_COVER_REVIEW_UNSAFE",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
+    "REASON_REVIEW_OUTDATED",
     "SKIP_COVER_NO_CONSENT",
     "SKIP_COVER_NO_PHOTOS",
     "SKIP_COVER_NO_PROJECT",
@@ -166,7 +212,13 @@ __all__ = [
     "SKIP_COVER_UNAVAILABLE",
     "TABLE_COVER_ASSETS",
     "TEXT_COVER_RENDER_FAILED",
+    "TEXT_COVER_REQUIRES_REVIEW",
+    "TEXT_COVER_REVIEW_INTERRUPTED",
+    "TEXT_COVER_REVIEW_UNSAFE",
     "TEXT_COVER_SWITCHING",
+    "TEXT_REVIEW_ON_WEBSITE",
+    "TEXT_REVIEW_REPLACED",
+    "TEXT_REVIEW_RESENDING",
     "UPLOAD_READ_SLACK_BYTES",
     "UPLOAD_STATUS_BY_CODE",
 ]

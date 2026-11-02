@@ -14,7 +14,8 @@ from rag_backend.infrastructure.database.models.event_outbox import EventOutboxM
 from rag_backend.modules.autopilot.constants import (
     AGGREGATE_TYPE_AUTOPILOT_RUN,
 )
-from rag_backend.modules.autopilot.domain.notice_log import dump_log
+from rag_backend.modules.autopilot.domain.notice_log import dump_log, parse_stored
+from rag_backend.modules.autopilot.domain.notice_merge import LedgerChange, merge_change
 from rag_backend.modules.autopilot.domain.notify import (
     AutopilotOutboxEvent,
     SaveNoticeLog,
@@ -127,11 +128,23 @@ class SqlNoticeLogStore:
         self._session = session
 
     async def save(self, command: SaveNoticeLog) -> None:
-        """Persist the ledger. The caller commits."""
+        """Apply the writer's change to the committed ledger, under a row lock.
+
+        The row is read ``FOR UPDATE``, so concurrent writers serialize and each
+        merges into what the previous one committed. The caller commits.
+        """
+        current = await self._session.scalar(
+            select(AutopilotRunModel.telegram_message_ids)
+            .where(AutopilotRunModel.id == command.run_id)
+            .with_for_update()
+        )
+        merged = merge_change(
+            parse_stored(current), LedgerChange(base=command.base, new=command.log)
+        )
         await self._session.execute(
             update(AutopilotRunModel)
             .where(AutopilotRunModel.id == command.run_id)
-            .values(telegram_message_ids=dump_log(command.log))
+            .values(telegram_message_ids=dump_log(merged))
         )
         await self._session.flush()
         stored = await self._session.get(AutopilotRunModel, command.run_id)

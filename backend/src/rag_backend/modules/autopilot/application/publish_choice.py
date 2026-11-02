@@ -29,6 +29,11 @@ from rag_backend.modules.autopilot.application.owner_steps import (
     APPROVE_STEP,
     OwnerStep,
 )
+from rag_backend.modules.autopilot.application.review_revision_guard import (
+    TEXT_BY_OUTDATED,
+    RevisionGuard,
+    TappedReview,
+)
 from rag_backend.modules.autopilot.application.schedule_picker import (
     PickerDeps,
     SchedulePicker,
@@ -38,6 +43,12 @@ from rag_backend.modules.autopilot.application.schedule_steps import (
     SCHEDULE_REFUSED_STEP,
     SCHEDULED_PUBLISH_NOW_STEP,
     UNSCHEDULE_STEP,
+    ApproveRefusal,
+    reschedule_command,
+    schedule_command,
+)
+from rag_backend.modules.autopilot.cover_constants import (
+    ANSWER_REVIEW_REPLACED,
 )
 from rag_backend.modules.autopilot.domain.callback_parse import ParsedCallback
 from rag_backend.modules.autopilot.domain.gate import ResumeStatus
@@ -57,6 +68,7 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.pov_schedule import is_pov_run
 from rag_backend.modules.autopilot.domain.recommend import reason_text
+from rag_backend.modules.autopilot.domain.review_revision import tapped_revision
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     day_label,
@@ -82,8 +94,6 @@ from rag_backend.modules.autopilot.schedule_constants import (
     KIND_UNSCHEDULE,
     PUBLISH_MODE_NEXT_SLOT,
     PUBLISH_MODE_NOW,
-    REASON_OWNER_RESCHEDULED,
-    REASON_OWNER_SCHEDULED,
     SCHEDULE_PENDING_PHASE,
     TEXT_ASK_TIME,
     TEXT_CHOOSE_DAY,
@@ -98,7 +108,6 @@ from rag_backend.modules.autopilot.webhook_constants import (
     KIND_APPROVE,
     TEXT_ALREADY,
     TEXT_APPROVE_FAILED,
-    TEXT_APPROVE_REFUSED,
     TEXT_APPROVED,
 )
 
@@ -139,17 +148,35 @@ class PublishChoiceActions:
         self._picker = SchedulePicker(
             PickerDeps(clock=deps.clock, signals=deps.signals), replies
         )
+        self._revision: int | None = None
+
+    async def _refusal(self, run: AutopilotRun | None) -> str | None:
+        """The answer when the tap's revision is outdated, else None."""
+        guard = RevisionGuard(approval=self._deps.approval, runs=self._deps.runs)
+        found = await guard.check(TappedReview(run=run, revision=self._revision))
+        return TEXT_BY_OUTDATED.get(found)
 
     async def handle(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
-        """Dispatch one of this module's callback kinds."""
+        """Dispatch one callback kind; an outdated review's buttons do nothing."""
+        run = await self._deps.runs.get(parsed.run_id)
+        self._revision = tapped_revision(run, update.message_id)
+        refusal = await self._refusal(run)
+        if refusal is not None:
+            await self._replies.finish(update, ANSWER_REVIEW_REPLACED, refusal)
+            return
         handler = _HANDLERS[parsed.kind]
         await handler(self, update, parsed)
 
     async def on_time_text(self, update: WebhookUpdate, pending: PendingRework) -> None:
-        """The owner typed a time after ``✏️ Outro horário``."""
+        """A time typed after ``✏️ Outro horário``; it answers that tap's review."""
         run = await self._pickable(pending.run_id)
+        self._revision = pending.revision
         if run is None:
             await self._replies.tell(update, TEXT_ALREADY)
+            return
+        refusal = await self._refusal(run)
+        if refusal is not None:
+            await self._replies.tell(update, refusal)
             return
         choice = parse_owner_time(update.text, self._deps.clock.now())
         if choice.at is None:
@@ -188,9 +215,11 @@ class PublishChoiceActions:
         if run is None or not await self._apply(run.run_id, APPROVE_STEP):
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        status = await self._deps.approval.approve(run)
+        status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
-            await self._refused(update, run, APPROVE_REFUSED_STEP)
+            await self._refused(
+                update, run, ApproveRefusal(step=APPROVE_REFUSED_STEP, status=status)
+            )
             return
         await self._release(update, run)
 
@@ -258,6 +287,7 @@ class PublishChoiceActions:
                 owner_chat_id=update.actor_id,
                 run_id=run.run_id,
                 phase=SCHEDULE_PENDING_PHASE,
+                revision=self._revision,
             )
         )
         await self._replies.finish(update, TEXT_ASK_TIME, TEXT_ASK_TIME)
@@ -292,21 +322,26 @@ class PublishChoiceActions:
         if not await self._to_scheduled(run.run_id, choice.at):
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        status = await self._deps.approval.approve(run)
+        status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
-            await self._refused(update, run, SCHEDULE_REFUSED_STEP)
+            await self._refused(
+                update, run, ApproveRefusal(step=SCHEDULE_REFUSED_STEP, status=status)
+            )
             return
         text = scheduled_text(choice.at, choice.reason)
         await self._replies.answer(update, ANSWER_SCHEDULED)
         await self._show(update, text, scheduled_keyboard(run.run_id))
 
     async def _refused(
-        self, update: WebhookUpdate, run: AutopilotRun, step: OwnerStep
+        self, update: WebhookUpdate, run: AutopilotRun, refusal: ApproveRefusal
     ) -> None:
-        """The editorial approve was refused: keep the review open with buttons."""
-        await self._apply(run.run_id, step)
+        """Refused approve: the tapped review stays open (a typed time: text only)."""
+        await self._apply(run.run_id, refusal.step)
         await self._replies.answer(update, TEXT_APPROVE_FAILED)
-        await self._show(update, TEXT_APPROVE_REFUSED, review_keyboard(run.run_id))
+        if not update.callback_id:
+            await self._replies.tell(update, refusal.text)
+            return
+        await self._replies.edit(update, refusal.text, review_keyboard(run.run_id))
 
     async def _show(
         self, update: WebhookUpdate, text: str, keyboard: InlineKeyboard
@@ -335,27 +370,10 @@ class PublishChoiceActions:
         return run if run.state in _PICKABLE else None
 
     async def _reschedule(self, run_id: UUID, at: datetime) -> bool:
-        """``scheduled -> scheduled`` with the new time; the due tick races safely."""
-        return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run_id,
-                expected=_S.SCHEDULED,
-                new=_S.SCHEDULED,
-                reason=REASON_OWNER_RESCHEDULED,
-                scheduled_at=at,
-            )
-        )
+        return await self._deps.runs.transition(reschedule_command(run_id, at))
 
     async def _to_scheduled(self, run_id: UUID, at: datetime) -> bool:
-        return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run_id,
-                expected=_S.AWAITING_OWNER,
-                new=_S.SCHEDULED,
-                reason=REASON_OWNER_SCHEDULED,
-                scheduled_at=at,
-            )
-        )
+        return await self._deps.runs.transition(schedule_command(run_id, at))
 
     async def _apply(self, run_id: UUID, step: OwnerStep) -> bool:
         return await self._deps.runs.transition(
@@ -363,11 +381,6 @@ class PublishChoiceActions:
                 run_id=run_id, expected=step.expected, new=step.new, reason=step.reason
             )
         )
-
-
-def is_schedule_reply(pending: PendingRework) -> bool:
-    """True when the owner's next text is a publish time, not rework feedback."""
-    return pending.phase == SCHEDULE_PENDING_PHASE
 
 
 def _handlers() -> dict[str, _Handler]:

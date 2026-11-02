@@ -159,6 +159,10 @@ export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
   RUN_IN_PROGRESS: "resume_already_in_progress",
   /** Stale ``lock_version``: distinct copy from the other two causes. */
   VERSION_CONFLICT: "version_conflict",
+  /** Final-review approve while the slides still wait for a re-render. */
+  BUILD_IN_PROGRESS: "build_in_progress",
+  /** Another operation holds the carousel (a render or repair is running). */
+  MUTATION_IN_PROGRESS: "mutation_in_progress",
 } as const;
 
 /**
