@@ -1,6 +1,6 @@
 # AE-0594 — A website cover switches a completed carousel and reopens final review
 
-Status: Blocked
+Status: In Development
 Tier: T2
 Priority: High
 Type: Feature
@@ -134,7 +134,31 @@ needs the run moved out of `awaiting_owner` and a fresh notice, either by
 reusing the review rework with a "generated cover" target or by an autopilot
 facade that the API route calls.
 
-## Open questions (for Pedro)
+## Pedro's decision (2026-11-02)
+
+Answers to the three questions below:
+
+1. **Scope of this ticket is the clean case** (option B for now): a website
+   cover that succeeds on a completed carousel still waiting for its first
+   approval (`final_review / awaiting_human`, `workflow_status` draft)
+   switches slide 1, re-renders through the existing switch/republish
+   services, and stays in final review. Reopening the review of an approved or
+   scheduled carousel (option A) is the next ticket (AE-0597); this one only
+   keeps the guard easy to lift.
+2. **The guard ships here** (a real bug): `PUT /carousels/{id}/cover` on an
+   approved carousel (`approved_for_publish`, autopilot scheduled ones
+   included) today re-renders it and leaves it publishable with an image the
+   owner never saw. Until AE-0597 the picker refuses approved, scheduled and
+   published carousels with the coded error `cover_switch_requires_review`
+   (pt/en message on the publish page), and the website auto-switch skips
+   them (logged); the generated cover stays a picker option. Published
+   carousels never switch and never re-render.
+3. **Wiring:** the API layer composes the Telegram hook, the same pattern as
+   `selecting_cover_task`; editorial never imports autopilot. On Telegram the
+   run leaves `awaiting_owner` and the review is sent again at the new lock
+   version, so the old message cannot approve the new render.
+
+## Open questions (answered above, kept for the record)
 
 1. **Approved or scheduled carousels:** how should approval be revoked
    without re-running a phase? Options:
@@ -159,13 +183,92 @@ facade that the API route calls.
 - No change for autopilot-started covers on completed carousels.
 - No change for carousels that are not completed (AE-0590).
 
+## Scope (design)
+
+- **Guard** (`application/services/carousel/cover_switch_guard.py`):
+  `cover_switch_refusal(project, workflow_status)` returns
+  `carousel_published` when `is_public` and `carousel_approved` when
+  `workflow_status == approved_for_publish`. Every Instagram post needs the
+  approval, which nothing drops afterwards, so "approved" covers scheduled and
+  posted carousels; "released" is the public one. This is the single place
+  AE-0597 lifts for approved carousels.
+- **Picker** (`CoverPickService.pick`): reads `workflow_status` through
+  `EditorialReviewState` (the legacy ACL) and raises
+  `CoverPickError(cover_switch_requires_review)` (HTTP 422) before any stage,
+  write or render. The lock-version CAS covers an approval that lands after
+  the read (the resume CAS bumps the version).
+- **Website auto-switch** (`reviewing_cover_task`, the route only): the
+  AE-0590 selection with a `review` switch. A non-completed carousel keeps the
+  AE-0590 gate write unchanged. A completed carousel goes to
+  `switch_in_review`:
+  1. refusals, each a logged skip: approved / published (the guard); not at
+     `final_review / awaiting_human` (`not_in_final_review`); a failed or
+     rejected phase; already the cover (`already_selected`, idempotent); any
+     change to `slide_cover` / `hook_asset_id` since the request's baseline
+     (`manual_choice`). A cover chosen before the click does not block: the
+     owner asked for a new cover on a finished carousel.
+  2. hold the Telegram review (`ReviewHold`, composed by the API layer from
+     `modules.autopilot.cover_review_hold`): an autopilot run in
+     `awaiting_owner` moves to `reworking` with a `website_cover` rework queued
+     (CAS); any other state (scheduled, published, none) is not held.
+  3. `EditorialReviewCoverStore`: fresh session, re-check, stage, then under
+     the project lock and the unchanged lock-version CAS a `SELECT ... FOR
+     UPDATE` re-check (guard, phase, baseline) and the write of `slide_cover`
+     alone; a refusal rolls the CAS bump back. Then the republish renderer the
+     picker's switch uses (`RepublishRenderer`); on success the
+     needs-republish marker is cleared. The workflow, its approval, `is_public`
+     and the release are never written. A held lock or a moved version is
+     `conflict`, never retried.
+  4. release: `changed` (the write landed) clears the rework and leaves the run
+     in `reworking`; the worker's normal final-review stop moves it back to
+     `awaiting_owner` and sends the review at the new lock version. Unchanged
+     (refusal, conflict) moves it straight back to `awaiting_owner` (reason
+     `website_cover_kept`), no new message. A crash releases as changed (a new
+     review at the current version is always safe).
+- **Worker** (`ReworkStep`): a `website_cover` rework waits (tick returns 0)
+  until released; a hold older than 15 minutes (a restart killed the task) is
+  dropped and the final-review stop re-sends the review.
+- **Old Telegram messages** (`PublishChoiceActions.handle`): approve, publish
+  now and the schedule buttons from a review message whose recorded revision
+  is older than the newest recorded review answer "Esta revisão foi
+  substituída" and change nothing (`is_replaced_review`, from the notice
+  log). While the run is held, the existing `awaiting_owner` check already
+  refuses them. Known limit: between the worker's stop and the delivery of the
+  new review (one notify tick) the old message is still the newest recorded
+  one.
+- **Telegram "Usar capa do Grok" at review** (the other
+  `SlideCoverSwitchService.switch` caller, via `ReworkStep._cover`): only
+  runs while the editorial is at `final_review / awaiting_human` and the run
+  is `awaiting_owner`, so it never re-renders an approved or scheduled
+  carousel. Left unchanged.
+- **Frontend:** the cover picker maps the 422 detail
+  `cover_switch_requires_review` to `publish.coverPicker.requiresReview`
+  (pt/en).
+
 ## Acceptance Criteria
 
-To be fixed once the open questions are answered. Planned scenarios: happy
-path, a manual choice wins, a lock conflict is skipped, a failed generation,
-a scheduled carousel does not publish until re-approved, an already published
-carousel, an idempotent replay, an autopilot cover on a completed carousel
-unchanged.
+- [x] A website cover on a completed carousel in final review (draft) becomes
+      slide 1 (`ai_image`), the slides are re-rendered, and the carousel stays
+      `completed / final_review / awaiting_human / draft`, `is_public` false;
+      no Instagram call.
+- [x] A website approval read before the switch is refused by the resume CAS.
+- [x] Telegram: the run leaves `awaiting_owner` before the write and render;
+      the worker sends the review again at the new lock version; approve,
+      publish and schedule from an older review message are refused.
+- [x] A manual choice while the job ran wins (before the hold and under the
+      lock); a lock conflict is a logged skip; a failed generation changes
+      nothing; a replay is `already_selected`.
+- [x] The picker refuses approved, scheduled and published carousels with
+      `cover_switch_requires_review`; nothing is staged, written or rendered;
+      the publish page explains it (pt/en).
+- [x] The website auto-switch skips approved/scheduled (`carousel_approved`)
+      and published (`carousel_published`) carousels; the cover stays a picker
+      option; a scheduled run is not touched.
+- [x] An autopilot-started cover on a completed carousel is unchanged
+      (`carousel_completed`).
+- [x] Gates green (every backend gate except local mutation, individually,
+      with the Postgres `DATABASE_URL`; frontend scope; Python 3.11 import
+      check).
 
 ## Affected Areas
 
@@ -186,13 +289,83 @@ above. Blocked on the open questions: the current workflow cannot revoke a
 final-review approval cleanly (no `approved_hold -> final_review` path), and
 Telegram approvals are not tied to a revision. No production code changed.
 
+Pedro answered (2026-11-02, recorded above): clean case + guard here, reopen
+review in AE-0597, API-layer wiring. Unblocked and implemented as described
+in "Scope (design)".
+
 ## Files Touched
 
-- .agent/tasks/AE-0594-website-cover-switches-completed-carousel.md (new)
+- backend/src/rag_backend/domain/constants/cover_review_switch.py (new)
+- backend/src/rag_backend/application/services/carousel/cover_switch_guard.py (new)
+- backend/src/rag_backend/application/services/carousel/cover_review_switch.py (new)
+- backend/src/rag_backend/application/services/carousel/cover_autoselect.py
+- backend/src/rag_backend/application/services/carousel/cover_pick.py
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_review_switch.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autoselect.py
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_pick.py
+- backend/src/rag_backend/modules/editorial/public.py
+- backend/src/rag_backend/modules/autopilot/application/cover_review_hold.py (new)
+- backend/src/rag_backend/modules/autopilot/infrastructure/cover_review_hold.py (new)
+- backend/src/rag_backend/modules/autopilot/domain/review_replaced.py (new)
+- backend/src/rag_backend/modules/autopilot/application/rework_step.py
+- backend/src/rag_backend/modules/autopilot/application/runner.py
+- backend/src/rag_backend/modules/autopilot/application/publish_choice.py
+- backend/src/rag_backend/modules/autopilot/cover_constants.py
+- backend/src/rag_backend/modules/autopilot/public.py
+- backend/src/rag_backend/modules/autopilot/__init__.py
+- backend/src/rag_backend/api/routes/carousels/cover_generate.py
+- backend/tests/features/website_cover_review_switch_ae0594.feature (new)
+- backend/tests/integration/website_cover_review_pg_support.py (new)
+- backend/tests/integration/test_website_cover_review_switch_pg_ae0594.py (new)
+- backend/tests/integration/test_cover_pick_review_guard_pg_ae0594.py (new)
+- backend/tests/integration/test_cover_pick_review_guard_api_ae0594.py (new)
+- backend/tests/unit/application/test_cover_review_switch_ae0594.py (new)
+- backend/tests/unit/modules/autopilot/test_cover_review_hold_ae0594.py (new)
+- backend/tests/unit/application/test_cover_pick_ae0445.py
+- backend/tests/unit/application/test_cover_generation_parts_ae0508.py
+- frontend/src/modules/publishing/distribution/constants.ts
+- frontend/src/modules/publishing/distribution/components/cover-picker-section.tsx
+- frontend/src/modules/publishing/distribution/components/cover-picker-section.test.tsx
+- frontend/src/i18n/locales/en.json
+- frontend/src/i18n/locales/pt.json
 
 ## Test Evidence
 
-None yet (no code).
+- Postgres (real generation, selection, review store with lock + CAS +
+  `FOR UPDATE`, run repository and review hold; fake bridge, recorded render):
+  clean switch stays in final review (draft, not public, lock +1, one render,
+  no Instagram); a stale website approval at the old version raises the
+  version conflict; the run is `reworking` with the `website_cover` rework
+  during the render and `reworking` without it after; an owner photo
+  committed between the re-check and the locked write is kept and the run is
+  handed back (`website_cover_kept`); a change before the read is
+  `manual_choice` with no hold; a held lock is `conflict` and the run is
+  handed back; a failed generation changes nothing; a replay is
+  `already_selected` with no second render; approved and scheduled carousels
+  are skipped (`carousel_approved`, the scheduled run untouched, the cover
+  listed as a generated option); a released one is `carousel_published`; an
+  autopilot-started cover stays `carousel_completed`. Picker: approved,
+  scheduled and published refused with `cover_switch_requires_review`,
+  nothing written or rendered; a draft carousel in review still switches.
+- HTTP (SQLite): `PUT /cover` answers 422 `cover_switch_requires_review` for
+  approved, approved + public and public; a draft one switches (200);
+  `POST /cover-generations` on a completed carousel in final review switches
+  slide 1 and renders once (route wiring).
+- Unit: the review-switch rules over fakes (hold/release pairing, conflict
+  releases unchanged, a crash releases as changed, render failure logged at
+  warning, every refusal neither holds nor writes, a cover chosen before the
+  job does not block, replay, no review switch keeps `carousel_completed`, a
+  non-completed carousel keeps the gate write); the guard; the picker refuses
+  before switching. Autopilot: the hold's CAS and states, both releases; the
+  worker waits on a fresh hold, re-sends after release at revision 4, drops
+  an outlived or undated hold; approve / publish now / schedule from an older
+  review message are refused, the newest still publishes.
+- Frontend: the picker shows the requires-review message for the coded 422
+  and the generic failure for a non-API error.
+- The tests fail without the change: with the guard, the replaced-review check
+  and the locked re-check neutralised, 19 of the new tests fail; the
+  website-switch tests need `reviewing_cover_task`, which does not exist
+  before.
 
 ## QA Report
 
@@ -200,4 +373,4 @@ Pending.
 
 ## Blockers
 
-Open questions 1 to 3 above (Pedro).
+None (Pedro answered 2026-11-02).
