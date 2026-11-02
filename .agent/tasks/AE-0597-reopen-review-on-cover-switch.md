@@ -41,7 +41,8 @@ unreviewed cover.
 
 - **Missed slot (the existing scheduler behaviour): expire, never roll
   forward.** `ScheduledPublishSweep._fire`
-  (`backend/src/rag_backend/modules/autopilot/application/scheduled_publish.py:85-89`)
+  (`backend/src/rag_backend/modules/autopilot/application/scheduled_publish.py:85-89`
+  on the base commit, 99-102 now)
   moves a due `scheduled` run whose carousel is no longer
   `approved_for_publish` to `expired` (reason `schedule_withdrawn`, owner text
   `TEXT_SCHEDULE_WITHDRAWN`: "Agendamento expirado: o carrossel não está mais
@@ -112,6 +113,19 @@ unreviewed cover.
 - **Hook photo:** the reopen is staged with the marker (the existing first
   commit), before the photo is written; the entity the route writes carries
   the reopened phase, so the later `update_project` does not undo it.
+- **Render check stays strict:** the website switch's render under the build
+  lock still requires a draft waiting in final review (`render_refusal`), so an
+  approval that overtook the switch is rolled back as before; only the write
+  side (`review_refusal`) accepts an approved carousel, which it reopens.
+- **Fallback:** a switch wired without the checkpoint reopen (no checkpointer
+  available) keeps refusing an approved carousel as approved.
+- **Owner text:** `PUT /cover` answers `review_reopened`; the picker then says
+  the carousel is back in final review (pt/en). The refusal text now says
+  "published" only.
+- **Hook photo, two commits:** the reopen commits with the marker, before the
+  photo write commits (the route's existing order). The approval is therefore
+  dropped first; the marker refuses any approve until a render, and the re-read
+  after the commit refuses an approval that landed in between.
 - **Telegram for the picker and the hook photo:** the routes call the
   autopilot `reopened` hook after their write: a `scheduled` or
   `awaiting_owner` run goes to `reworking` (anchor kept), and the worker sends
@@ -130,7 +144,8 @@ unreviewed cover.
 - Autopilot: the `reopened` hook, the `(scheduled, reworking)` transition,
   the kept time on approve, the due sweep's row lock and kept-time runs.
 - Publishing: the release requires the approval.
-- Frontend: the picker's refusal text says "published" only (pt/en).
+- Frontend: the picker's refusal text says "published" only, and a switch
+  that reopened the review says so (pt/en).
 
 ## Non-Goals
 
@@ -140,20 +155,20 @@ unreviewed cover.
 
 ## Acceptance Criteria
 
-- [ ] A cover switch on an approved (or scheduled) carousel, by each of the
+- [x] A cover switch on an approved (or scheduled) carousel, by each of the
       four paths, leaves the carousel `draft`, `final_review /
       awaiting_human`, with the new slide 1 and the marker, in one commit; the
       checkpoint waits at the final review again; the slides re-render.
-- [ ] A fresh approve after the render restores `approved_for_publish`.
-- [ ] A published carousel is still refused with
+- [x] A fresh approve after the render restores `approved_for_publish`.
+- [x] A published carousel is still refused with
       `cover_switch_requires_review`; nothing is written or rendered.
-- [ ] A reopened scheduled run keeps its time, gets a new Telegram review,
+- [x] A reopened scheduled run keeps its time, gets a new Telegram review,
       and an approve schedules it again at that time; a passed time expires
       it (`schedule_withdrawn`) and nothing is published.
-- [ ] Postgres race: the switch and the due sweep with real sessions and
+- [x] Postgres race: the switch and the due sweep with real sessions and
       locks; either the release wins and the switch is refused as published,
       or the switch wins and nothing is released.
-- [ ] The release refuses a carousel whose approval was dropped.
+- [x] The release refuses a carousel whose approval was dropped.
 - [ ] Gates green (every backend gate except local mutation; frontend scope).
 
 ## Gherkin Scenarios
@@ -163,9 +178,10 @@ See `backend/tests/features/reopen_review_on_cover_switch_ae0597.feature`.
 ## Affected Areas
 
 - Backend: editorial, autopilot, publishing, carousel services, routes
-- Frontend: picker refusal text (pt/en)
+- Frontend: picker refusal and reopened texts (pt/en)
 - Database: none
-- API: none (same status codes)
+- API: `PUT /carousels/{id}/cover` answers `review_reopened` (additive);
+  `PUT /cover` and `PUT /hook-photo` now answer 200 for an approved carousel
 - Tests: unit, Postgres integration
 
 ## Dependencies
@@ -178,11 +194,39 @@ See `backend/tests/features/reopen_review_on_cover_switch_ae0597.feature`.
 ### 2026-11-02
 
 Ticket written from Pedro's decision (2026-11-02); findings and decisions
-recorded above.
+recorded above. Implemented as described: graph reopen, the four switch paths,
+the autopilot hook, the kept time, the sweep's row lock and the release check.
+AE-0594 scenarios that described the refusal of approved or scheduled
+carousels were replaced by the AE-0597 ones (the picker and website tests now
+assert the reopen, or the fallback when no checkpoint reopen is wired).
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0597.dev-summary.md` (AC to test mapping, gate
+evidence). In short:
+
+- Graph (LangGraph with `AsyncSqliteSaver`): a held carousel is reopened to
+  the `final_review` interrupt (draft, `quality_passed` false) and a fresh
+  approve parks it at `approved_hold`, approved again; a thread not held, an
+  unknown thread and no checkpointer are left alone.
+- Postgres (real picker, website switch, project lock, CAS, `FOR UPDATE`,
+  autopilot hook, due sweep and release): the reopen sees the old approved row
+  (nothing committed yet) and the render sees slide 1, the marker and the
+  draft together; the scheduled run goes to `reworking` with its time kept; a
+  cancelled schedule is held and handed back; due kept times expire or publish;
+  the release refuses a draft.
+- Race (Postgres, real sessions and locks): release first, then the switch is
+  refused as published and nothing moves; switch first, then the sweep expires
+  the run and nothing is released; 8 free races all end in one of the two; a
+  release waiting on the switch's lock releases nothing.
+- The tests fail without the change: without the sweep's row lock the two
+  forced-order race tests fail (the run ends `publish_failed`: only the
+  release check saved it); without the release's approval check the two
+  release tests fail.
+- HTTP (SQLite): picker and hook photo reopen an approved carousel and refuse a
+  published one. Unit: switch service order and refusals, review switch, kept
+  time, hook, GrokBot cover on an approved carousel, state machine, release.
+- Frontend: the reopened message.
 
 ## QA Report
 
