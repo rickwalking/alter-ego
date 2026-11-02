@@ -224,8 +224,11 @@ The backend's rate limits (login and change-password: 5 per minute) key on the v
   never break a deploy. To refresh: copy <https://www.cloudflare.com/ips-v4> and <https://www.cloudflare.com/ips-v6>
   into the `set_real_ip_from` lines of both `nginx/nginx.conf.ssl` and `nginx/nginx.conf`, run
   `docker run --rm -v "$PWD/nginx/nginx.conf.ssl:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t`, and ship it as a
-  normal PR. A missing range only makes those visitors key on the Cloudflare edge again (no spoofing risk). AE-0592
-  tracks a weekly check that flags a difference.
+  normal PR. A missing range only makes those visitors key on the Cloudflare edge again (no spoofing risk). The
+  weekly `Cloudflare Ranges (Weekly)` workflow (`.github/workflows/cloudflare-ranges.yml`, Mondays 06:00 UTC, or run
+  it by hand) compares both configs with the published lists via `python3 scripts/ci/check_cloudflare_ranges.py`. A
+  red run lists the added and removed ranges in its log and step summary; exit 2 means a list could not be fetched,
+  not that the ranges match.
 - nginx has the fixed address `172.18.200.10` on the pinned compose network (`172.18.0.0/16`, dynamic addresses from
   `172.18.0.0/17` only). The backend runs uvicorn with `--proxy-headers` and `FORWARDED_ALLOW_IPS=127.0.0.1,172.18.200.10`,
   so it trusts `X-Forwarded-For` from nginx and nobody else.

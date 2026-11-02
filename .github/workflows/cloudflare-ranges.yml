@@ -1,0 +1,37 @@
+name: Cloudflare Ranges (Weekly)
+
+# Weekly check that the `set_real_ip_from` ranges pinned in nginx/nginx.conf.ssl
+# and nginx/nginx.conf still match Cloudflare's published lists (AE-0592).
+# Read-only: it never deploys, never edits the configs and opens no issue.
+# A difference fails the job and lists the added and removed ranges in the log
+# and the step summary; a fetch failure fails it with exit 2 (never a pass).
+# Refresh steps: docs/deployment/DEPLOYMENT_GUIDE.md, Client Addresses and Rate Limits.
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+concurrency:
+  group: cloudflare-ranges
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: nginx / Cloudflare ranges current
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compare nginx's Cloudflare ranges with the published lists
+        run: python3 scripts/ci/check_cloudflare_ranges.py
