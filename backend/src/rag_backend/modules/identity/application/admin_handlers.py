@@ -169,7 +169,12 @@ class AdminUserHandler:
         )
 
     async def create(self, command: CreateUserInput) -> CreatedUserView:
-        """Create a user (auto-generating a temp password when none given)."""
+        """Create a user (auto-generating a temp password when none given).
+
+        Every admin-created user must change the password at the first login:
+        a generated or an admin-typed password is known to the admin, so the
+        user is flagged either way, like after an admin reset.
+        """
         role = _parse_role(command.role)
         temp_password, password = self._resolve_password(command.password)
         async with self._unit_of_work:
@@ -180,6 +185,7 @@ class AdminUserHandler:
                 hashed_password=self._passwords.hash(password),
                 role=role,
                 is_active=True,
+                must_change_password=True,
             )
             created = await self._repository.create(user)
             result = CreatedUserView(

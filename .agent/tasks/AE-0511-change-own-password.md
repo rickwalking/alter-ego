@@ -104,6 +104,7 @@ follow-ups (its Non-Goals point here).
 
 - Blocked by: AE-0490 (change-password and reset no longer 500).
 - Related: AE-0578 (one-shot + drift check pattern), AE-0514 (reset dialog).
+- Follow-up: AE-0587 (users an admin creates are flagged too, Pedro's decision 2026-11-01).
 
 ## Implementation Plan
 

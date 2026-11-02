@@ -24,9 +24,7 @@ from rag_backend.modules.identity import (
     AssignRoleCommand,
     AuthenticationDeps,
     AuthenticationService,
-    ChangePasswordCommand,
     CreateUserCommand,
-    CurrentPasswordIncorrectError,
     DeleteUserCommand,
     GetUserQuery,
     InactiveUserError,
@@ -293,35 +291,6 @@ class TestUserService:
 
         assert view.role == UserRole.ADMIN.value
         assert uow.commits == 1
-
-    async def test_change_password_verifies_current(self) -> None:
-        service, repo, uow = _build_user_service()
-        user = _seed_user(repo)
-
-        await service.change_password(
-            ChangePasswordCommand(
-                user_id=user.id,
-                current_password=_VALID_PASSWORD,
-                new_password="brand-new-passphrase",
-            )
-        )
-
-        assert uow.commits == 1
-        stored = await service.get(GetUserQuery(user_id=user.id))
-        assert stored is not None
-
-    async def test_change_password_wrong_current_raises(self) -> None:
-        service, repo, _ = _build_user_service()
-        user = _seed_user(repo)
-
-        with pytest.raises(CurrentPasswordIncorrectError):
-            await service.change_password(
-                ChangePasswordCommand(
-                    user_id=user.id,
-                    current_password="not-the-password",
-                    new_password="brand-new-passphrase",
-                )
-            )
 
     async def test_delete_hit_and_miss(self) -> None:
         service, repo, _ = _build_user_service()

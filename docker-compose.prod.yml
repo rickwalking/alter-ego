@@ -134,6 +134,10 @@ services:
       OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
       TELEGRAM_ALERTS_BOT_TOKEN: ${TELEGRAM_ALERTS_BOT_TOKEN:-}
       TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
+      # uvicorn reads the client address from X-Forwarded-For only when the
+      # peer is nginx (its fixed address below) or the container itself, so the
+      # rate limits key on the real client and nobody else can spoof the header.
+      FORWARDED_ALLOW_IPS: "127.0.0.1,172.18.200.10"
     depends_on:
       postgres:
         condition: service_healthy
@@ -326,6 +330,10 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - certbot_data:/etc/letsencrypt
       - certbot_www:/var/www/certbot
+    # Fixed address: the backend trusts X-Forwarded-For from this peer only.
+    networks:
+      default:
+        ipv4_address: 172.18.200.10
     depends_on:
       - frontend
       - backend
@@ -353,6 +361,16 @@ services:
       resources:
         limits:
           memory: 128M
+
+# The subnet prod already used, now pinned so nginx keeps a fixed address. Other
+# containers get dynamic addresses from ip_range only, which leaves nginx's
+# address free. The deploy's `down` removes the network and `up` recreates it.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          ip_range: 172.18.0.0/17
 
 volumes:
   postgres_data:

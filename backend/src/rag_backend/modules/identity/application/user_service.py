@@ -144,13 +144,6 @@ class UserService:
             view = to_user_view(updated)
         return view
 
-    async def change_password(self, command: ChangePasswordCommand) -> None:
-        """Change a user's password after verifying the current one (committed once)."""
-        async with self._unit_of_work:
-            user = await self._require_user(command.user_id)
-            user.change_password(new_password_hash(self._passwords, user, command))
-            await self._repository.update(user)
-
     async def delete(self, command: DeleteUserCommand) -> bool:
         """Delete a user by id (committed once); ``False`` if absent."""
         async with self._unit_of_work:

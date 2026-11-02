@@ -14,7 +14,7 @@ from rag_backend.domain.models.user import UserRole
 class TestGetCurrentUser:
     async def test_returns_user_for_valid_payload(self) -> None:
         db = AsyncMock()
-        user = MagicMock(is_active=True, must_change_password=False)
+        user = MagicMock(is_active=True, must_change_password=False, token_version=0)
         db.get = AsyncMock(return_value=user)
 
         result = await get_current_user({"sub": "user-1"}, db)
@@ -42,7 +42,9 @@ class TestGetCurrentUser:
     async def test_rejects_a_user_who_must_change_the_password(self) -> None:
         db = AsyncMock()
         db.get = AsyncMock(
-            return_value=MagicMock(is_active=True, must_change_password=True)
+            return_value=MagicMock(
+                is_active=True, must_change_password=True, token_version=0
+            )
         )
 
         with pytest.raises(CodedHTTPException) as exc_info:

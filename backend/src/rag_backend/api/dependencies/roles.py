@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies.auth import reject_pending_password_change
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.token_version import reject_stale_token
 from rag_backend.api.middleware.auth import get_current_user as get_jwt_payload
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models import UserModel
@@ -20,7 +21,8 @@ async def get_current_user(
     """Resolve the authenticated user from a validated JWT payload.
 
     A user who must change an admin-issued password is refused with 403
-    ``password_change_required``, like :func:`require_authenticated_user`.
+    ``password_change_required``, like :func:`require_authenticated_user`; a
+    token from before the user's last password change is refused with 401.
     """
     user_id = payload.get("sub")
     if not user_id:
@@ -40,6 +42,7 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is deactivated",
         )
+    reject_stale_token(payload, int(user.token_version))
     reject_pending_password_change(must_change_password=bool(user.must_change_password))
     return user
 

@@ -12,6 +12,7 @@ codes are byte-identical to the pre-refactor routes: the JWT/bcrypt still come
 from the UNCHANGED ``infrastructure.auth`` via the identity adapters.
 """
 
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -57,6 +58,28 @@ def _auth_cookie_secure(request: Request, settings: Settings) -> bool:
     if forwarded:
         return forwarded.split(",")[0].strip().lower() == "https"
     return request.url.scheme == "https"
+
+
+@dataclass(frozen=True)
+class _SessionCookie:
+    """The request a session cookie answers, and the token it holds."""
+
+    request: Request
+    token: str
+
+
+def _set_access_cookie(
+    response: Response, cookie: _SessionCookie, settings: Settings
+) -> None:
+    """Set the HttpOnly session cookie, with the token's lifetime as max age."""
+    response.set_cookie(
+        key=COOKIE_ACCESS_TOKEN,
+        value=cookie.token,
+        httponly=True,
+        secure=_auth_cookie_secure(cookie.request, settings),
+        samesite="strict",
+        max_age=settings.access_token_expire_minutes * 60,
+    )
 
 
 class LoginRequest(BaseModel):
@@ -128,15 +151,9 @@ async def login(
             detail=str(exc),
         ) from exc
 
-    response.set_cookie(
-        key=COOKIE_ACCESS_TOKEN,
-        value=token_view.access_token,
-        httponly=True,
-        secure=_auth_cookie_secure(request, settings),
-        samesite="strict",
-        max_age=settings.access_token_expire_minutes * 60,
+    _set_access_cookie(
+        response, _SessionCookie(request, token_view.access_token), settings
     )
-
     return TokenResponse(access_token=token_view.access_token)
 
 
@@ -206,16 +223,23 @@ async def get_me(
 async def change_password(
     request: Request,
     body: ChangePasswordRequest,
+    response: Response,
     user: Annotated[User, Depends(require_signed_in_user)],
     service: Annotated[IdentityServices, Depends(get_identity_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     """Change the authenticated user's password.
 
     Also open to a user who must change an admin-issued password; a
     successful change clears that flag. Rate limited like the login.
+
+    A successful change logs out every other session of the user: each token
+    issued before it is refused with 401 from now on. This session gets a
+    fresh token in the ``access_token`` cookie (same attributes as the login),
+    so it stays signed in. A refused change sets no cookie and logs nobody out.
     """
     try:
-        await service.auth.change_password(
+        token_view = await service.auth.change_password(
             ChangePasswordCommand(
                 user_id=user.id,
                 current_password=body.current_password,
@@ -232,3 +256,6 @@ async def change_password(
         raise CodedHTTPException(
             status.HTTP_400_BAD_REQUEST, str(exc), ERR_CODE_PASSWORD_UNCHANGED
         ) from exc
+    _set_access_cookie(
+        response, _SessionCookie(request, token_view.access_token), settings
+    )

@@ -30,6 +30,7 @@ from tests.integration.change_password_support import (
     login,
     reset_by_admin,
     seed_user,
+    sign_in,
     stored_user,
 )
 
@@ -177,7 +178,8 @@ async def test_changing_the_temporary_password_clears_the_flag(
 ) -> None:
     async with _env(tmp_path) as (env, admin, editor):
         temp = await reset_by_admin(env, admin, editor)
-        async with env.client_for(editor) as client:
+        async with env.client() as client:
+            await sign_in(client, (EDITOR_EMAIL, temp))
             changed = await client.post(
                 CHANGE_URL, json=change_body(temp, NEW_PASSWORD)
             )

@@ -12,6 +12,10 @@ from rag_backend.api.constants import (
     ERR_PASSWORD_CHANGE_REQUIRED,
     ERR_USER_NOT_FOUND,
 )
+from rag_backend.api.dependencies.token_version import (
+    is_current_token,
+    reject_stale_token,
+)
 from rag_backend.api.middleware.auth import get_current_user, get_current_user_optional
 from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.domain.models import User
@@ -49,7 +53,8 @@ async def require_signed_in_user(
     Only ``/api/auth/me`` and ``/api/auth/change-password`` use this directly;
     every other protected endpoint goes through
     :func:`require_authenticated_user`, which also refuses a user who must
-    change the password first.
+    change the password first. A token issued before the user's last password
+    change is refused here, so it is refused everywhere.
 
     Args:
         payload: JWT payload from get_current_user.
@@ -59,7 +64,7 @@ async def require_signed_in_user(
         Authenticated User entity.
 
     Raises:
-        HTTPException: If user not found or inactive.
+        HTTPException: If user not found or inactive, or the token is stale.
     """
     user_id = UUID(payload["sub"])
     user = await repo.get_by_id(user_id)
@@ -76,6 +81,7 @@ async def require_signed_in_user(
             detail="User account is deactivated",
         )
 
+    reject_stale_token(payload, user.token_version)
     return user
 
 
@@ -189,7 +195,8 @@ async def get_optional_user(
 
     Returns:
         User entity if authenticated, None otherwise. A user who must change
-        the password is treated as an anonymous visitor.
+        the password, or a token from before the last password change, is
+        treated as an anonymous visitor.
     """
     if payload is None:
         return None
@@ -200,7 +207,7 @@ async def get_optional_user(
     if user is None or not user.is_active or user.must_change_password:
         return None
 
-    return user
+    return user if is_current_token(payload, user.token_version) else None
 
 
 __all__ = [

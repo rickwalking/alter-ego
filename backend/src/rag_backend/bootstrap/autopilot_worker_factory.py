@@ -190,26 +190,15 @@ def _ads_client(settings: Settings) -> tuple[object, object]:
     import httpx
 
     from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
-        AdsConfig,
         MetaAdsGateway,
     )
+    from rag_backend.modules.autopilot.infrastructure.meta_graph import ads_config
 
     token = settings.meta_ads_access_token.get_secret_value().strip()
     if not settings.boost_enabled or token == "":
         return None, None
     client = httpx.AsyncClient(timeout=20)
-    gateway = MetaAdsGateway(
-        AdsConfig(
-            enabled=True,
-            token=token,
-            app_secret=settings.meta_ads_app_secret.get_secret_value().strip(),
-            account_id=settings.meta_ad_account_id,
-            page_id=settings.meta_page_id,
-            ig_user_id=settings.meta_ads_ig_user_id,
-            graph_base=settings.meta_ads_graph_base,
-        ),
-        client,
-    )
+    gateway = MetaAdsGateway(ads_config(settings, token), client)
     return gateway, client
 
 

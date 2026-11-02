@@ -134,7 +134,7 @@ class BoostRequestService:
             return await _move(self._deps, replace(move, status=STATUS_REJECTED))
         try:
             facts = await _facts_for_request(self._deps.store, current, now)
-            check_request(_draft_of(current), command.limits, facts)
+            check_request(draft_of(current), command.limits, facts)
         except BoostError as exc:
             failed = replace(move, status=STATUS_FAILED, error_code=exc.code)
             return await _move(self._deps, failed)
@@ -168,7 +168,7 @@ async def _facts(store: BoostStore, draft: BoostDraft, now: datetime) -> PolicyF
 async def _facts_for_request(
     store: BoostStore, request: BoostRequest, now: datetime
 ) -> PolicyFacts:
-    facts = await _facts(store, _draft_of(request), now)
+    facts = await _facts(store, draft_of(request), now)
     already = request.total_budget_cents
     return replace(
         facts,
@@ -203,7 +203,8 @@ def _pending(built: _Built) -> BoostRequest:
     )
 
 
-def _draft_of(request: BoostRequest) -> BoostDraft:
+def draft_of(request: BoostRequest) -> BoostDraft:
+    """The stored request as the draft the caps are checked on."""
     return BoostDraft(
         media_id=request.media_id,
         daily_budget_cents=request.daily_budget_cents,
@@ -290,4 +291,5 @@ __all__ = [
     "CreateCommand",
     "Created",
     "DecideCommand",
+    "draft_of",
 ]

@@ -74,6 +74,22 @@ def check_request(draft: BoostDraft, limits: BoostLimits, facts: PolicyFacts) ->
     _media(draft, limits, facts)
 
 
+def check_launch(draft: BoostDraft, limits: BoostLimits, committed_cents: int) -> None:
+    """Re-run the shape and weekly caps right before spending.
+
+    ``committed_cents`` excludes the request itself, so a cap lowered after the
+    approval still binds. Raises ``BoostError`` with the same codes as the request.
+    """
+    _shape(draft, limits)
+    if committed_cents + draft.daily_budget_cents * draft.days > limits.max_week_cents:
+        raise BoostError(ERR_WEEK, HTTP_UNPROCESSABLE)
+
+
+def allowed_countries(raw: str) -> frozenset[str]:
+    """The comma-separated ``BOOST_ALLOWED_COUNTRIES`` value as a set."""
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+
 def _shape(draft: BoostDraft, limits: BoostLimits) -> None:
     if draft.objective != OBJECTIVE_ENGAGEMENT:
         raise BoostError(ERR_OBJECTIVE, HTTP_UNPROCESSABLE)
@@ -120,4 +136,10 @@ def _media(draft: BoostDraft, limits: BoostLimits, facts: PolicyFacts) -> None:
     del draft
 
 
-__all__ = ["BoostLimits", "PolicyFacts", "check_request"]
+__all__ = [
+    "BoostLimits",
+    "PolicyFacts",
+    "allowed_countries",
+    "check_launch",
+    "check_request",
+]

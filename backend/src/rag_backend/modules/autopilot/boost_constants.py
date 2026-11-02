@@ -80,6 +80,7 @@ ERR_CURRENCY = "currency_mismatch"
 ERR_ACCOUNT = "ad_account_inactive"
 ERR_ADS_DISABLED = "ads_disabled"
 ERR_PAGE_MISSING = "meta_page_missing"
+DETAIL_ERROR_CODE = "error_code"
 
 DEFAULT_MAX_DAILY = 3000
 DEFAULT_MIN_DAILY = 600
@@ -160,6 +161,7 @@ __all__ = [
     "DEFAULT_POLL_MINUTES",
     "DEFAULT_TTL_HOURS",
     "DESTINATION_ON_POST",
+    "DETAIL_ERROR_CODE",
     "ERR_ACCOUNT",
     "ERR_ADS_DISABLED",
     "ERR_AUDIENCE",

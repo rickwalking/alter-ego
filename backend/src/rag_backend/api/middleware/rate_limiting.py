@@ -1,4 +1,10 @@
-"""Rate limiting middleware using slowapi."""
+"""Rate limiting middleware using slowapi.
+
+Limits key on ``request.client``. In production uvicorn runs with
+``--proxy-headers`` and sets it from ``X-Forwarded-For`` only when the peer is in
+``FORWARDED_ALLOW_IPS`` (nginx's fixed address and loopback), so each visitor gets
+its own bucket and no other peer can choose its key.
+"""
 
 from fastapi import Request
 from slowapi import Limiter
