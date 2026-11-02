@@ -36,7 +36,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.workflow_state import (
@@ -150,19 +149,17 @@ class CarouselProjectWriteOwner:
         here (not in the infrastructure/database sweeper) so the
         ddd:adapter-commit boundary holds — adapters flush, owners commit.
         """
-        await self._session.execute(
-            update(CarouselProjectModel)
-            .where(
-                CarouselProjectModel.id == project_id,
-                CarouselProjectModel.needs_republish_since <= rendered_from,
-            )
-            .values(needs_republish_since=None)
-            .execution_options(synchronize_session=False)
+        project = await self._session.get(
+            CarouselProjectModel,
+            project_id,
+            with_for_update=True,
+            populate_existing=True,
         )
+        if project is not None and _stamped_by(
+            project.needs_republish_since, rendered_from
+        ):
+            project.needs_republish_since = None
         await self._session.commit()
-        stored = await self._session.get(CarouselProjectModel, project_id)
-        if stored is not None:
-            await self._session.refresh(stored)
 
     async def bump_resume_lock_version(
         self,
@@ -186,3 +183,12 @@ class CarouselProjectWriteOwner:
 
 
 __all__ = ["CarouselProjectWriteOwner"]
+
+
+def _stamped_by(marker: datetime | None, rendered_from: datetime) -> bool:
+    """True when a set marker predates the render (SQLite reads it back naive)."""
+    if marker is None:
+        return False
+    if marker.tzinfo is None:
+        marker = marker.replace(tzinfo=UTC)
+    return marker <= rendered_from
