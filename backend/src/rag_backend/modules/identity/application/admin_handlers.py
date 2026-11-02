@@ -234,12 +234,14 @@ class AdminUserHandler:
         then saves it through ``repository.update``; the temporary password is
         returned once and never stored in clear. The user row is read locked
         until the commit, so a reset and a concurrent password change each bump
-        from the committed version.
+        from the committed version. The temporary password is hashed before the
+        lock is taken, so the row is not held during the hashing.
         """
+        temp_password = _generate_secure_password()
+        temp_hash = self._passwords.hash(temp_password)
         async with self._unit_of_work:
             user = await self._require_locked_user(user_id)
-            temp_password = _generate_secure_password()
-            user.reset_password(self._passwords.hash(temp_password))
+            user.reset_password(temp_hash)
             await self._repository.update(user)
         return temp_password
 

@@ -50,7 +50,8 @@ Feature: An admin password reset logs out every open session of the user
     Then the answer is 403 and no user's token version changes
     And the other user's session keeps working
 
-  Scenario: A reset racing a password change bumps the version once each
-    Given two writers on the same user, a locked reset and a password change
-    When the change waits for the reset to commit
-    Then it sees the reset and the token version ends two higher
+  Scenario: A reset waits for a password change that holds the user row
+    Given a password change that holds the user row lock
+    When an admin resets the user's password meanwhile
+    Then the reset waits on the lock and the stored version stays unchanged
+    And once the change commits the reset bumps from it, so the token version ends two higher

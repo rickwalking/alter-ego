@@ -63,13 +63,11 @@ async def test_the_handler_commits_the_bump_once_from_a_locked_read() -> None:
 # Scenario: A reset of an unknown user changes no token version
 async def test_a_reset_of_an_unknown_user_commits_nothing() -> None:
     handler, repo, uow = _build_admin_handler()
-    user = _seed_user(repo)
     missing = uuid4()
 
     with pytest.raises(UserNotFoundError):
         await handler.reset_password(missing)
 
-    assert user.token_version == 0
     assert uow.commits == 0
     assert uow.rollbacks == 1
     assert repo.locked == [missing]

@@ -199,8 +199,9 @@ async def test_a_flagged_user_is_anonymous_on_optional_endpoints(
     tmp_path: Path,
 ) -> None:
     async with _env(tmp_path) as (env, admin, editor):
-        await reset_by_admin(env, admin, editor)
-        async with env.client_for(editor) as client:
+        temp = await reset_by_admin(env, admin, editor)
+        token = await login(env, (EDITOR_EMAIL, temp))
+        async with env.client(bearer(token)) as client:
             resp = await client.post(CONVERSATIONS_URL, json={"title": "As visitor"})
 
         assert resp.status_code == 201

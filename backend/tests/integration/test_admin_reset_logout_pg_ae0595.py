@@ -14,6 +14,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import pytest
+from sqlalchemy import text
 
 from rag_backend.domain.models import UserRole
 from tests.integration.change_password_support import (
@@ -36,7 +37,12 @@ from tests.integration.pg_schema_support import isolated_schema, requires_postgr
 _TABLES = ("users", "conversations", "messages")
 _ADMIN_EMAIL = "reset-pg-admin@integration.example.com"
 _EDITOR_EMAIL = "reset-pg-editor@integration.example.com"
-_LOCK_WAIT_SECONDS = 0.5
+_POLL_SECONDS = 0.05
+_POLL_ATTEMPTS = 100
+_LOCK_WAITERS_SQL = text(
+    "SELECT count(*) FROM pg_stat_activity"
+    " WHERE datname = current_database() AND wait_event_type = 'Lock'"
+)
 
 pytestmark = [pytest.mark.integration, requires_postgres]
 
@@ -46,6 +52,20 @@ async def _pg_env() -> AsyncIterator[FlowEnv]:
     """The real app over a fresh Postgres schema (opened inside each test)."""
     async with isolated_schema(_TABLES) as engine, app_over(engine) as env:
         yield env
+
+
+async def _wait_for_a_lock_waiter() -> bool:
+    """Poll Postgres until some backend of this database waits on a lock."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    async with get_session_maker()() as probe:
+        for _ in range(_POLL_ATTEMPTS):
+            waiters = (await probe.execute(_LOCK_WAITERS_SQL)).scalar_one()
+            await probe.rollback()
+            if waiters > 0:
+                return True
+            await asyncio.sleep(_POLL_SECONDS)
+    return False
 
 
 # Scenario: An admin reset logs out every open session of the user
@@ -80,7 +100,7 @@ async def test_a_reset_on_postgres_logs_out_the_user_only() -> None:
         assert (await stored_user(admin.id)).token_version == 0
 
 
-# Scenario: A reset racing a password change bumps the version once each
+# Scenario: A reset waits for a password change that holds the user row
 async def test_the_reset_waits_for_the_row_lock_and_bumps_from_the_commit() -> None:
     from rag_backend.infrastructure.database.config import get_session_maker
     from rag_backend.infrastructure.database.user_repository import (
@@ -95,14 +115,16 @@ async def test_the_reset_waits_for_the_row_lock_and_bumps_from_the_commit() -> N
             held = await repo.get_by_id_for_update(editor.id)
             assert held is not None
             resetting = asyncio.create_task(reset_by_admin(env, admin, editor))
-            await asyncio.sleep(_LOCK_WAIT_SECONDS)
-            blocked = not resetting.done()
+            waiting = await _wait_for_a_lock_waiter()
+            pending = not resetting.done()
+            version_while_held = (await stored_user(editor.id)).token_version
             held.change_password("hash-of-the-change")
             await repo.update(held)
             await holder.commit()
             temp_password = await resetting
         temp_login = await login(env, (_EDITOR_EMAIL, temp_password))
 
-        assert blocked is True
+        assert (waiting, pending) == (True, True)
+        assert version_while_held == 0
         assert (await stored_user(editor.id)).token_version == 2
         assert temp_login.status_code == 200
