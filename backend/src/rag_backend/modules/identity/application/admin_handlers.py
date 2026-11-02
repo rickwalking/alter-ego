@@ -229,12 +229,15 @@ class AdminUserHandler:
     async def reset_password(self, user_id: UUID) -> str:
         """Reset a user's password to a fresh temp password; return it.
 
-        Stores the new hash and flags the user to change it at the next login,
+        Stores the new hash, flags the user to change it at the next login and
+        bumps the token version (every open session of the user is logged out),
         then saves it through ``repository.update``; the temporary password is
-        returned once and never stored in clear.
+        returned once and never stored in clear. The user row is read locked
+        until the commit, so a reset and a concurrent password change each bump
+        from the committed version.
         """
         async with self._unit_of_work:
-            user = await self._require_user(user_id)
+            user = await self._require_locked_user(user_id)
             temp_password = _generate_secure_password()
             user.reset_password(self._passwords.hash(temp_password))
             await self._repository.update(user)
@@ -274,6 +277,12 @@ class AdminUserHandler:
 
     async def _require_user(self, user_id: UUID) -> User:
         user = await self._repository.get_by_id(user_id)
+        if user is None:
+            raise UserNotFoundError(ERR_USER_NOT_FOUND)
+        return user
+
+    async def _require_locked_user(self, user_id: UUID) -> User:
+        user = await self._repository.get_by_id_for_update(user_id)
         if user is None:
             raise UserNotFoundError(ERR_USER_NOT_FOUND)
         return user
