@@ -228,14 +228,39 @@ Answers to the three questions below:
 - **Worker** (`ReworkStep`): a `website_cover` rework waits (tick returns 0)
   until released; a hold older than 15 minutes (a restart killed the task) is
   dropped and the final-review stop re-sends the review.
-- **Old Telegram messages** (`PublishChoiceActions.handle`): approve, publish
-  now and the schedule buttons from a review message whose recorded revision
-  is older than the newest recorded review answer "Esta revisão foi
-  substituída" and change nothing (`is_replaced_review`, from the notice
-  log). While the run is held, the existing `awaiting_owner` check already
-  refuses them. Known limit: between the worker's stop and the delivery of the
-  new review (one notify tick) the old message is still the newest recorded
-  one.
+- **Telegram taps are bound to their revision** (`PublishChoiceActions`,
+  `FinalReviewApproval`, `review_revision_guard`): every review keyboard and
+  every reminder message is recorded per revision in the notice ledger (the
+  JSON `telegram_message_ids` column, no schema change). Approve, publish now
+  and the schedule buttons on an `awaiting_owner` run resolve the tapped
+  message's revision; an unknown message or a revision that is not the
+  carousel's current lock version answers "Esta revisão foi substituída" and
+  changes nothing, and when no review was sent yet for the current version the
+  run goes `awaiting_owner -> reworking` (`review_outdated`) so the worker sends
+  it. The editorial approve runs its CAS at the tapped revision, never at the
+  version read now. A typed time answers the newest recorded review. An already
+  approved carousel (a cancelled schedule) needs no approve and is not
+  checked: its slide 1 cannot change.
+- **Hold bookkeeping:** the hold keeps the run's `updated_at` (the 72-hour
+  review window) and stores its start time in the queued rework's feedback;
+  an unchanged release restores `awaiting_owner` with the same anchor. The
+  runner skips a run with an active hold and steps the next active run.
+- **Render failure, process death, approval during the switch:** the locked
+  write stamps `needs_republish_since` with the cover, so a process that dies
+  before the render leaves the republish sweep to render it. After the render
+  the store re-checks the review under a fresh locked read; a failed render,
+  or an approval/run that landed between the write and the render, restores
+  the previous cover under the lock and the CAS (re-rendering after an
+  approval), clears the marker and reports `rolled_back` (the Telegram review
+  is sent again). The write and the render cannot share one project lock (the
+  republish takes the same lock on its own connection), so the re-check after
+  the render closes that gap instead.
+- **Picker guard under the lock:** `SlideCoverSwitchService` re-reads the
+  approval and release (`EditorialReviewState`, a direct column select, never
+  the cached row) after the CAS under the project lock; an approved or
+  published carousel rolls the CAS back and answers
+  `cover_switch_requires_review`. The route answers it as **409** (a state
+  conflict).
 - **Telegram "Usar capa do Grok" at review** (the other
   `SlideCoverSwitchService.switch` caller, via `ReworkStep._cover`): only
   runs while the editorial is at `final_review / awaiting_human` and the run
@@ -293,6 +318,20 @@ Pedro answered (2026-11-02, recorded above): clean case + guard here, reopen
 review in AE-0597, API-layer wiring. Unblocked and implemented as described
 in "Scope (design)".
 
+### 2026-11-02 (independent review fixes)
+
+Merged origin/main (AE-0588). Blocker B1 fixed by binding Telegram approve,
+publish and schedule to the tapped message's revision (reviews and reminders
+recorded per revision; no schema change). S1/S3: needs-republish stamped with
+the cover; rollback after a failed or overtaken render. S2: the runner skips a
+held run. S4: guard re-checked under the lock; 409 for the refusal. S5:
+Postgres tests through the real approve route, the publish-now vs hold race,
+the locked picker refusal and the rollbacks. Nits: test files split under 400
+lines, `NoReviewHold` moved to the test fakes, typed test helpers, the
+frontend test scenario fixed, the unchanged release keeps the 72-hour
+anchor. Existing approve/schedule test fixtures now tap a recorded review
+(message 9 at revision 4), as a real tap does.
+
 ## Files Touched
 
 - backend/src/rag_backend/domain/constants/cover_review_switch.py (new)
@@ -306,7 +345,28 @@ in "Scope (design)".
 - backend/src/rag_backend/modules/editorial/public.py
 - backend/src/rag_backend/modules/autopilot/application/cover_review_hold.py (new)
 - backend/src/rag_backend/modules/autopilot/infrastructure/cover_review_hold.py (new)
-- backend/src/rag_backend/modules/autopilot/domain/review_replaced.py (new)
+- backend/src/rag_backend/modules/autopilot/domain/review_revision.py (new)
+- backend/src/rag_backend/modules/autopilot/domain/cover_hold.py (new)
+- backend/src/rag_backend/modules/autopilot/application/review_revision_guard.py (new)
+- backend/src/rag_backend/modules/autopilot/application/owner_approval.py
+- backend/src/rag_backend/modules/autopilot/application/schedule_steps.py
+- backend/src/rag_backend/modules/autopilot/domain/notice_log.py
+- backend/src/rag_backend/modules/autopilot/domain/models.py
+- backend/src/rag_backend/modules/autopilot/infrastructure/repository.py
+- backend/src/rag_backend/modules/autopilot/notify_constants.py
+- backend/src/rag_backend/modules/autopilot/constants.py
+- backend/src/rag_backend/modules/editorial/infrastructure/cover_review_rollback.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/cover_review_state.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover.py
+- backend/src/rag_backend/application/services/carousel/slide_cover_switch.py
+- backend/src/rag_backend/api/routes/carousels/cover_pick.py
+- backend/tests/integration/test_website_cover_review_guard_pg_ae0594.py (new)
+- backend/tests/integration/test_website_cover_review_route_pg_ae0594.py (new)
+- backend/tests/unit/application/cover_review_fakes.py (new)
+- backend/tests/unit/application/test_cover_switch_guard_ae0594.py (new)
+- backend/tests/unit/modules/autopilot/test_review_revision_ae0594.py (new)
+- backend/tests/unit/modules/autopilot/test_owner_actions.py
+- backend/tests/unit/modules/autopilot/test_schedule_webhook_ae0370.py
 - backend/src/rag_backend/modules/autopilot/application/rework_step.py
 - backend/src/rag_backend/modules/autopilot/application/runner.py
 - backend/src/rag_backend/modules/autopilot/application/publish_choice.py
@@ -330,6 +390,18 @@ in "Scope (design)".
 - frontend/src/i18n/locales/pt.json
 
 ## Test Evidence
+
+Review-fix round (2026-11-02): B1 unit tests (old review before and after the
+new one is logged, old reminder, unknown message, current reminder publishes at
+its revision, approve-after-rework from the newest review, slot on current and
+old review, typed time for an outdated review, ledger round-trip); hold anchor,
+skip of a held run, outlived and undated holds; Postgres: approve route answers
+409 for the pre-switch version and 202 for the current one, publish-now vs
+hold race (exactly one wins; a published run makes the switch skip as
+approved), approval landing before the picker's locked write refused, failed
+render rolled back (cover restored, marker cleared, review re-sent), approval
+before the render rolled back and rendered again, a dying process leaves the
+marker, the unchanged release keeps the run's `updated_at`.
 
 - Postgres (real generation, selection, review store with lock + CAS +
   `FOR UPDATE`, run repository and review hold; fake bridge, recorded render):
