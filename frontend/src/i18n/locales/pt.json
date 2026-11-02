@@ -1199,6 +1199,7 @@
       "resumeUnknown": "Falha ao retomar o fluxo de trabalho",
       "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite.",
       "runInProgress": "Já existe uma revisão em andamento para este carrossel. Acompanhe o progresso no aviso acima.",
+      "renderPending": "Os slides ainda estão sendo renderizados. Tente de novo em alguns minutos.",
       "versionConflict": "Este carrossel foi alterado em outra sessão. Atualize a página e tente novamente.",
       "resumeCodes": {
         "edited_localized_slides_phase_not_allowed": "As correções manuais não podem ser enviadas nesta etapa agora. Suas edições continuam aqui; atualize a página e tente de novo.",

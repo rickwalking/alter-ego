@@ -1199,6 +1199,7 @@
       "resumeUnknown": "Workflow resume failed",
       "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit.",
       "runInProgress": "A revision run is already in progress for this carousel. Follow its progress in the banner above.",
+      "renderPending": "The slides are still being rendered. Try again in a few minutes.",
       "versionConflict": "This carousel changed in another session. Refresh the page and try again.",
       "resumeCodes": {
         "edited_localized_slides_phase_not_allowed": "Manual fixes cannot be submitted at this step right now. Your edits are still here; refresh the page and try again.",
