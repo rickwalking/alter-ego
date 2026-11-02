@@ -17,3 +17,6 @@ export const UPLOAD_FAILURE = {
   NETWORK: "network",
   SERVER: "server",
 } as const;
+
+/** The picker's refusal for an approved (or scheduled) or published carousel. */
+export const COVER_SWITCH_REQUIRES_REVIEW = "cover_switch_requires_review";

@@ -1500,6 +1500,7 @@
       "success": "Cover changed. Slides and PDF updated.",
       "conflict": "The carousel changed since you opened this page. Reload the page and try again.",
       "failed": "Could not change the cover.",
+      "requiresReview": "This carousel is already approved or published, so its cover cannot change. Generated covers stay here as options.",
       "loadFailed": "Could not load the photos.",
       "generatedLabel": "Generated cover {number}",
       "generatedShort": "Grok",

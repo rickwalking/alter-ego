@@ -5,7 +5,10 @@ import { useTranslations } from "next-intl";
 import { TEXT_DIM } from "@/constants/neon";
 import { HTTP_STATUS } from "@/constants/api";
 import { ApiError } from "@/lib/api-client";
-import { SECTION_CARD_STYLE } from "@/modules/publishing/distribution/constants";
+import {
+  COVER_SWITCH_REQUIRES_REVIEW,
+  SECTION_CARD_STYLE,
+} from "@/modules/publishing/distribution/constants";
 import {
   useCoverOptions,
   usePickCover,
@@ -21,8 +24,17 @@ import type {
 
 const SOURCE_LIBRARY = "library";
 
-function failureKey(error: Error | null): "conflict" | "failed" {
-  if (error instanceof ApiError && error.status === HTTP_STATUS.CONFLICT) {
+/** The message for a refused pick: approved/published, a stale page, or other. */
+function failureKey(
+  error: Error | null,
+): "requiresReview" | "conflict" | "failed" {
+  if (!(error instanceof ApiError)) {
+    return "failed";
+  }
+  if (error.detail === COVER_SWITCH_REQUIRES_REVIEW) {
+    return "requiresReview";
+  }
+  if (error.status === HTTP_STATUS.CONFLICT) {
     return "conflict";
   }
   return "failed";
