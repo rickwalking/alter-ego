@@ -19,12 +19,14 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.owner_ports import PendingRework
 from rag_backend.modules.autopilot.recovery_constants import REASON_APPROVE_REFUSED
 from rag_backend.modules.autopilot.schedule_constants import (
     REASON_OWNER_PUBLISH_NOW,
     REASON_OWNER_RESCHEDULED,
     REASON_OWNER_SCHEDULED,
     REASON_OWNER_UNSCHEDULED,
+    SCHEDULE_PENDING_PHASE,
 )
 
 _AWAITING = AutopilotRunState.AWAITING_OWNER
@@ -68,3 +70,8 @@ def reschedule_command(run_id: UUID, at: datetime) -> TransitionCommand:
         reason=REASON_OWNER_RESCHEDULED,
         scheduled_at=at,
     )
+
+
+def is_schedule_reply(pending: PendingRework) -> bool:
+    """True when the owner's next text is a publish time, not rework feedback."""
+    return pending.phase == SCHEDULE_PENDING_PHASE

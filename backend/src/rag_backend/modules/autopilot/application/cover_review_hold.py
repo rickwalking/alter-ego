@@ -8,13 +8,17 @@ run id, so the run must not stay in ``awaiting_owner`` meanwhile:
 - ``hold``: ``awaiting_owner -> reworking`` (compare-and-set) with the
   ``website_cover`` rework queued (its feedback is the hold's start time), so
   the worker skips the run instead of driving it; ``updated_at``, the anchor of
-  the review's 72-hour window, is kept;
+  the review's 72-hour window, is kept; an open publish-time reply ("Outro
+  horário") is dropped, since it answered the render being replaced;
 - ``release(changed=True)``: the queued rework is cleared and the run stays in
   ``reworking``; the worker's normal final-review stop moves it back to
   ``awaiting_owner`` and sends the review again at the new lock version;
 - ``release(changed=False)``: nothing changed on the carousel, so the run goes
   straight back to ``awaiting_owner`` with its window anchor kept, and the
-  review on screen stays valid.
+  review on screen stays valid;
+- ``escalate``: the switch could not be confirmed (a failed rollback): the run
+  goes ``reworking -> escalated`` with the lock version marked, so the owner is
+  told and no review of a render slide 1 may not match goes out.
 
 A run in any other state (a scheduled one included) is never held. Each step
 commits on its own.
@@ -30,13 +34,24 @@ from rag_backend.modules.autopilot.cover_constants import (
     COVER_REVIEW_HOLD_PHASE,
     REASON_COVER_REVIEW_HOLD,
     REASON_COVER_REVIEW_KEPT,
+    REASON_COVER_REVIEW_UNSAFE,
 )
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
-from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
+from rag_backend.modules.autopilot.domain.notice_log import is_time_reply, set_pending
+from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
+from rag_backend.modules.autopilot.domain.ports import (
+    AutopilotRunRepository,
+    Clock,
+    NoticeLogStore,
+)
+from rag_backend.modules.autopilot.domain.recovery import (
+    EscalationMark,
+    ReworkIntent,
+    RunRecoveryStore,
+)
 
 _S = AutopilotRunState
 
@@ -49,10 +64,11 @@ class Committer(Protocol):
 
 @dataclass(frozen=True, kw_only=True)
 class CoverReviewHoldDeps:
-    """The run store, the rework store, the session commit and the clock."""
+    """The run store, the rework store, the ledger, the session commit, the clock."""
 
     runs: AutopilotRunRepository
     recovery: RunRecoveryStore
+    notices: NoticeLogStore
     checkpoint: Committer
     clock: Clock
 
@@ -85,8 +101,40 @@ class CoverReviewHold:
                 run_id=run.run_id, phase=COVER_REVIEW_HOLD_PHASE, feedback=started
             )
         )
+        if is_time_reply(run.notice_log.pending):
+            await self._deps.notices.save(
+                SaveNoticeLog(
+                    run_id=run.run_id,
+                    log=set_pending(run.notice_log, None),
+                    base=run.notice_log,
+                )
+            )
         await self._deps.checkpoint.commit()
         return run.run_id
+
+    async def escalate(self, run_id: UUID, version: int | None) -> None:
+        """Escalate the held run (slide 1 may show an unreviewed cover).
+
+        ``version`` is the carousel's lock version now; the escalation wakes once
+        the owner changes the carousel. Without it the hold stays, and the worker
+        escalates it when it outlives its limit (it reads the version itself).
+        """
+        if version is None:
+            return
+        await self._deps.recovery.clear_rework(run_id)
+        moved = await self._deps.runs.transition(
+            TransitionCommand(
+                run_id=run_id,
+                expected=_S.REWORKING,
+                new=_S.ESCALATED,
+                reason=REASON_COVER_REVIEW_UNSAFE,
+            )
+        )
+        if moved:
+            await self._deps.recovery.mark_escalated(
+                EscalationMark(run_id=run_id, version=version)
+            )
+        await self._deps.checkpoint.commit()
 
     async def release(self, run_id: UUID, *, changed: bool) -> None:
         """Clear the hold; unchanged goes straight back to the owner's review."""

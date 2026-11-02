@@ -131,7 +131,9 @@ class QueueNoticeService:
             return 0
         for run in runs:
             log = record_status(run.notice_log, THESIS_BATCH_NOTICE_KEY, message_id)
-            await self._deps.notices.save(SaveNoticeLog(run_id=run.run_id, log=log))
+            await self._deps.notices.save(
+                SaveNoticeLog(run_id=run.run_id, log=log, base=run.notice_log)
+            )
         return 1
 
     async def _batch_line(self, index: int, run: AutopilotRun) -> str:

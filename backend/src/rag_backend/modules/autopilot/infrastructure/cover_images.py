@@ -12,6 +12,9 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+)
 from rag_backend.modules.autopilot.cover_constants import (
     LOG_COVER,
     LOG_COVER_RENDER_FAILED,
@@ -38,6 +41,7 @@ logger = structlog.get_logger()
 _SWITCH_STATUS: dict[str, CoverSwitchStatus] = {
     AUTOFIX_STATUS_FIXED: CoverSwitchStatus.SWITCHED,
     AUTOFIX_STATUS_CONFLICT: CoverSwitchStatus.CONFLICT,
+    ERR_COVER_SWITCH_REQUIRES_REVIEW: CoverSwitchStatus.REQUIRES_REVIEW,
 }
 
 

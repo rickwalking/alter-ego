@@ -18,7 +18,9 @@ from rag_backend.modules.autopilot.application.cover_review_hold import (
 from rag_backend.modules.autopilot.cover_constants import (
     COVER_REVIEW_HOLD_PHASE,
     REASON_COVER_REVIEW_HOLD,
+    REASON_COVER_REVIEW_INTERRUPTED,
     REASON_COVER_REVIEW_KEPT,
+    REASON_COVER_REVIEW_UNSAFE,
 )
 from rag_backend.modules.autopilot.domain.cover_hold import (
     hold_active,
@@ -29,8 +31,11 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, StoredPending
+from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
-from rag_backend.modules.autopilot.domain.recovery import ReworkIntent
+from rag_backend.modules.autopilot.domain.recovery import EscalationMark, ReworkIntent
+from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_PENDING_PHASE
 from tests.unit.modules.autopilot.test_owner_actions import (
     _Notices,
     _runner,
@@ -107,11 +112,23 @@ class _Store:
     async def commit(self) -> None:
         self.commits += 1
 
+    async def save(self, command: SaveNoticeLog) -> None:
+        assert self.run is not None
+        self.run = replace(self.run, notice_log=command.log)
+
+    async def mark_escalated(self, mark: EscalationMark) -> None:
+        assert self.run is not None
+        self.run = replace(self.run, escalated_version=mark.version)
+
 
 def _hold(store: _Store) -> CoverReviewHold:
     return CoverReviewHold(
         CoverReviewHoldDeps(
-            runs=store, recovery=store, checkpoint=store, clock=_FixedClock()
+            runs=store,
+            recovery=store,
+            notices=store,
+            checkpoint=store,
+            clock=_FixedClock(),
         )
     )
 
@@ -184,6 +201,56 @@ class TestCoverReviewHold:
         assert store.run.updated_at == _ANCHOR
 
 
+@pytest.mark.unit
+class TestHoldSafety:
+    # Scenario: A failed or overtaken website cover switch is rolled back
+    @pytest.mark.asyncio
+    async def test_escalate_marks_the_version_and_never_hands_back(self) -> None:
+        store = _Store(run=_run(_S.AWAITING_OWNER))
+        held = await _hold(store).hold(_PROJECT)
+        assert held is not None
+
+        await _hold(store).escalate(held, 7)
+
+        assert store.run is not None
+        assert store.run.state is _S.ESCALATED
+        assert store.run.state_reason == REASON_COVER_REVIEW_UNSAFE
+        assert store.run.escalated_version == 7
+        assert store.run.rework_phase is None
+
+    # Scenario: A failed or overtaken website cover switch is rolled back
+    @pytest.mark.asyncio
+    async def test_escalate_without_a_version_keeps_the_hold(self) -> None:
+        store = _Store(run=_run(_S.AWAITING_OWNER))
+        held = await _hold(store).hold(_PROJECT)
+        assert held is not None
+
+        await _hold(store).escalate(held, None)
+
+        assert store.run is not None
+        assert store.run.state is _S.REWORKING
+        assert store.run.rework_phase == COVER_REVIEW_HOLD_PHASE
+
+    # Scenario: A typed publish time answers the review it was asked from
+    @pytest.mark.asyncio
+    async def test_hold_drops_an_open_publish_time_reply(self) -> None:
+        pending = StoredPending(
+            owner_chat_id="42", phase=SCHEDULE_PENDING_PHASE, revision=4
+        )
+        rework = StoredPending(owner_chat_id="42", phase="text")
+        timed = replace(_run(_S.AWAITING_OWNER), notice_log=NoticeLog(pending=pending))
+        reworked = replace(
+            _run(_S.AWAITING_OWNER), notice_log=NoticeLog(pending=rework)
+        )
+        first, second = _Store(run=timed), _Store(run=reworked)
+
+        await _hold(first).hold(_PROJECT)
+        await _hold(second).hold(_PROJECT)
+
+        assert first.run is not None and first.run.notice_log.pending is None
+        assert second.run is not None and second.run.notice_log.pending == rework
+
+
 def _held(world: _World, started: datetime | None) -> None:
     world.runs.run = replace(
         world.runs.run,
@@ -212,14 +279,14 @@ class TestWorkerResend:
         assert world.runs.run.state is _S.AWAITING_OWNER
         assert [event.revision for event in notices.ready] == [4]
 
-    # Scenario: A Telegram review hold that outlives its task is dropped
+    # Scenario: A Telegram review hold that outlives its task is escalated
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "started",
         [datetime.now(UTC) - timedelta(hours=1), None],
         ids=["old", "undated"],
     )
-    async def test_an_outlived_hold_is_dropped_and_sent(
+    async def test_an_outlived_hold_is_escalated_not_sent(
         self, started: datetime | None
     ) -> None:
         world = _world()
@@ -229,8 +296,9 @@ class TestWorkerResend:
         await _runner(world, notices).tick()
 
         assert world.runs.run.rework_phase is None
-        assert world.runs.run.state is _S.AWAITING_OWNER
-        assert [event.revision for event in notices.ready] == [4]
+        assert world.runs.run.state is _S.ESCALATED
+        assert world.runs.run.state_reason == REASON_COVER_REVIEW_INTERRUPTED
+        assert notices.ready == []
 
     # Scenario: A held run does not block the other autopilot runs
     @pytest.mark.asyncio
@@ -261,7 +329,7 @@ class TestWorkerResend:
         assert world.runs.run.state is _S.AWAITING_OWNER
         assert [event.run_id for event in notices.ready] == [other.run_id]
 
-    # Scenario: A Telegram review hold that outlives its task is dropped
+    # Scenario: A Telegram review hold that outlives its task is escalated
     def test_hold_activity(self) -> None:
         run = _run(_S.REWORKING)
         assert hold_active(run, _NOW) is False

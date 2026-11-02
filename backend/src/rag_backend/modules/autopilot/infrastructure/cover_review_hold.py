@@ -16,6 +16,7 @@ from rag_backend.modules.autopilot.application.cover_review_hold import (
     CoverReviewHoldDeps,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
@@ -32,6 +33,7 @@ def _service(session: AsyncSession) -> CoverReviewHold:
         CoverReviewHoldDeps(
             runs=repo,
             recovery=SqlRunRecoveryStore(session),
+            notices=SqlNoticeLogStore(session),
             checkpoint=repo,
             clock=SystemClock(),
         )
@@ -48,6 +50,11 @@ class SessionCoverReviewHold:
         """The held run, or None when no run waits for the owner's review."""
         async with self._sessions() as session:
             return await _service(session).hold(project_id)
+
+    async def escalate(self, run_id: UUID, version: int | None) -> None:
+        """Escalate the held run instead of handing the review back."""
+        async with self._sessions() as session:
+            await _service(session).escalate(run_id, version)
 
     async def release(self, run_id: UUID, *, changed: bool) -> None:
         """Hand the run back; ``changed`` lets the worker send the review again."""

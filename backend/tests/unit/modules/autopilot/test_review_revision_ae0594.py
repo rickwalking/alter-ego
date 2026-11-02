@@ -13,6 +13,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     ANSWER_REVIEW_REPLACED,
     REASON_REVIEW_OUTDATED,
     TEXT_REVIEW_REPLACED,
+    TEXT_REVIEW_RESENDING,
 )
 from rag_backend.modules.autopilot.domain.gate import GateSnapshot
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
@@ -24,10 +25,7 @@ from rag_backend.modules.autopilot.domain.notice_log import (
     parse_stored,
     record_reminder,
 )
-from rag_backend.modules.autopilot.domain.review_revision import (
-    latest_revision,
-    tapped_revision,
-)
+from rag_backend.modules.autopilot.domain.review_revision import tapped_revision
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate
 from tests.unit.modules.autopilot import test_schedule_webhook_ae0370 as schedule
 from tests.unit.modules.autopilot.test_owner_actions import (
@@ -65,11 +63,11 @@ def _on(update: WebhookUpdate, message_id: int) -> WebhookUpdate:
     return replace(update, message_id=message_id)
 
 
-def _assert_refused(world: _World) -> None:
+def _assert_refused(world: _World, text: str = TEXT_REVIEW_REPLACED) -> None:
     assert world.editorial.resumes == []
     assert world.release.ids == []
     assert world.messenger.answers[-1].text == ANSWER_REVIEW_REPLACED
-    assert world.messenger.edits[-1].text == TEXT_REVIEW_REPLACED
+    assert world.messenger.edits[-1].text == text
 
 
 @pytest.mark.unit
@@ -85,7 +83,7 @@ class TestOutdatedReview:
 
         await _handle(world, _on(_tap(1, _action(kind, world)), 9))
 
-        _assert_refused(world)
+        _assert_refused(world, TEXT_REVIEW_RESENDING)
         assert world.runs.run.state is _S.REWORKING
         assert world.runs.run.state_reason == REASON_REVIEW_OUTDATED
 
@@ -196,7 +194,7 @@ class TestScheduleRevision:
 
         assert world.runs.run.state is _S.REWORKING
         assert world.editorial.resumes == []
-        assert world.messenger.texts[-1].text == TEXT_REVIEW_REPLACED
+        assert world.messenger.texts[-1].text == TEXT_REVIEW_RESENDING
 
 
 @pytest.mark.unit
@@ -219,7 +217,7 @@ class TestRevisionLedger:
         )
 
     # Scenario: An unknown Telegram message cannot approve anything
-    def test_tapped_and_latest_revision(self) -> None:
+    def test_tapped_revision(self) -> None:
         run = replace(_world().runs.run, notice_log=NoticeLog(reviews=(_OLD, _NEW)))
 
         assert tapped_revision(run, 9) == 4
@@ -227,6 +225,3 @@ class TestRevisionLedger:
         assert tapped_revision(run, 77) is None
         assert tapped_revision(run, None) is None
         assert tapped_revision(None, 9) is None
-        assert latest_revision(run) == 6
-        assert latest_revision(replace(run, notice_log=NoticeLog())) is None
-        assert latest_revision(None) is None

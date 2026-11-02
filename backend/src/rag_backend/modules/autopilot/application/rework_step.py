@@ -11,8 +11,8 @@ back to ``awaiting_owner`` and stages the fresh review (new lock version).
 
 A website cover switching slide 1 holds the run (phase marker
 ``COVER_REVIEW_HOLD_PHASE``): the tick waits until the switch releases it, or,
-when the hold outlives its task (a restart), drops it and lets the final-review
-stop send the review at the current lock version.
+when the hold outlives its task (a restart), escalates the run, since slide 1
+may then carry a cover no render shows.
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ from rag_backend.modules.autopilot.cover_constants import (
     COVER_REWORK_PHASE,
     REASON_COVER_MISSING,
     REASON_COVER_RENDER_FAILED,
+    REASON_COVER_REQUIRES_REVIEW,
+    REASON_COVER_REVIEW_INTERRUPTED,
 )
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
@@ -163,8 +165,9 @@ class ReworkStep:
         status = await switcher.switch(command)
         if status is CoverSwitchStatus.CONFLICT:
             return 1
-        if status is CoverSwitchStatus.MISSING:
-            await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_COVER_MISSING)
+        back = _BACK_TO_OWNER.get(status)
+        if back is not None:
+            await self._end(run, AutopilotRunState.AWAITING_OWNER, back)
             return 1
         if status is CoverSwitchStatus.RENDER_FAILED:
             await self._escalate(run, project_id, REASON_COVER_RENDER_FAILED)
@@ -178,12 +181,16 @@ class ReworkStep:
         snapshot: GateSnapshot,
         project_id: str,
     ) -> int | None:
-        """Wait for the website cover switch; an outlived hold is dropped."""
-        del snapshot, project_id
+        """Wait for the website cover switch; an outlived hold is escalated.
+
+        The switch's task died (a restart): slide 1 may carry a cover no render
+        shows, so the owner is told instead of being sent a review.
+        """
+        del snapshot
         if hold_active(run, self._deps.clock.now()):
             return 0
-        await self._deps.recovery.clear_rework(run.run_id)
-        return None
+        await self._escalate(run, project_id, REASON_COVER_REVIEW_INTERRUPTED)
+        return 1
 
     async def _apply(
         self,
@@ -226,6 +233,13 @@ class ReworkStep:
                 reason=reason,
             )
         )
+
+
+_BACK_TO_OWNER: dict[CoverSwitchStatus, str] = {
+    CoverSwitchStatus.MISSING: REASON_COVER_MISSING,
+    CoverSwitchStatus.REQUIRES_REVIEW: REASON_COVER_REQUIRES_REVIEW,
+}
+"""Cover switch outcomes that leave slide 1 as it was and reopen the review."""
 
 
 def _at_final_review(snapshot: GateSnapshot) -> bool:

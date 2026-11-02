@@ -19,10 +19,12 @@ from rag_backend.modules.autopilot.notify_constants import (
     LEDGER_REVIEWS,
     LEDGER_STATUSES,
 )
+from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_PENDING_PHASE
 from rag_backend.modules.autopilot.webhook_constants import (
     LEDGER_PENDING,
     LEDGER_PENDING_OWNER,
     LEDGER_PENDING_PHASE,
+    LEDGER_PENDING_REVISION,
 )
 
 
@@ -57,6 +59,7 @@ class StoredPending:
 
     owner_chat_id: str
     phase: str
+    revision: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -116,13 +119,23 @@ def reminder_revision(log: NoticeLog) -> int:
 
 
 def record_review(log: NoticeLog, review: ReviewRecord) -> NoticeLog:
-    """Replace any partial review for the same revision and append its ids."""
+    """Replace any partial review for the same revision and append its ids.
+
+    A publish-time reply still open for an older review is dropped: it answered
+    a render the new review replaces.
+    """
     kept = tuple(item for item in log.reviews if item.revision != review.revision)
     return replace(
         log,
         reviews=(*kept, review),
         message_ids=_merge_ids(log.message_ids, _review_ids(review)),
+        pending=None if is_time_reply(log.pending) else log.pending,
     )
+
+
+def is_time_reply(pending: StoredPending | None) -> bool:
+    """True for a pending publish-time reply ("Outro horário")."""
+    return pending is not None and pending.phase == SCHEDULE_PENDING_PHASE
 
 
 def record_status(log: NoticeLog, event_id: str, message_id: int) -> NoticeLog:
@@ -182,6 +195,7 @@ def dump_log(log: NoticeLog) -> dict[str, object]:
         payload[LEDGER_PENDING] = {
             LEDGER_PENDING_OWNER: log.pending.owner_chat_id,
             LEDGER_PENDING_PHASE: log.pending.phase,
+            LEDGER_PENDING_REVISION: log.pending.revision,
         }
     return payload
 
@@ -231,7 +245,11 @@ def _pending(raw: object) -> StoredPending | None:
         return None
     if not isinstance(phase, str) or not phase:
         return None
-    return StoredPending(owner_chat_id=owner, phase=phase)
+    return StoredPending(
+        owner_chat_id=owner,
+        phase=phase,
+        revision=_optional_int(raw.get(LEDGER_PENDING_REVISION)),
+    )
 
 
 def _reviews(raw: object) -> tuple[ReviewRecord, ...]:

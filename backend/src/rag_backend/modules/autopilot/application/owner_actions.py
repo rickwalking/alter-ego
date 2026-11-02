@@ -35,9 +35,9 @@ from rag_backend.modules.autopilot.application.publish_choice import (
     CHOICE_KINDS,
     PublishChoiceActions,
     PublishChoiceDeps,
-    is_schedule_reply,
 )
 from rag_backend.modules.autopilot.application.queue_actions import QueueOwnerActions
+from rag_backend.modules.autopilot.application.schedule_steps import is_schedule_reply
 from rag_backend.modules.autopilot.application.thesis_actions import (
     ThesisOwnerActions,
     is_thesis_pending,

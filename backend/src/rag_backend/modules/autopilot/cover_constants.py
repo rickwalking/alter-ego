@@ -87,6 +87,11 @@ TEXT_COVER_SWITCHING = "🖼️ Trocando a capa do slide 1. A revisão volta em 
 COVER_REWORK_PHASE = "owner_cover"
 REASON_COVER_SWITCH = "owner_cover_switch"
 REASON_COVER_MISSING = "cover_file_missing"
+REASON_COVER_REQUIRES_REVIEW = "cover_requires_review"
+TEXT_COVER_REQUIRES_REVIEW = (
+    "🖼️ Este carrossel já foi aprovado ou publicado: a capa do slide 1 não muda "
+    "sem uma nova revisão."
+)
 REASON_COVER_RENDER_FAILED = "cover_render_failed"
 TEXT_COVER_RENDER_FAILED = (
     "🖼️ A troca da capa do slide 1 não renderizou. Os slides não mudaram; "
@@ -96,10 +101,28 @@ COVER_REVIEW_HOLD_PHASE = "website_cover"
 COVER_REVIEW_HOLD_MAX_SECONDS = 15 * 60.0
 REASON_COVER_REVIEW_HOLD = "website_cover_switch"
 REASON_COVER_REVIEW_KEPT = "website_cover_kept"
-ANSWER_REVIEW_REPLACED = "Esta revisão foi substituída"
+REASON_COVER_REVIEW_UNSAFE = "website_cover_unsafe"
+REASON_COVER_REVIEW_INTERRUPTED = "website_cover_interrupted"
+TEXT_COVER_REVIEW_UNSAFE = (
+    "🖼️ A capa gerada no site não pôde ser aplicada nem desfeita com segurança. "
+    "Abra o carrossel no dashboard e confira o slide 1 antes de aprovar."
+)
+TEXT_COVER_REVIEW_INTERRUPTED = (
+    "🖼️ A troca da capa gerada no site foi interrompida. Abra o carrossel no "
+    "dashboard e confira o slide 1 antes de aprovar."
+)
+ANSWER_REVIEW_REPLACED = "Esta revisão está desatualizada"
 TEXT_REVIEW_REPLACED = (
-    "🖼️ Esta revisão foi substituída: o carrossel mudou. "
-    "Use a revisão mais recente; ela chega numa nova mensagem."
+    "🖼️ Esta revisão está desatualizada: o carrossel mudou depois dela. "
+    "Use a mensagem de revisão mais recente."
+)
+TEXT_REVIEW_RESENDING = (
+    "🖼️ Esta revisão está desatualizada: o carrossel mudou depois dela. "
+    "A revisão atual vai chegar numa nova mensagem."
+)
+TEXT_REVIEW_ON_WEBSITE = (
+    "🖼️ Esta revisão está desatualizada e a atual não pôde ser enviada aqui. "
+    "Revise e aprove o carrossel no dashboard."
 )
 REASON_REVIEW_OUTDATED = "review_outdated"
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
@@ -173,8 +196,11 @@ __all__ = [
     "REASON_COVER_ASSET_USED",
     "REASON_COVER_MISSING",
     "REASON_COVER_RENDER_FAILED",
+    "REASON_COVER_REQUIRES_REVIEW",
     "REASON_COVER_REVIEW_HOLD",
+    "REASON_COVER_REVIEW_INTERRUPTED",
     "REASON_COVER_REVIEW_KEPT",
+    "REASON_COVER_REVIEW_UNSAFE",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
     "REASON_REVIEW_OUTDATED",
@@ -185,8 +211,13 @@ __all__ = [
     "SKIP_COVER_UNAVAILABLE",
     "TABLE_COVER_ASSETS",
     "TEXT_COVER_RENDER_FAILED",
+    "TEXT_COVER_REQUIRES_REVIEW",
+    "TEXT_COVER_REVIEW_INTERRUPTED",
+    "TEXT_COVER_REVIEW_UNSAFE",
     "TEXT_COVER_SWITCHING",
+    "TEXT_REVIEW_ON_WEBSITE",
     "TEXT_REVIEW_REPLACED",
+    "TEXT_REVIEW_RESENDING",
     "UPLOAD_READ_SLACK_BYTES",
     "UPLOAD_STATUS_BY_CODE",
 ]
