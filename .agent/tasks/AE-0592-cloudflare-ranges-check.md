@@ -1,6 +1,6 @@
 # AE-0592 — Periodic check that nginx's Cloudflare ranges are current
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Chore
@@ -38,9 +38,9 @@ but nothing reminds anyone to run it.
 
 ## Acceptance Criteria
 
-- [ ] AC1 The job passes when both configs match Cloudflare's published lists.
-- [ ] AC2 The job reports the added and removed ranges when they differ.
-- [ ] AC3 A seeded difference makes the check fail in a unit test.
+- [x] AC1 The job passes when both configs match Cloudflare's published lists.
+- [x] AC2 The job reports the added and removed ranges when they differ.
+- [x] AC3 A seeded difference makes the check fail in a unit test.
 
 ## Gherkin Scenarios
 
@@ -111,6 +111,11 @@ Feature: Cloudflare ranges in nginx stay current
 Ticket filed with AE-0589 at Pedro's request (2026-11-01): the ranges are a pinned list, so a periodic check is
 needed.
 
+### 2026-11-02
+
+Implemented on `chore/ae-0592-cloudflare-ranges-check`: checker script, rule-fires tests, weekly workflow, guide
+update. Gates covering the touched files green (dev summary).
+
 ## Files Touched
 
 - `scripts/ci/check_cloudflare_ranges.py` (new, stdlib only)
@@ -120,7 +125,10 @@ needed.
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/unit/scripts_ci/test_check_cloudflare_ranges.py`: 13 passed (no network; local files or a stub
+  HTTPS connection). Seeded differences exit 1, fetch/parse failures exit 2.
+- Live run 2026-11-02: `Cloudflare ranges OK: 22 ranges match in 2 configs`, exit 0.
+- Per-gate runs and actionlint: `.agent/reports/AE-0592.dev-summary.md`.
 
 ## QA Report
 
