@@ -10,6 +10,9 @@ cover through ``POST /api/autopilot/assets`` and names it on a topic
 - An unused cover may be attached for 6 hours; then the sweep deletes it.
 - Telegram callback ``ap:cv:<run>`` uses the cover and ``ap:cvoff:<run>`` drops it.
 - The rework marker the worker tick reads fits ``REWORK_PHASE_LENGTH``.
+- A website cover switching slide 1 while the run waits for the owner's review
+  holds the run in ``reworking`` (``COVER_REVIEW_HOLD_PHASE``; the worker waits,
+  at most ``COVER_REVIEW_HOLD_MAX_SECONDS``) until the switch is done.
 - A slide-1 switch that was stored but whose re-render failed is escalated, not done.
 - The thesis-time cover photo is sent once per run (a notice-ledger key).
 """
@@ -89,8 +92,6 @@ TEXT_COVER_RENDER_FAILED = (
     "🖼️ A troca da capa do slide 1 não renderizou. Os slides não mudaram; "
     "abra o carrossel no dashboard e gere de novo."
 )
-# A website cover switching slide 1 while the run waits for the owner's review:
-# the run is held in ``reworking`` (the worker waits) until the switch is done.
 COVER_REVIEW_HOLD_PHASE = "website_cover"
 COVER_REVIEW_HOLD_MAX_SECONDS = 15 * 60.0
 REASON_COVER_REVIEW_HOLD = "website_cover_switch"
