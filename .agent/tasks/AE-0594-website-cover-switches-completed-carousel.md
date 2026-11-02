@@ -251,21 +251,28 @@ Answers to the three questions below:
   review window) and stores its start time in the queued rework's feedback;
   an unchanged release restores `awaiting_owner` with the same anchor. The
   runner skips a run with an active hold and steps the next active run.
-- **Invariant: no approval between the cover write and a settled render
-  (mechanism, third review):** the locked write stamps the existing
-  `needs_republish_since` marker in the same commit as `slide_cover`. Both
-  approve paths refuse an approve while the marker is set: the website resume
-  route (`ensure_rendered_before_approve`, typed 409 `build_in_progress`) and
-  the run-owned path the Telegram approve uses (`run_automation_phase`,
-  `resume_already_in_progress`). The CAS makes it atomic: an approve whose
-  version predates the write loses its CAS, one read after it sees the marker.
-  Only a settled render clears the marker (the switch's own render, the
-  rollback's re-render, or the republish sweep), so a crash, a deploy
-  cancelling the task, or a failed rollback leaves approval refused until the
-  sweep renders the carousel, and the held Telegram run is escalated by the
-  worker (hold expiry), never released to approval. The marker also covers a
-  slide-text edit not yet republished: an approve then waits for its render
-  (a few minutes at most, the sweep's guarantee).
+- **Invariant: no final-review approval between a slide-1 write and a
+  settled render (all three switch paths):** the existing
+  `needs_republish_since` marker is stamped in the same commit as the slide-1
+  change by (1) the website cover switch (`EditorialReviewCoverStore`), (2) the
+  cover switch service behind the picker `PUT /cover` and the Telegram GrokBot
+  cover (`SlideCoverSwitchService` through its `RenderMarker` port), and (3)
+  `PUT /hook-photo` on a completed carousel (stamped before the photo is
+  written; that route also refuses approved or released carousels with
+  `cover_switch_requires_review`, 409, re-checking after the stamp). A
+  final-review approve is refused while the marker is set: the website resume
+  route (typed 409 `build_in_progress`; the publish page says the slides are
+  still being rendered) and the run-owned path the Telegram approve uses
+  (`resume_render_pending`, its own text). Approves at earlier gates are not
+  affected. Every clear is a compare-and-clear (`needs_republish_since <=
+  <render start>`): the switch's render, the rollback's re-render, the picker,
+  the manual republish route and the sweep never wipe a marker stamped while
+  they rendered. A crash, a cancelled task or a failed rollback leaves the
+  marker, so approval stays refused until the sweep renders; the held Telegram
+  run is escalated at hold expiry. The sweep logs a row refused with
+  `cover_change_requires_review` once and skips it until its lock version
+  moves (no endless retry). A slide-text edit not yet republished also blocks
+  the final-review approve for its few minutes.
 - **Render under the build lock, review re-checked:** the switch renders
   through the republish pipeline inside `republish_build_lock`, re-checking
   `review_refusal` first, so a render never lands on an approved or released
@@ -375,6 +382,16 @@ lines, `NoReviewHold` moved to the test fakes, typed test helpers, the
 frontend test scenario fixed, the unchanged release keeps the 72-hour
 anchor. Existing approve/schedule test fixtures now tap a recorded review
 (message 9 at revision 4), as a real tap does.
+
+### 2026-11-02 (fourth review: marker liveness)
+
+The marker is stamped by all three slide-1 paths (website switch, picker and
+GrokBot switch service, hook photo on a completed carousel, which now also
+refuses approved carousels), cleared only by compare-and-clear, and the sweep
+stops retrying a cover-refused row. The marker checks apply to the final-review
+approve only. Owner texts: "slides still rendering" on the website for
+`build_in_progress` / `mutation_in_progress`, and a distinct Telegram code and
+text. The manifest record is tested through the real build and writer.
 
 ### 2026-11-02 (third review: invariant at the approval and render points)
 
