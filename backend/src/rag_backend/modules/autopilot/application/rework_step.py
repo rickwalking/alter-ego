@@ -9,6 +9,10 @@ A "Fix issues" tap is queued the same way (phase marker
 re-render, then hands the run to the normal final-review stop, which moves it
 back to ``awaiting_owner`` and stages the fresh review (new lock version).
 
+"Usar capa do Grok" also applies on an approved carousel (a cancelled
+schedule): the switch drops the approval with the write, and the final-review
+stop then sends the review of the new render (Pedro's decision, 2026-11-02).
+
 A website cover switching slide 1 holds the run (phase marker
 ``COVER_REVIEW_HOLD_PHASE``): the tick waits until the switch releases it, or,
 when the hold outlives its task (a restart), escalates the run, since slide 1
@@ -23,6 +27,7 @@ from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.run_recovery import RunRecovery
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
+    PHASE_STATUS_APPROVED,
     PHASE_STATUS_AWAITING,
     REASON_PROJECT_MISSING,
     REASON_REVISION_CAP,
@@ -105,7 +110,7 @@ class ReworkStep:
             await self._end(run, AutopilotRunState.ESCALATED, REASON_PROJECT_MISSING)
             return 1
         snapshot = await self._deps.editorial.read_gate(project_id)
-        if not _at_final_review(snapshot):
+        if not _at_final_review(snapshot, run.rework_phase):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
         special = {
@@ -242,10 +247,15 @@ _BACK_TO_OWNER: dict[CoverSwitchStatus, str] = {
 """Cover switch outcomes that leave slide 1 as it was and reopen the review."""
 
 
-def _at_final_review(snapshot: GateSnapshot) -> bool:
+def _at_final_review(snapshot: GateSnapshot, rework_phase: str) -> bool:
+    """Waiting in final review; the GrokBot cover also runs once approved there."""
+    if snapshot.phase != GATE_FINAL_REVIEW:
+        return False
+    if snapshot.phase_status == PHASE_STATUS_AWAITING:
+        return True
     return (
-        snapshot.phase == GATE_FINAL_REVIEW
-        and snapshot.phase_status == PHASE_STATUS_AWAITING
+        rework_phase == COVER_REWORK_PHASE
+        and snapshot.phase_status == PHASE_STATUS_APPROVED
     )
 
 

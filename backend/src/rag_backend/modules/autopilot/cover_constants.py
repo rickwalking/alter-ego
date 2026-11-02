@@ -14,6 +14,9 @@ cover through ``POST /api/autopilot/assets`` and names it on a topic
   holds the run in ``reworking`` (``COVER_REVIEW_HOLD_PHASE``; the worker waits,
   at most ``COVER_REVIEW_HOLD_MAX_SECONDS``) until the switch is done.
 - A slide-1 switch that was stored but whose re-render failed is escalated, not done.
+- A slide-1 switch that dropped an approved carousel's approval sends its run
+  (``scheduled`` or ``awaiting_owner``) to ``reworking`` for a new review; a
+  scheduled run keeps its time (``REASON_COVER_REVIEW_REOPENED``).
 - The thesis-time cover photo is sent once per run (a notice-ledger key).
 """
 
@@ -103,6 +106,7 @@ REASON_COVER_REVIEW_HOLD = "website_cover_switch"
 REASON_COVER_REVIEW_KEPT = "website_cover_kept"
 REASON_COVER_REVIEW_UNSAFE = "website_cover_unsafe"
 REASON_COVER_REVIEW_INTERRUPTED = "website_cover_interrupted"
+REASON_COVER_REVIEW_REOPENED = "cover_review_reopened"
 TEXT_COVER_REVIEW_UNSAFE = (
     "🖼️ A troca da capa gerada no site não terminou: o slide 1 ainda não foi "
     "renderizado com segurança. A aprovação fica bloqueada até os slides serem "
@@ -201,6 +205,7 @@ __all__ = [
     "REASON_COVER_REVIEW_HOLD",
     "REASON_COVER_REVIEW_INTERRUPTED",
     "REASON_COVER_REVIEW_KEPT",
+    "REASON_COVER_REVIEW_REOPENED",
     "REASON_COVER_REVIEW_UNSAFE",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",

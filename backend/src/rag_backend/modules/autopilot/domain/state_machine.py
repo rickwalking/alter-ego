@@ -9,8 +9,10 @@ owner's Approve, so the review stays open instead of a dead ``publish_failed``. 
 run waits in ``awaiting_thesis`` for the owner's thesis before generating. ``scheduled``
 holds the owner's publish time: cancel reopens the review, a carousel no longer approved
 at the due time expires the run, and the owner may move a scheduled run to another day
-or time. ``(escalated, generating)`` is the owner's "Tentar de novo" on a run the
-generation queue parked: the run resumes from its checkpoint.
+or time; a slide-1 change that drops the approval sends it to ``reworking`` for a
+new review, keeping its time. ``(escalated, generating)`` is the owner's "Tentar
+de novo" on a run the generation queue parked: the run resumes from its
+checkpoint.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
         (_S.SCHEDULED, _S.AWAITING_OWNER),
         (_S.SCHEDULED, _S.EXPIRED),
         (_S.SCHEDULED, _S.SCHEDULED),
+        (_S.SCHEDULED, _S.REWORKING),
     })
 )
 

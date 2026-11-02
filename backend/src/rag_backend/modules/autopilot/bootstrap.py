@@ -318,6 +318,7 @@ def runner_dependencies(
     from rag_backend.modules.autopilot.infrastructure.project_inputs import (
         SqlProjectInputs,
     )
+    from rag_backend.modules.editorial.public import WorkflowCheckpointReopener
 
     repo = SqlAlchemyAutopilotRepository(session)
     driver = InProcessEditorialDriver(
@@ -350,7 +351,9 @@ def runner_dependencies(
         gate_repair=autofixer,
         slide_fix=autofixer,
         covers=cover_offers(session),
-        cover_switch=EditorialCoverSwitcher(session),
+        cover_switch=EditorialCoverSwitcher(
+            session, WorkflowCheckpointReopener(config.engine_factory)
+        ),
         auto_cover=EditorialAutoCoverScheduler(
             lambda: get_session_maker()(), consent=config.cover_consent
         ),

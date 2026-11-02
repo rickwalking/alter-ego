@@ -14,7 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
-from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_PUBLISHED,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.blog_generation_state import GenerationStart
 from rag_backend.infrastructure.database.blog_generation_drafts import (
@@ -178,7 +181,7 @@ async def test_the_release_keeps_a_caption_edited_after_the_load(
     await db.execute(
         update(CarouselProjectModel)
         .where(CarouselProjectModel.id == project_id)
-        .values(caption=_EDITED)
+        .values(caption=_EDITED, workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH)
     )
 
     released = await LegacyPublishingAcl(db, repo).release_public(loaded, project_id)

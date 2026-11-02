@@ -28,6 +28,7 @@ from rag_backend.modules.autopilot.domain.cover_ports import (
 from rag_backend.modules.editorial.public import (
     AUTOFIX_STATUS_CONFLICT,
     AUTOFIX_STATUS_FIXED,
+    CheckpointReopener,
     CoverImageRequest,
     CoverSwitchRequest,
     cover_image_file,
@@ -78,10 +79,17 @@ class EditorialCoverImages:
 
 
 class EditorialCoverSwitcher:
-    """Re-render a finished carousel with or without the GrokBot cover."""
+    """Re-render a finished carousel with or without the GrokBot cover.
 
-    def __init__(self, session: AsyncSession) -> None:
+    With ``checkpoint`` a switch on an approved carousel (a cancelled
+    schedule) drops its approval; without it that carousel is refused.
+    """
+
+    def __init__(
+        self, session: AsyncSession, checkpoint: CheckpointReopener | None = None
+    ) -> None:
         self._session = session
+        self._checkpoint = checkpoint
 
     async def switch(self, command: CoverSwitchCommand) -> CoverSwitchStatus:
         """Stage, store and re-render; a conflict writes nothing.
@@ -94,6 +102,7 @@ class EditorialCoverSwitcher:
                 project_id=command.project_id,
                 expected_version=command.expected_version,
                 cover=command.cover,
+                checkpoint=self._checkpoint,
             )
         )
         status = _SWITCH_STATUS.get(result.status, CoverSwitchStatus.MISSING)

@@ -23,11 +23,12 @@ from rag_backend.modules.autopilot.infrastructure.carousel_release import (
 from rag_backend.modules.publishing import CarouselRepository, LegacyPublishingAcl
 
 _EPOCH = 5
+_APPROVED = "approved_for_publish"
 
 
 def _result(rowcount: int) -> MagicMock:
     result = MagicMock(rowcount=rowcount)
-    result.one_or_none.return_value = (2, _EPOCH)
+    result.one_or_none.return_value = (2, _EPOCH, _APPROVED)
     return result
 
 
@@ -77,7 +78,9 @@ async def test_the_autopilot_release_reports_a_lost_race_as_not_released(
     assert session.commit.await_count == int(released)
 
 
-@pytest.mark.parametrize(("captured", "released"), [(_EPOCH - 1, False), (_EPOCH, True)])
+@pytest.mark.parametrize(
+    ("captured", "released"), [(_EPOCH - 1, False), (_EPOCH, True)]
+)
 async def test_a_run_owned_release_honours_the_epoch_fence(
     captured: int, released: bool
 ) -> None:

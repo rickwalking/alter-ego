@@ -256,6 +256,7 @@ GATE_DESIGN = "design"
 GATE_IMAGES = "images"
 GATE_FINAL_REVIEW = "final_review"
 PHASE_STATUS_AWAITING = "awaiting_human"
+PHASE_STATUS_APPROVED = "approved"
 PHASE_STATUS_FAILED = "failed"
 PHASE_STATUS_IN_PROGRESS = "in_progress"
 

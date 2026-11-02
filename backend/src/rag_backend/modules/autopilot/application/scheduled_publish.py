@@ -7,7 +7,18 @@ carousel is released public; the existing publish job then posts it (quota,
 containers, Story, notice) on the same worker tick. The compare-and-set is
 the idempotency key: a second tick finds the run no longer ``scheduled``. A
 run whose carousel is no longer approved at its time expires instead, and
-nothing is published.
+nothing is published: a missed slot expires, it never rolls forward.
+
+The carousel row is locked (``SELECT ... FOR UPDATE``) before the approval is
+read and stays locked until the run move and the release commit, so a slide-1
+switch, which drops an approved carousel's approval under its compare-and-set
+on that row, lands either before (the run expires) or after (the switch finds
+the carousel released and is refused).
+
+A reopened review (Pedro's decision, 2026-11-02) keeps its time on an
+``awaiting_owner`` run: at that time it expires the same way, unless the
+carousel was approved again on the website, in which case it is published as
+the scheduled run would have been.
 """
 
 from __future__ import annotations
@@ -36,6 +47,7 @@ from rag_backend.modules.autopilot.domain.ports import (
 )
 from rag_backend.modules.autopilot.domain.publish import PublishNotice
 from rag_backend.modules.autopilot.domain.schedule_ports import (
+    CarouselRowLock,
     DueScheduleQuery,
     ScheduledRunSource,
 )
@@ -55,7 +67,8 @@ _S = AutopilotRunState
 
 @dataclass(frozen=True, kw_only=True)
 class ScheduledPublishDependencies:
-    """Collaborators for one worker tick. The session is already bound."""
+    """Collaborators for one worker tick. The session is already bound;
+    ``lock`` holds the carousel row until the tick's commit."""
 
     runs: AutopilotRunRepository
     scheduled: ScheduledRunSource
@@ -64,6 +77,7 @@ class ScheduledPublishDependencies:
     notifier: PublishNotifier
     checkpoint: PublishCheckpoint
     clock: Clock
+    lock: CarouselRowLock
 
 
 class ScheduledPublishSweep:
@@ -118,8 +132,10 @@ class ScheduledPublishSweep:
         )
 
     async def _snapshot(self, run: AutopilotRun) -> CarouselPublishSnapshot | None:
+        """The carousel, locked for the rest of this run's transaction."""
         if run.carousel_project_id is None:
             return None
+        await self._deps.lock.lock(run.carousel_project_id)
         return await self._deps.source.load(run.carousel_project_id)
 
     async def _move(
@@ -127,7 +143,7 @@ class ScheduledPublishSweep:
     ) -> bool:
         return await self._deps.runs.transition(
             TransitionCommand(
-                run_id=run.run_id, expected=_S.SCHEDULED, new=new, reason=reason
+                run_id=run.run_id, expected=run.state, new=new, reason=reason
             )
         )
 

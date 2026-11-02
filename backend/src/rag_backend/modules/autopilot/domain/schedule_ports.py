@@ -12,7 +12,8 @@ from rag_backend.modules.autopilot.domain.recommend import ScheduleSignals
 
 @dataclass(frozen=True, kw_only=True)
 class DueScheduleQuery:
-    """``scheduled`` runs whose time is at or before ``now``, oldest first."""
+    """Runs whose time is at or before ``now``, oldest first: ``scheduled``
+    ones and reopened ones waiting for the owner with their time kept."""
 
     now: datetime
     limit: int
@@ -23,6 +24,14 @@ class ScheduledRunSource(Protocol):
 
     async def due(self, query: DueScheduleQuery) -> list[AutopilotRun]:
         """Due runs, earliest ``scheduled_at`` first, capped by ``query.limit``."""
+        ...
+
+
+class CarouselRowLock(Protocol):
+    """Locks a carousel row until the caller's transaction ends."""
+
+    async def lock(self, project_id: str) -> None:
+        """``SELECT ... FOR UPDATE``: a concurrent slide-1 switch waits."""
         ...
 
 

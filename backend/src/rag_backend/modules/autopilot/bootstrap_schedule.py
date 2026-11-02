@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
 from rag_backend.modules.autopilot.infrastructure.schedule_store import (
+    EditorialCarouselRowLock,
     SqlScheduledRuns,
 )
 
@@ -43,5 +44,6 @@ def scheduled_publish_sweep(
             notifier=OutboxPublishNotifier(session),
             checkpoint=repo,
             clock=SystemClock(),
+            lock=EditorialCarouselRowLock(session),
         )
     )
