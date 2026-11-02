@@ -59,8 +59,3 @@ Feature: A stale user write never restores an old password hash or token version
     When one admin edit deactivates the second admin and another deactivates the first, meanwhile
     Then both edits wait, and once the change commits neither deadlocks
     And one edit is allowed, the other refused, and one active admin is left
-
-  Scenario: Two admins deactivating each other still leave one active admin
-    Given two active admins on Postgres
-    When each deactivates the other at once
-    Then one edit is allowed, the other refused, and one active admin is left

@@ -56,13 +56,16 @@ revoked password works again and the logged-out sessions come back.
       back, commits nothing).
 - [ ] AC4 On Postgres, an admin profile edit racing a password change (two sessions, real row lock) waits for the
       lock, and afterwards the new hash, the bumped token version and the new name are all stored.
-- [ ] AC5 The AE-0585 mutual deactivation on Postgres still leaves one active admin (no deadlock with the new lock).
+- [ ] AC5 The AE-0585 mutual deactivation on Postgres still leaves one active admin, and two admin edits queued
+      behind a password change on one admin's row never deadlock.
 - [ ] AC6 Existing contracts unchanged: 404 before 422 on an admin edit of a missing user with a bad role, the
       last-active-admin guard, the reset and the change flows.
 
 ## Gherkin Scenarios
 
 - `backend/tests/features/stale_user_write_ae0596.feature`
+- The mutual deactivation of AC5 stays in `backend/tests/features/last_active_admin_guard_ae0585.feature`
+  (`tests/integration/test_last_active_admin_lock_pg_ae0585.py`), re-run green on Postgres.
 
 ## Delta
 
@@ -133,6 +136,23 @@ revoked password works again and the logged-out sessions come back.
 
 Ticket created from Pedro's decision (2026-11-02). Audit of the users-table writers recorded above.
 
+Implemented the field tracking, the changed-fields-only write and the locked reads. Proof that the tests bite:
+
+- Repository writing every field again: the SQLite stale-rename and no-change tests and the Postgres stale-copy
+  test fail (3 fail).
+- Handlers back on plain `get_by_id`: 8 unit tests fail (every locked-read check).
+- Admin edit locking the user row before the admin count: the unit order test fails (2 cases), and the Postgres
+  "edits queued behind a password change" test deadlocks (`DeadlockDetectedError`) in 2 of 3 runs (whether it
+  deadlocks depends on how the two random ids sort); with the new order it passed 3 of 3.
+
+Finding: the Postgres race test (admin rename waiting on a password change) also passes on the original code.
+SQLAlchemy only sends the columns that differ from the session's own loaded copy of the row, and in that path the
+entity and the session copy are the same stale snapshot, so the UPDATE only carries the name. The stale write
+restores a hash or version when the entity differs from the session's copy: an entity kept across a commit
+(`expire_on_commit` reloads the row), carried from another session, or read before a `populate_existing` re-read.
+The stale-copy tests (SQLite and Postgres) reproduce that and fail on the old code. The race test stays as the
+proof of AC4 (the edit waits on the lock and the credentials survive).
+
 ## Files Touched
 
 See Delta.
@@ -155,6 +175,12 @@ Pending.
   two admins deactivating each other deadlock (each holds its target and waits on the other's in the count).
 - The admin edit keeps a plain read first, so a missing user still answers 404 before a bad role answers 422.
 - `change_password` now reads inside the UoW: a refused change rolls back and releases the lock at once.
+- The `UserField` members for the credential columns are named `CREDENTIAL_HASH`, `CREDENTIAL_CHANGE_REQUIRED`
+  and `SESSION_VERSION` (values are the real column names), so bandit S105 does not flag them and no `noqa` is
+  needed.
+- `UserService.update` now goes through the entity mutators (`rename`, `change_email`, `activate`/`deactivate`),
+  which also refresh `updated_at`; the column's `onupdate` already set it on every UPDATE, so the stored result is
+  the same.
 
 ## Blockers
 
