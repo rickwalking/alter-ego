@@ -7,12 +7,14 @@ change at once. Until the review can be reopened, both are refused: the
 picker answers ``cover_switch_requires_review`` and a generated cover stays a
 picker option.
 
-Every slide-1 writer that re-renders asks ``cover_switch_refusal`` first, so
-the rule is lifted in one place once reopening the review exists.
+Every slide-1 writer that re-renders asks ``cover_switch_refusal`` before and
+again under the project lock (``SlideCoverSwitchService``, the review switch
+store), so the rule is lifted in one place once reopening the review exists.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from rag_backend.domain.constants.carousel_workflow import (
@@ -25,25 +27,43 @@ from rag_backend.domain.constants.cover_review_switch import (
 from rag_backend.domain.models import CarouselProject
 
 
-class ReviewStateSource(Protocol):
-    """The carousel's editorial approval (``workflow_status``)."""
+@dataclass(frozen=True, kw_only=True)
+class ReviewState:
+    """The carousel's editorial approval and release, as committed now."""
 
-    async def workflow_status(self, project_id: str) -> str:
-        """``approved_for_publish`` once approved; empty when unknown."""
+    workflow_status: str
+    is_public: bool
+
+
+class ReviewStateSource(Protocol):
+    """A fresh read of the approval and release (never a cached row)."""
+
+    async def review_state(self, project_id: str) -> ReviewState | None:
+        """The committed state; None for an unknown carousel."""
         ...
 
 
-def cover_switch_refusal(project: CarouselProject, workflow_status: str) -> str | None:
+def review_state_of(project: CarouselProject, workflow_status: str) -> ReviewState:
+    """``project``'s release with ``workflow_status``."""
+    return ReviewState(workflow_status=workflow_status, is_public=project.is_public)
+
+
+def cover_switch_refusal(state: ReviewState) -> str | None:
     """Why slide 1 must not change without a new approval, if any.
 
     Released (``is_public``) is published; every Instagram post also needs the
     approval, which nothing drops afterwards.
     """
-    if project.is_public:
+    if state.is_public:
         return REASON_AUTO_SELECT_PUBLISHED
-    if workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
+    if state.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
         return REASON_AUTO_SELECT_APPROVED
     return None
 
 
-__all__ = ["ReviewStateSource", "cover_switch_refusal"]
+__all__ = [
+    "ReviewState",
+    "ReviewStateSource",
+    "cover_switch_refusal",
+    "review_state_of",
+]

@@ -11,7 +11,9 @@ bind another library photo as the slide-1 photo (``hook_photo``).
 3. re-render through the republish path (hero images reused).
 
 A held lock or a moved version is a conflict: nothing is written and the
-caller retries on the next tick.
+caller retries on the next tick. With a ``review`` source the write re-reads
+the approval under the lock: an approved or published carousel is refused
+(``cover_switch_requires_review``), the CAS bump rolled back, nothing rendered.
 """
 
 from __future__ import annotations
@@ -22,6 +24,10 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReviewStateSource,
+    cover_switch_refusal,
+)
 from rag_backend.application.services.carousel.owner_autofix_lock import (
     AutofixConflictError,
     LockedWrite,
@@ -31,6 +37,9 @@ from rag_backend.domain.constants.carousel_autofix import (
     AUTOFIX_STATUS_CONFLICT,
     AUTOFIX_STATUS_FIXED,
     AUTOFIX_STATUS_NOTHING_TO_FIX,
+)
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
 from rag_backend.domain.models.slide_cover import SlideCover
 from rag_backend.domain.protocols import CarouselRepository
@@ -50,12 +59,14 @@ class CoverStager(Protocol):
 
 @dataclass(frozen=True, kw_only=True)
 class SlideCoverSwitchDeps:
-    """The session, the carousel repository, the stager and the renderer."""
+    """The session, the carousel repository, the stager, the renderer and the
+    approval read checked under the lock (None: unchecked)."""
 
     db: AsyncSession
     repo: CarouselRepository
     stager: CoverStager
     renderer: CoverRenderer
+    review: ReviewStateSource | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -85,6 +96,10 @@ class SlideCoverSwitchResult:
     render_errors: tuple[str, ...] = ()
 
 
+class _SwitchRefusedError(Exception):
+    """The carousel was approved or released: the locked write must not happen."""
+
+
 class SlideCoverSwitchService:
     """Stage, store and re-render one slide-1 cover change."""
 
@@ -105,10 +120,14 @@ class SlideCoverSwitchService:
             await write_locked(self._deps.db, target, lambda: self._write(command))
         except AutofixConflictError:
             return SlideCoverSwitchResult(status=AUTOFIX_STATUS_CONFLICT)
+        except _SwitchRefusedError:
+            await self._deps.db.rollback()
+            return SlideCoverSwitchResult(status=ERR_COVER_SWITCH_REQUIRES_REVIEW)
         errors = await self._deps.renderer.render(command.project_id)
         return SlideCoverSwitchResult(status=AUTOFIX_STATUS_FIXED, render_errors=errors)
 
     async def _write(self, command: SlideCoverSwitchCommand) -> None:
+        await self._refuse_unreviewed(command.project_id)
         project = await self._deps.repo.get_project_by_id(UUID(command.project_id))
         if project is None:
             return
@@ -118,6 +137,14 @@ class SlideCoverSwitchService:
             project.hook_asset_staged_path = command.hook_photo.staged_path
         await self._deps.repo.update_project(project)
         await self._deps.db.commit()
+
+    async def _refuse_unreviewed(self, project_id: str) -> None:
+        review = self._deps.review
+        if review is None:
+            return
+        state = await review.review_state(project_id)
+        if state is not None and cover_switch_refusal(state) is not None:
+            raise _SwitchRefusedError
 
 
 __all__ = [

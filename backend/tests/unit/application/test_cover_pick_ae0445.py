@@ -28,6 +28,7 @@ from rag_backend.application.services.carousel.cover_pick import (
     CoverPickService,
     current_cover_asset,
 )
+from rag_backend.application.services.carousel.cover_switch_guard import ReviewState
 from rag_backend.application.services.carousel.owner_autofix_lock import LockedWrite
 from rag_backend.application.services.carousel.slide_cover_switch import (
     HookPhotoChoice,
@@ -106,9 +107,9 @@ class DraftReview:
     """A carousel waiting for its first approval."""
 
     @staticmethod
-    async def workflow_status(project_id: str) -> str:
+    async def review_state(project_id: str) -> ReviewState | None:
         del project_id
-        return "draft"
+        return ReviewState(workflow_status="draft", is_public=False)
 
 
 def _service(

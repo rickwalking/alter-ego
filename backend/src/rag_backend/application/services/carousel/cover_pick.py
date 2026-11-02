@@ -216,11 +216,12 @@ class CoverPickService:
 
         An approved (or scheduled) or published carousel is refused with
         ``cover_switch_requires_review``: its slide 1 would change unapproved.
+        The switch checks it again under the project lock.
         """
         project = command.project
         _assert_switchable(project)
-        status = await self._deps.review.workflow_status(str(project.id))
-        if cover_switch_refusal(project, status) is not None:
+        state = await self._deps.review.review_state(str(project.id))
+        if state is not None and cover_switch_refusal(state) is not None:
             raise CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW)
         found = await self._candidates(project)
         offer = found.offer

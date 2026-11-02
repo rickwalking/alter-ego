@@ -68,12 +68,12 @@ async def test_pick_on_an_approved_or_published_carousel_is_refused(
     monkeypatch: pytest.MonkeyPatch,
     values: dict[str, object],
 ) -> None:
-    """422 ``cover_switch_requires_review`` and nothing is rendered."""
+    """409 ``cover_switch_requires_review`` and nothing is rendered."""
     # Scenario: The picker refuses an approved carousel
     # Scenario: The picker refuses a published carousel
     status, detail, calls = await _pick(client, values, monkeypatch)
 
-    assert status == 422
+    assert status == 409
     assert detail == ERR_COVER_SWITCH_REQUIRES_REVIEW
     assert calls == []
 

@@ -234,6 +234,16 @@ async def run_facts(built: Harness, project_id: str) -> RunFacts | None:
         )
 
 
+async def run_updated_at(built: Harness, project_id: str) -> datetime | None:
+    """The committed run's ``updated_at`` (the review's 72-hour anchor)."""
+    async with built.sessions()() as session:
+        return await session.scalar(
+            select(AutopilotRunModel.updated_at).where(
+                AutopilotRunModel.carousel_project_id == project_id
+            )
+        )
+
+
 async def row(built: Harness, project_id: str) -> CarouselProjectModel:
     """The committed carousel row."""
     async with built.sessions()() as session:
@@ -303,6 +313,7 @@ __all__ = [
     "result_asset",
     "row",
     "run_facts",
+    "run_updated_at",
     "seed",
     "seed_run",
     "tables",

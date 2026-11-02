@@ -17,6 +17,8 @@ and the approval is never touched.
   render, and is released afterwards, with ``changed`` when the slides moved
   (the worker then sends the review again at the new lock version).
 - A lock-version conflict is a logged skip; a replay is ``already_selected``.
+- A failed render, or an approval that landed between the write and the
+  render, rolls the cover back (``rolled_back``, the review sent again).
 """
 
 from __future__ import annotations
@@ -24,8 +26,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
-
-import structlog
 
 from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverSelection,
@@ -36,6 +36,7 @@ from rag_backend.application.services.carousel.cover_autoselect import (
 )
 from rag_backend.application.services.carousel.cover_switch_guard import (
     cover_switch_refusal,
+    review_state_of,
 )
 from rag_backend.domain.constants.carousel_autofix import AUTOFIX_STATUS_FIXED
 from rag_backend.domain.constants.carousel_workflow import (
@@ -48,12 +49,12 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_MANUAL_CHOICE,
 )
 from rag_backend.domain.constants.cover_review_switch import (
-    LOG_COVER_REVIEW_RENDER_FAILED,
     REASON_AUTO_SELECT_NOT_IN_REVIEW,
+    REASON_AUTO_SELECT_ROLLED_BACK,
 )
 from rag_backend.domain.models import CarouselProject
 
-logger = structlog.get_logger(__name__)
+_MOVED = frozenset({AUTOFIX_STATUS_FIXED, REASON_AUTO_SELECT_ROLLED_BACK})
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -84,21 +85,6 @@ class ReviewHold(Protocol):
         ...
 
 
-class NoReviewHold:
-    """No Telegram review to hold (no autopilot wiring)."""
-
-    @staticmethod
-    async def hold(project_id: str) -> UUID | None:
-        """Nothing is held."""
-        del project_id
-        return None
-
-    @staticmethod
-    async def release(run_id: UUID, *, changed: bool) -> None:
-        """Nothing to release."""
-        del run_id, changed
-
-
 @dataclass(frozen=True, kw_only=True)
 class ReviewSwitch:
     """The store and the review hold of a website generation."""
@@ -109,7 +95,7 @@ class ReviewSwitch:
 
 def review_refusal(found: ProjectAtVersion) -> str | None:
     """Approved, published, or not waiting in final review."""
-    guard = cover_switch_refusal(found.project, found.workflow_status)
+    guard = cover_switch_refusal(review_state_of(found.project, found.workflow_status))
     if guard is not None:
         return guard
     project = found.project
@@ -154,12 +140,6 @@ async def switch_in_review(
     outcome = await _held_switch(review, write)
     if outcome.status != AUTOFIX_STATUS_FIXED:
         return outcome.status
-    if outcome.render_errors:
-        logger.warning(
-            LOG_COVER_REVIEW_RENDER_FAILED,
-            project_id=selection.project_id,
-            errors=list(outcome.render_errors),
-        )
     return OUTCOME_AUTO_SELECT_SELECTED
 
 
@@ -171,7 +151,7 @@ async def _held_switch(
     changed = True
     try:
         outcome = await review.store.switch_in_review(write)
-        changed = outcome.status == AUTOFIX_STATUS_FIXED
+        changed = outcome.status in _MOVED
     finally:
         if run_id is not None:
             await review.hold.release(run_id, changed=changed)
@@ -179,7 +159,6 @@ async def _held_switch(
 
 
 __all__ = [
-    "NoReviewHold",
     "ReviewCoverStore",
     "ReviewHold",
     "ReviewSwitch",

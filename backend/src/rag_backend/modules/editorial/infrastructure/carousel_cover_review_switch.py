@@ -5,9 +5,11 @@ stages the generated cover, and under the project lock and the lock-version
 CAS writes ``slide_cover`` only while the row still matches: in final review,
 not approved, not released, and slide 1's cover fields unchanged since the
 baseline (read ``FOR UPDATE``, so an owner write that takes no lock is never
-overwritten). It then re-renders through the republish renderer, the one the
-picker's switch uses. The workflow, its approval and the release are never
-touched.
+overwritten). The needs-republish marker is stamped with it. It then
+re-renders through the republish renderer, the one the picker's switch uses,
+and re-checks the review: a failed render or an approval that landed
+meanwhile rolls the cover back (``cover_review_rollback``). The
+workflow, its approval and the release are never touched.
 
 ``reviewing_cover_task`` is the background run of the owner's website
 generation: the generated-cover selection, with the review switch for a completed
@@ -19,8 +21,8 @@ from __future__ import annotations
 import typing
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_autoselect import (
@@ -44,6 +46,9 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_ASSET_GONE,
     REASON_AUTO_SELECT_NO_PROJECT,
 )
+from rag_backend.domain.constants.cover_review_switch import (
+    REASON_AUTO_SELECT_ROLLED_BACK,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.cover_generation import CoverGenerationStatus
 from rag_backend.domain.models.slide_cover import SlideCover, slide_cover_row
@@ -54,13 +59,16 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover_generation impo
     CoverRunWiring,
     cover_generation_task,
 )
+from rag_backend.modules.editorial.infrastructure.cover_review_rollback import (
+    CoverRollback,
+    render_and_settle,
+    roll_back_cover,
+    row_for_update,
+)
 
 if typing.TYPE_CHECKING:
     from rag_backend.application.services.carousel.cover_generation import (
         CoverGenerationRun,
-    )
-    from rag_backend.infrastructure.database.models.carousel import (
-        CarouselProjectModel,
     )
 
 SessionFactory = Callable[[], AsyncSession]
@@ -73,14 +81,45 @@ class EditorialReviewCoverStore:
         self._sessions = sessions
 
     async def switch_in_review(self, command: AutoCoverWrite) -> ReviewSwitchOutcome:
-        """Re-check, stage, the locked write, then the re-render."""
+        """Re-check, stage, the locked write, the re-render, then the re-check.
+
+        A failed render, or a carousel that left the review meanwhile, is rolled
+        back (``rolled_back``).
+        """
         async with self._sessions() as session:
-            status = await _write(session, command)
-            if status != AUTOFIX_STATUS_FIXED:
-                return ReviewSwitchOutcome(status=status)
-            return ReviewSwitchOutcome(
-                status=status, render_errors=await _render(session, command.project_id)
+            stored = await _write(session, command)
+            if stored.status != AUTOFIX_STATUS_FIXED or stored.cover is None:
+                return ReviewSwitchOutcome(status=stored.status)
+            errors = await render_and_settle(session, command.project_id)
+            if not errors and await _still_in_review(session, command.project_id):
+                return ReviewSwitchOutcome(status=AUTOFIX_STATUS_FIXED)
+            await roll_back_cover(
+                session,
+                CoverRollback(
+                    project_id=command.project_id,
+                    switched=stored.cover,
+                    previous=stored.previous,
+                    render_errors=errors,
+                ),
             )
+            return ReviewSwitchOutcome(
+                status=REASON_AUTO_SELECT_ROLLED_BACK, render_errors=errors
+            )
+
+
+async def _still_in_review(session: AsyncSession, project_id: str) -> bool:
+    """No approval, release or run overtook the switch (a fresh locked read)."""
+    row = await row_for_update(session, project_id)
+    if row is None:
+        await session.rollback()
+        return False
+    found = ProjectAtVersion(
+        project=row.to_entity(),
+        lock_version=int(row.lock_version or 1),
+        workflow_status=str(row.workflow_status or ""),
+    )
+    await session.rollback()
+    return review_refusal(found) is None
 
 
 async def _load(session: AsyncSession, project_id: str) -> ProjectAtVersion | None:
@@ -100,18 +139,27 @@ async def _load(session: AsyncSession, project_id: str) -> ProjectAtVersion | No
     )
 
 
-async def _write(session: AsyncSession, command: AutoCoverWrite) -> str:
+@dataclass(frozen=True, kw_only=True)
+class _Stored:
+    """The write's status; on success the cover written and the one before it."""
+
+    status: str
+    cover: SlideCover | None = None
+    previous: SlideCover | None = None
+
+
+async def _write(session: AsyncSession, command: AutoCoverWrite) -> _Stored:
     found = await _load(session, command.project_id)
     if found is None:
-        return REASON_AUTO_SELECT_NO_PROJECT
+        return _Stored(status=REASON_AUTO_SELECT_NO_PROJECT)
     refusal = review_refusal(found) or review_choice_refusal(
         found.project, command.baseline, command.asset_id
     )
     if refusal is not None:
-        return refusal
+        return _Stored(status=refusal)
     cover = await _generated_cover(session, command)
     if cover is None or not await _stage(session, (found.project, cover)):
-        return REASON_AUTO_SELECT_ASSET_GONE
+        return _Stored(status=REASON_AUTO_SELECT_ASSET_GONE)
     return await _locked(session, _ReviewWrite(command=command, cover=cover))
 
 
@@ -150,7 +198,7 @@ class _ReviewWrite:
     cover: SlideCover
 
 
-async def _locked(session: AsyncSession, write: _ReviewWrite) -> str:
+async def _locked(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     """Project lock + the unchanged lock-version CAS; a held lock is a conflict."""
     from rag_backend.application.services.carousel.owner_autofix_lock import (
         AutofixConflictError,
@@ -165,15 +213,19 @@ async def _locked(session: AsyncSession, write: _ReviewWrite) -> str:
     try:
         return await write_locked(session, target, lambda: _store(session, write))
     except AutofixConflictError:
-        return AUTOFIX_STATUS_CONFLICT
+        return _Stored(status=AUTOFIX_STATUS_CONFLICT)
 
 
-async def _store(session: AsyncSession, write: _ReviewWrite) -> str:
-    """Write ``slide_cover`` while the locked row still allows it, else roll back."""
-    row = await _row_for_update(session, write.command.project_id)
+async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
+    """Write ``slide_cover`` while the locked row still allows it, else roll back.
+
+    The needs-republish marker is stamped in the same commit, so a process that
+    dies before the render leaves the republish sweep to render it.
+    """
+    row = await row_for_update(session, write.command.project_id)
     if row is None:
         await session.rollback()
-        return REASON_AUTO_SELECT_NO_PROJECT
+        return _Stored(status=REASON_AUTO_SELECT_NO_PROJECT)
     found = ProjectAtVersion(
         project=row.to_entity(),
         lock_version=int(row.lock_version or 1),
@@ -184,41 +236,12 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> str:
     )
     if refusal is not None:
         await session.rollback()
-        return refusal
+        return _Stored(status=refusal)
+    previous = found.project.slide_cover
     row.slide_cover = slide_cover_row(write.cover)
+    row.needs_republish_since = datetime.now(UTC)
     await session.commit()
-    return AUTOFIX_STATUS_FIXED
-
-
-async def _row_for_update(
-    session: AsyncSession, project_id: str
-) -> CarouselProjectModel | None:
-    from rag_backend.infrastructure.database.models.carousel import (
-        CarouselProjectModel as Row,
-    )
-
-    result = await session.execute(
-        select(Row)
-        .where(Row.id == project_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    return result.scalar_one_or_none()
-
-
-async def _render(session: AsyncSession, project_id: str) -> tuple[str, ...]:
-    """The republish render; on success the needs-republish marker is cleared."""
-    from rag_backend.modules.editorial.infrastructure import (
-        CarouselProjectWriteOwner,
-    )
-    from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
-        RepublishRenderer,
-    )
-
-    errors = await RepublishRenderer(session).render(project_id)
-    if not errors:
-        await CarouselProjectWriteOwner(session).clear_needs_republish(project_id)
-    return errors
+    return _Stored(status=AUTOFIX_STATUS_FIXED, cover=write.cover, previous=previous)
 
 
 @dataclass(frozen=True, kw_only=True)

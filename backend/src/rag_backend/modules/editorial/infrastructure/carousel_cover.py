@@ -207,6 +207,9 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
     from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
         RepublishRenderer,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+        EditorialReviewState,
+    )
 
     return SlideCoverSwitchService(
         SlideCoverSwitchDeps(
@@ -214,6 +217,7 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
             repo=PostgresCarouselRepository(session=session),
             stager=_ProjectStager(session),
             renderer=RepublishRenderer(session),
+            review=EditorialReviewState(session),
         )
     )
 
