@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import update
@@ -18,6 +18,7 @@ from structlog.testing import capture_logs
 
 from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverSelection,
+    AutoCoverWrite,
     CoverBaseline,
 )
 from rag_backend.application.services.carousel.cover_review_switch import (
@@ -27,9 +28,11 @@ from rag_backend.application.services.carousel.cover_review_switch import (
 from rag_backend.domain.constants.cover_autoselect import (
     LOG_COVER_AUTO_SELECT,
     OUTCOME_AUTO_SELECT_ALREADY,
+    REASON_AUTO_SELECT_ASSET_GONE,
     REASON_AUTO_SELECT_COMPLETED,
     REASON_AUTO_SELECT_CONFLICT,
     REASON_AUTO_SELECT_MANUAL_CHOICE,
+    REASON_AUTO_SELECT_NO_PROJECT,
 )
 from rag_backend.domain.constants.cover_review_switch import (
     REASON_AUTO_SELECT_APPROVED,
@@ -44,6 +47,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     REASON_COVER_REVIEW_KEPT,
 )
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.editorial.infrastructure import carousel_owner_autofix
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
     auto_cover_selector,
 )
@@ -426,3 +430,44 @@ async def test_autopilot_cover_on_a_completed_carousel_is_unchanged(
         assert await run_facts(built, project_id) == RunFacts(
             state=_AWAITING.value, reason=None, rework_phase=None
         )
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_review_store_refuses_gone_rows_and_keeps_render_errors(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown project or asset writes nothing; render errors come back."""
+    # Scenario: A website cover switches a completed carousel in final review
+    async with isolated_schema(tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id, photos = await seed(built, dirs)
+        store = EditorialReviewCoverStore(built.sessions())
+        baseline = CoverBaseline(
+            slide_cover_asset_id=None, hook_asset_id=UUID(photos[0])
+        )
+
+        def _write(target: str, asset: UUID) -> AutoCoverWrite:
+            return AutoCoverWrite(
+                project_id=target,
+                asset_id=asset,
+                expected_version=3,
+                baseline=baseline,
+            )
+
+        gone = await store.switch_in_review(_write(str(uuid4()), uuid4()))
+        assert gone.status == REASON_AUTO_SELECT_NO_PROJECT
+        missing = await store.switch_in_review(_write(project_id, uuid4()))
+        assert missing.status == REASON_AUTO_SELECT_ASSET_GONE
+        await _assert_unchanged(built, project_id, photos[0])
+
+        async def _failed(_self: object, _project_id: str) -> tuple[str, ...]:
+            return ("render_failed",)
+
+        monkeypatch.setattr(carousel_owner_autofix.RepublishRenderer, "render", _failed)
+        await (await website_task(built, project_id, photos[0]))()
+        asset = await result_asset(built, project_id)
+        model = await row(built, project_id)
+        assert isinstance(model.slide_cover, dict)
+        assert model.slide_cover["asset_id"] == asset
+        assert model.lock_version == 4
