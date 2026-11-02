@@ -65,6 +65,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TopicCandidate,
 )
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, ReviewRecord
 from rag_backend.modules.autopilot.domain.publish import PostExtras
 from rag_backend.modules.autopilot.domain.schedule import epoch_of
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate
@@ -191,6 +192,17 @@ async def world(
         await engine.dispose()
 
 
+async def _reviewed_at_current_version(world: _World) -> NoticeLog:
+    """The review the owner taps (message 9) was sent at the carousel's version."""
+    version = await world.session.scalar(
+        select(CarouselProjectModel.lock_version).where(
+            CarouselProjectModel.id == world.project_id
+        )
+    )
+    review = ReviewRecord(revision=int(version or 1), album_ids=(1,), keyboard_id=9)
+    return NoticeLog(reviews=(review,))
+
+
 async def _awaiting_run(world: _World) -> AutopilotRun:
     """The carousel is marked completed and given its caption by hand because in prod
     the (faked) slide render and distribution pack do it.
@@ -221,6 +233,7 @@ async def _awaiting_run(world: _World) -> AutopilotRun:
         ig_container_id=None,
         ig_post_id=None,
         ig_permalink=None,
+        notice_log=await _reviewed_at_current_version(world),
     )
     await repo.add(run)
     await world.session.execute(
