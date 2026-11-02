@@ -23,6 +23,7 @@ from rag_backend.infrastructure.database.user_repository import (
 from rag_backend.modules.identity import (
     AdminUserDeps,
     AdminUserHandler,
+    LastAdminError,
     PasswordService,
     UpdateUserInput,
 )
@@ -37,6 +38,9 @@ _STALE_NAME = "Renamed From A Stale Copy"
 _POLL_SECONDS = 0.05
 _POLL_ATTEMPTS = 100
 _UNBLOCKED_WAIT_SECONDS = 10.0
+_BOTH_EDITS = 2
+_ALLOWED = "ok"
+_REFUSED = "refused"
 _LOCK_WAITERS_SQL = text(
     "SELECT count(*) FROM pg_stat_activity"
     " WHERE datname = current_database() AND wait_event_type = 'Lock'"
@@ -75,7 +79,20 @@ async def _stored(engine: AsyncEngine, user_id: UUID) -> User:
     return stored
 
 
-async def _rename_by_admin(engine: AsyncEngine, user_id: UUID) -> None:
+async def _seed_admin(engine: AsyncEngine, email: str) -> User:
+    async with AsyncSession(engine) as session:
+        user = User(
+            email=email,
+            full_name="Order Admin",
+            role=UserRole.ADMIN,
+            hashed_password=_OLD_HASH,
+        )
+        created = await PostgresUserRepository(session).create(user)
+        await session.commit()
+    return created
+
+
+async def _edit_by_admin(engine: AsyncEngine, edit: UpdateUserInput) -> None:
     """Run the admin edit in its own session and transaction."""
     async with AsyncSession(engine) as session:
         handler = AdminUserHandler(
@@ -85,16 +102,25 @@ async def _rename_by_admin(engine: AsyncEngine, user_id: UUID) -> None:
                 unit_of_work=SqlAlchemyUnitOfWork(session),
             ),
         )
-        await handler.update(UpdateUserInput(user_id=user_id, full_name=_NEW_NAME))
+        await handler.update(edit)
 
 
-async def _wait_for_a_lock_waiter(engine: AsyncEngine) -> bool:
-    """Poll Postgres until some backend of this database waits on a lock."""
+async def _deactivate(engine: AsyncEngine, user_id: UUID) -> str:
+    """Deactivate ``user_id`` through the admin edit; allowed or refused."""
+    try:
+        await _edit_by_admin(engine, UpdateUserInput(user_id=user_id, is_active=False))
+    except LastAdminError:
+        return _REFUSED
+    return _ALLOWED
+
+
+async def _wait_for_lock_waiters(engine: AsyncEngine, minimum: int) -> bool:
+    """Poll Postgres until ``minimum`` backends of this database wait on a lock."""
     async with AsyncSession(engine) as probe:
         for _ in range(_POLL_ATTEMPTS):
             waiters = (await probe.execute(_LOCK_WAITERS_SQL)).scalar_one()
             await probe.rollback()
-            if waiters > 0:
+            if waiters >= minimum:
                 return True
             await asyncio.sleep(_POLL_SECONDS)
     return False
@@ -108,8 +134,12 @@ async def test_an_admin_rename_waits_and_keeps_the_password_change() -> None:
             repo = PostgresUserRepository(holder)
             held = await repo.get_by_id_for_update(editor.id)
             assert held is not None
-            renaming = asyncio.create_task(_rename_by_admin(engine, editor.id))
-            waiting = await _wait_for_a_lock_waiter(engine)
+            renaming = asyncio.create_task(
+                _edit_by_admin(
+                    engine, UpdateUserInput(user_id=editor.id, full_name=_NEW_NAME)
+                )
+            )
+            waiting = await _wait_for_lock_waiters(engine, 1)
             pending = not renaming.done()
             name_while_held = (await _stored(engine, editor.id)).full_name
             held.change_password(_NEW_HASH)
@@ -145,3 +175,29 @@ async def test_a_stale_copy_saved_after_a_change_keeps_the_new_credentials() -> 
         stored = await _stored(engine, editor.id)
         assert stored.full_name == _STALE_NAME
         assert (stored.hashed_password, stored.token_version) == (_NEW_HASH, 1)
+
+
+# Scenario: Admin edits queued behind a password change never deadlock
+async def test_admin_edits_queued_behind_a_change_never_deadlock() -> None:
+    async with isolated_schema(_TABLES) as engine:
+        first = await _seed_admin(engine, "order-first@integration.example.com")
+        second = await _seed_admin(engine, "order-second@integration.example.com")
+        async with AsyncSession(engine) as holder:
+            repo = PostgresUserRepository(holder)
+            held = await repo.get_by_id_for_update(first.id)
+            assert held is not None
+            edits = asyncio.gather(
+                _deactivate(engine, second.id), _deactivate(engine, first.id)
+            )
+            waiting = await _wait_for_lock_waiters(engine, _BOTH_EDITS)
+            held.change_password(_NEW_HASH)
+            await repo.update(held)
+            await holder.commit()
+            outcomes = await asyncio.wait_for(edits, _UNBLOCKED_WAIT_SECONDS)
+
+        assert waiting is True
+        assert sorted(outcomes) == sorted([_ALLOWED, _REFUSED])
+        still_active = [
+            (await _stored(engine, u.id)).is_active for u in (first, second)
+        ]
+        assert still_active.count(True) == 1
