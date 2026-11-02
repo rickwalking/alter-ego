@@ -15,6 +15,7 @@ from rag_backend.modules.autopilot.application.cover_review_hold import (
     CoverReviewHold,
     CoverReviewHoldDeps,
 )
+from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
@@ -29,7 +30,10 @@ def _service(session: AsyncSession) -> CoverReviewHold:
     repo = SqlAlchemyAutopilotRepository(session)
     return CoverReviewHold(
         CoverReviewHoldDeps(
-            runs=repo, recovery=SqlRunRecoveryStore(session), checkpoint=repo
+            runs=repo,
+            recovery=SqlRunRecoveryStore(session),
+            checkpoint=repo,
+            clock=SystemClock(),
         )
     )
 

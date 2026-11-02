@@ -98,8 +98,10 @@ REASON_COVER_REVIEW_HOLD = "website_cover_switch"
 REASON_COVER_REVIEW_KEPT = "website_cover_kept"
 ANSWER_REVIEW_REPLACED = "Esta revisão foi substituída"
 TEXT_REVIEW_REPLACED = (
-    "🖼️ Esta revisão foi substituída por uma nova. Use a mensagem mais recente."
+    "🖼️ Esta revisão foi substituída: o carrossel mudou. "
+    "Use a revisão mais recente; ela chega numa nova mensagem."
 )
+REASON_REVIEW_OUTDATED = "review_outdated"
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
 COVER_SCOPE_THESIS = "thesis"
 
@@ -175,6 +177,7 @@ __all__ = [
     "REASON_COVER_REVIEW_KEPT",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
+    "REASON_REVIEW_OUTDATED",
     "SKIP_COVER_NO_CONSENT",
     "SKIP_COVER_NO_PHOTOS",
     "SKIP_COVER_NO_PROJECT",

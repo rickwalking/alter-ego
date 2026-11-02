@@ -18,7 +18,6 @@ stop send the review at the current lock version.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta
 
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.run_recovery import RunRecovery
@@ -29,7 +28,6 @@ from rag_backend.modules.autopilot.constants import (
     REASON_REVISION_CAP,
 )
 from rag_backend.modules.autopilot.cover_constants import (
-    COVER_REVIEW_HOLD_MAX_SECONDS,
     COVER_REVIEW_HOLD_PHASE,
     COVER_REWORK_PHASE,
     REASON_COVER_MISSING,
@@ -40,6 +38,7 @@ from rag_backend.modules.autopilot.domain.autofix import (
     AutofixStatus,
     ContentAutofixer,
 )
+from rag_backend.modules.autopilot.domain.cover_hold import hold_active
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverOffers,
     CoverSwitchCommand,
@@ -181,9 +180,7 @@ class ReworkStep:
     ) -> int | None:
         """Wait for the website cover switch; an outlived hold is dropped."""
         del snapshot, project_id
-        held_since = run.updated_at
-        limit = timedelta(seconds=COVER_REVIEW_HOLD_MAX_SECONDS)
-        if held_since is not None and self._deps.clock.now() < held_since + limit:
+        if hold_active(run, self._deps.clock.now()):
             return 0
         await self._deps.recovery.clear_rework(run.run_id)
         return None

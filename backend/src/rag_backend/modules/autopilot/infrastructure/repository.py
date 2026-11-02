@@ -286,7 +286,8 @@ class SqlAlchemyAutopilotRepository:
 def _transition_statement(command: TransitionCommand) -> Update:
     """Entering ``publishing`` restarts the publish retry budget (QA r1 B2/B3).
 
-    Entering ``scheduled`` stores the publish time; a cancel clears it.
+    Entering ``scheduled`` stores the publish time; a cancel clears it. A command
+    with ``updated_at`` keeps that time (the review's expiry anchor).
     """
     statement = (
         update(AutopilotRunModel)
@@ -297,7 +298,7 @@ def _transition_statement(command: TransitionCommand) -> Update:
         .values(
             state=command.new.value,
             state_reason=command.reason,
-            updated_at=func.now(),
+            updated_at=command.updated_at or func.now(),
         )
     )
     if command.new is AutopilotRunState.PUBLISHING:

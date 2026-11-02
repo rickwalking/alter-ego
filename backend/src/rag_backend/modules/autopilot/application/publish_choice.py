@@ -29,6 +29,9 @@ from rag_backend.modules.autopilot.application.owner_steps import (
     APPROVE_STEP,
     OwnerStep,
 )
+from rag_backend.modules.autopilot.application.review_revision_guard import (
+    refused_as_outdated,
+)
 from rag_backend.modules.autopilot.application.schedule_picker import (
     PickerDeps,
     SchedulePicker,
@@ -38,6 +41,8 @@ from rag_backend.modules.autopilot.application.schedule_steps import (
     SCHEDULE_REFUSED_STEP,
     SCHEDULED_PUBLISH_NOW_STEP,
     UNSCHEDULE_STEP,
+    reschedule_command,
+    schedule_command,
 )
 from rag_backend.modules.autopilot.cover_constants import (
     ANSWER_REVIEW_REPLACED,
@@ -61,7 +66,10 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.pov_schedule import is_pov_run
 from rag_backend.modules.autopilot.domain.recommend import reason_text
-from rag_backend.modules.autopilot.domain.review_replaced import is_replaced_review
+from rag_backend.modules.autopilot.domain.review_revision import (
+    latest_revision,
+    tapped_revision,
+)
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     day_label,
@@ -87,8 +95,6 @@ from rag_backend.modules.autopilot.schedule_constants import (
     KIND_UNSCHEDULE,
     PUBLISH_MODE_NEXT_SLOT,
     PUBLISH_MODE_NOW,
-    REASON_OWNER_RESCHEDULED,
-    REASON_OWNER_SCHEDULED,
     SCHEDULE_PENDING_PHASE,
     TEXT_ASK_TIME,
     TEXT_CHOOSE_DAY,
@@ -144,12 +150,17 @@ class PublishChoiceActions:
         self._picker = SchedulePicker(
             PickerDeps(clock=deps.clock, signals=deps.signals), replies
         )
+        self._revision: int | None = None
+
+    async def _outdated(self, run: AutopilotRun | None) -> bool:
+        target = (run, self._revision)
+        return await refused_as_outdated(self._deps.approval, self._deps.runs, target)
 
     async def handle(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
-        """Dispatch one callback kind; a replaced review's buttons do nothing."""
-        if is_replaced_review(
-            await self._deps.runs.get(parsed.run_id), update.message_id
-        ):
+        """Dispatch one callback kind; an outdated review's buttons do nothing."""
+        run = await self._deps.runs.get(parsed.run_id)
+        self._revision = tapped_revision(run, update.message_id)
+        if await self._outdated(run):
             await self._replies.finish(
                 update, ANSWER_REVIEW_REPLACED, TEXT_REVIEW_REPLACED
             )
@@ -158,10 +169,13 @@ class PublishChoiceActions:
         await handler(self, update, parsed)
 
     async def on_time_text(self, update: WebhookUpdate, pending: PendingRework) -> None:
-        """The owner typed a time after ``✏️ Outro horário``."""
+        """A time typed after ``✏️ Outro horário``; it answers the newest review."""
         run = await self._pickable(pending.run_id)
-        if run is None:
-            await self._replies.tell(update, TEXT_ALREADY)
+        self._revision = latest_revision(run)
+        if run is None or await self._outdated(run):
+            await self._replies.tell(
+                update, TEXT_ALREADY if run is None else TEXT_REVIEW_REPLACED
+            )
             return
         choice = parse_owner_time(update.text, self._deps.clock.now())
         if choice.at is None:
@@ -200,7 +214,7 @@ class PublishChoiceActions:
         if run is None or not await self._apply(run.run_id, APPROVE_STEP):
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        status = await self._deps.approval.approve(run)
+        status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
             await self._refused(update, run, APPROVE_REFUSED_STEP)
             return
@@ -304,7 +318,7 @@ class PublishChoiceActions:
         if not await self._to_scheduled(run.run_id, choice.at):
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        status = await self._deps.approval.approve(run)
+        status = await self._deps.approval.approve(run, self._revision)
         if status is not ResumeStatus.APPLIED:
             await self._refused(update, run, SCHEDULE_REFUSED_STEP)
             return
@@ -347,27 +361,10 @@ class PublishChoiceActions:
         return run if run.state in _PICKABLE else None
 
     async def _reschedule(self, run_id: UUID, at: datetime) -> bool:
-        """``scheduled -> scheduled`` with the new time; the due tick races safely."""
-        return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run_id,
-                expected=_S.SCHEDULED,
-                new=_S.SCHEDULED,
-                reason=REASON_OWNER_RESCHEDULED,
-                scheduled_at=at,
-            )
-        )
+        return await self._deps.runs.transition(reschedule_command(run_id, at))
 
     async def _to_scheduled(self, run_id: UUID, at: datetime) -> bool:
-        return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run_id,
-                expected=_S.AWAITING_OWNER,
-                new=_S.SCHEDULED,
-                reason=REASON_OWNER_SCHEDULED,
-                scheduled_at=at,
-            )
-        )
+        return await self._deps.runs.transition(schedule_command(run_id, at))
 
     async def _apply(self, run_id: UUID, step: OwnerStep) -> bool:
         return await self._deps.runs.transition(
