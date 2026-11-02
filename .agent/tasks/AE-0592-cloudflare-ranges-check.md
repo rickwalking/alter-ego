@@ -139,6 +139,9 @@ Pending.
 - 2026-11-02 — The checker lives in `scripts/ci/` so changes to it trigger the backend gate workflow (path filter),
   which runs its test.
 - 2026-11-02 — Schedule: Mondays 06:00 UTC (after the 04:00 mutation run).
+- 2026-11-02 — The fetch uses `http.client.HTTPSConnection` to the fixed host `www.cloudflare.com` (HTTPS only, no
+  scheme taken from input) instead of `urllib.request.urlopen`, so no `noqa`/`nosec` suppression is needed; a non-200
+  answer is a fetch failure (exit 2).
 - 2026-11-02 — Classification: CI/config/tooling, "unit tests suffice" (root CLAUDE.md, AE-0153). No `.feature`:
   (a) no public/user-visible behavior change: no app, API, nginx or deploy change; the job is read-only and does not
   run at deploy time; (b) seeded-violation tests: `test_fires_when_cloudflare_adds_a_range`,

@@ -9,11 +9,10 @@ fetch failure exits 2 instead of passing. No test touches the network.
 from __future__ import annotations
 
 import importlib.util
-import io
 import shutil
 import subprocess  # noqa: S404  # integrity-ok: a CLI checker test must invoke a subprocess
 import sys
-import urllib.error
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 
@@ -70,7 +69,9 @@ def _run(
     for config in configs:
         args += ["--config", str(config)]
     env = {"PATH": "/usr/bin:/bin", "GITHUB_STEP_SUMMARY": str(summary)}
-    return subprocess.run(args, capture_output=True, text=True, check=False, env=env)  # noqa: S603
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, test-controlled paths
+        args, capture_output=True, text=True, check=False, env=env
+    )
 
 
 def _configs(tmp_path: Path, ranges: list[str]) -> list[Path]:
@@ -169,36 +170,94 @@ def test_unreadable_config_is_unavailable(tmp_path: Path) -> None:
     assert "unreadable" in result.stderr
 
 
+@dataclass
+class _Response:
+    """A canned HTTP response."""
+
+    status: int
+    body: bytes
+
+    def read(self) -> bytes:
+        """The canned body."""
+        return self.body
+
+
+@dataclass
+class _Server:
+    """Stands in for Cloudflare: canned responses by path, records each request."""
+
+    responses: dict[str, _Response]
+    error: OSError | None = None
+    requested: list[str] = field(default_factory=list)
+    closed: int = 0
+
+    def connect(self, host: str, timeout: int) -> _Server:
+        """Plays ``http.client.HTTPSConnection(host, timeout=...)``."""
+        assert host == CHECKER_MOD.PUBLISHED_HOST
+        assert timeout == CHECKER_MOD.FETCH_TIMEOUT_SECONDS
+        return self
+
+    def request(self, method: str, path: str, headers: dict[str, str]) -> None:
+        """Records the request, or fails like a dropped connection."""
+        assert method == "GET"
+        assert headers["User-Agent"]
+        self.requested.append(path)
+        if self.error is not None:
+            raise self.error
+
+    def getresponse(self) -> _Response:
+        """The canned response for the last path."""
+        return self.responses[self.requested[-1]]
+
+    def close(self) -> None:
+        """Counts closed connections."""
+        self.closed += 1
+
+
+def _serve(monkeypatch: pytest.MonkeyPatch, server: _Server) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(CHECKER_MOD.http.client, "HTTPSConnection", server.connect)
+
+
+def _lists(v4_status: int = 200) -> dict[str, _Response]:
+    return {
+        "/ips-v4": _Response(v4_status, "\n".join(V4).encode()),
+        "/ips-v6": _Response(200, "\n".join(V6).encode()),
+    }
+
+
 def test_fetch_failure_is_unavailable(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A network error while fetching exits 2 and is never reported as a match."""
-
-    def _refuse(*_args: object, **_kwargs: object) -> object:
-        raise urllib.error.URLError("connection refused")
-
-    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
-    monkeypatch.setattr(CHECKER_MOD.urllib.request, "urlopen", _refuse)
+    server = _Server(_lists(), error=ConnectionRefusedError("connection refused"))
+    _serve(monkeypatch, server)
     assert CHECKER_MOD.main([]) == EXIT_UNAVAILABLE
     err = capsys.readouterr().err
     assert "could not fetch https://www.cloudflare.com/ips-v4" in err
     assert "NOT a pass" in err
+    assert server.closed == 1
+
+
+def test_http_error_status_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A non-200 answer (rate limit, outage) exits 2, even with a body."""
+    _serve(monkeypatch, _Server(_lists(v4_status=503)))
+    assert CHECKER_MOD.main([]) == EXIT_UNAVAILABLE
+    assert "ips-v4: HTTP 503" in capsys.readouterr().err
 
 
 def test_fetch_reads_both_lists(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Without --published the check fetches both URLs and compares them."""
-    bodies = {CHECKER_MOD.PUBLISHED_URLS[0]: V4, CHECKER_MOD.PUBLISHED_URLS[1]: V6}
-
-    def _serve(request: object, timeout: int) -> io.BytesIO:
-        assert timeout == CHECKER_MOD.FETCH_TIMEOUT_SECONDS
-        url = request.full_url  # type: ignore[attr-defined]
-        return io.BytesIO("\n".join(bodies[url]).encode())
-
-    monkeypatch.setattr(CHECKER_MOD.urllib.request, "urlopen", _serve)
+    """Without --published the check fetches both lists and compares them."""
+    server = _Server(_lists())
+    _serve(monkeypatch, server)
     config = _write(tmp_path / "nginx.conf", _nginx(V4 + V6))
     assert CHECKER_MOD.main(["--config", str(config)]) == EXIT_OK
+    assert server.requested == ["/ips-v4", "/ips-v6"]
+    assert server.closed == 2
     assert "4 ranges match in 1 configs" in capsys.readouterr().out
 
 

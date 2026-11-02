@@ -29,12 +29,11 @@ Rule-fires regression test (AE-0180):
 from __future__ import annotations
 
 import argparse
+import http.client
 import ipaddress
 import os
 import re
 import sys
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,10 +42,10 @@ DEFAULT_CONFIGS = (
     _REPO_ROOT / "nginx" / "nginx.conf.ssl",
     _REPO_ROOT / "nginx" / "nginx.conf",
 )
-PUBLISHED_URLS = (
-    "https://www.cloudflare.com/ips-v4",
-    "https://www.cloudflare.com/ips-v6",
-)
+PUBLISHED_HOST = "www.cloudflare.com"
+PUBLISHED_PATHS = ("/ips-v4", "/ips-v6")
+HTTP_GET = "GET"
+HTTP_OK = 200
 FETCH_TIMEOUT_SECONDS = 30
 USER_AGENT = "alter-ego-cloudflare-ranges-check"
 ENV_STEP_SUMMARY = "GITHUB_STEP_SUMMARY"
@@ -64,7 +63,8 @@ MSG_OK = "Cloudflare ranges OK: {count} ranges match in {configs} configs"
 MSG_DIFF = "{path}: differs from Cloudflare's published ranges"
 MSG_ADDED = "  added (published by Cloudflare, missing here): {cidr}"
 MSG_REMOVED = "  removed (listed here, no longer published): {cidr}"
-MSG_FETCH_FAILED = "could not fetch {source}: {reason}"
+MSG_FETCH_FAILED = "could not fetch https://{host}{path}: {reason}"
+MSG_HTTP_STATUS = "HTTP {status}"
 MSG_EMPTY = "{source}: no ranges found"
 MSG_BAD_RANGE = "{source}: not an IP range: {value!r}"
 MSG_UNREADABLE = "{source}: unreadable ({reason})"
@@ -131,16 +131,21 @@ def compare(published: set[Network], pinned: set[Network], path: str) -> ConfigD
     )
 
 
-def fetch(url: str) -> str:
-    """The body of one published list; any network or HTTP error is unavailable."""
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})  # noqa: S310
+def fetch(path: str) -> str:
+    """One published list over HTTPS; a network error or non-200 is unavailable."""
+    connection = http.client.HTTPSConnection(
+        PUBLISHED_HOST, timeout=FETCH_TIMEOUT_SECONDS
+    )
     try:
-        with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:  # noqa: S310  # nosec B310
-            body: bytes = response.read()
-    except (urllib.error.URLError, OSError) as exc:
-        raise RangesUnavailableError(
-            MSG_FETCH_FAILED.format(source=url, reason=exc)
-        ) from exc
+        connection.request(HTTP_GET, path, headers={"User-Agent": USER_AGENT})
+        response = connection.getresponse()
+        status, body = response.status, response.read()
+    except (OSError, http.client.HTTPException) as exc:
+        raise _fetch_error(path, str(exc)) from exc
+    finally:
+        connection.close()
+    if status != HTTP_OK:
+        raise _fetch_error(path, MSG_HTTP_STATUS.format(status=status))
     return body.decode(ENCODING, errors="replace")
 
 
@@ -161,7 +166,12 @@ def load_published(local: list[Path] | None) -> set[Network]:
         return set().union(
             *(parse_published(read_file(path), str(path)) for path in local)
         )
-    return set().union(*(parse_published(fetch(url), url) for url in PUBLISHED_URLS))
+    return set().union(
+        *(
+            parse_published(fetch(path), PUBLISHED_HOST + path)
+            for path in PUBLISHED_PATHS
+        )
+    )
 
 
 def diff_configs(published: set[Network], configs: list[Path]) -> list[ConfigDiff]:
@@ -228,6 +238,12 @@ def main(argv: list[str]) -> int:
         return EXIT_DIFFERENT
     print(MSG_OK.format(count=len(published), configs=len(configs)))
     return EXIT_OK
+
+
+def _fetch_error(path: str, reason: str) -> RangesUnavailableError:
+    return RangesUnavailableError(
+        MSG_FETCH_FAILED.format(host=PUBLISHED_HOST, path=path, reason=reason)
+    )
 
 
 def _sorted_text(networks: set[Network]) -> tuple[str, ...]:
