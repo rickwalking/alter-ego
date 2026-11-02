@@ -19,6 +19,9 @@ from rag_backend.agents.research_relevance import (
 from rag_backend.api.routes.carousels.editorial_workflow_routes_feedback import (
     phase_feedback_history_field,
 )
+from rag_backend.application.services.carousel.content_budget_step import (
+    review_translations as _review_translations,
+)
 from rag_backend.application.services.carousel.copy_hygiene_text import (
     wrong_language_detail,
 )
@@ -32,7 +35,6 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
-    _review_translations,
 )
 from rag_backend.application.services.carousel.presentation_casing_markers import (
     CASING_REPAIR_MESSAGE,

@@ -191,3 +191,44 @@ def build_gate_field_repair_prompt(variables: dict[str, object]) -> str:
         version=GATE_REPAIR_PROMPT_VERSION,
     )
     return prompt_text
+
+
+def _render_copy_budget_prompt(
+    name: str, variables: dict[str, object]
+) -> tuple[str, dict[str, object]]:
+    """Render one ``carousel_copy_budget`` prompt and its model config.
+
+    Same baselined lazy registry import as the builders above.
+    """
+    from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
+        render_prompt,
+    )
+    from rag_backend.domain.constants.copy_budget_fit import (
+        COPY_BUDGET_PROMPT_DOMAIN,
+        COPY_BUDGET_PROMPT_VERSION,
+    )
+
+    return render_prompt(
+        COPY_BUDGET_PROMPT_DOMAIN,
+        name,
+        variables=variables,
+        version=COPY_BUDGET_PROMPT_VERSION,
+    )
+
+
+def build_copy_budget_fit_prompt(
+    variables: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    """Shorten only the fields over their copy limit; the text and its model config."""
+    from rag_backend.domain.constants.copy_budget_fit import COPY_BUDGET_PROMPT_FIT
+
+    return _render_copy_budget_prompt(COPY_BUDGET_PROMPT_FIT, variables)
+
+
+def build_slide_limits_block(variables: dict[str, object]) -> str:
+    """This slide's copy limits for the drafting instruction."""
+    from rag_backend.domain.constants.copy_budget_fit import (
+        COPY_BUDGET_PROMPT_LIMITS,
+    )
+
+    return _render_copy_budget_prompt(COPY_BUDGET_PROMPT_LIMITS, variables)[0]
