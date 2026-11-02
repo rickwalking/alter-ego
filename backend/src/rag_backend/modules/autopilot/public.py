@@ -62,6 +62,9 @@ if TYPE_CHECKING:
     from rag_backend.modules.autopilot.infrastructure.cover_offers import (
         ProjectCoverOffer,
     )
+    from rag_backend.modules.autopilot.infrastructure.cover_review_hold import (
+        SessionCoverReviewHold,
+    )
 
 __all__ = [
     "AutopilotBootstrapDeps",
@@ -88,6 +91,7 @@ __all__ = [
     "build_instagram_publish_tick",
     "build_stored_instagram_token_provider",
     "build_telegram_notify_tick",
+    "cover_review_hold",
     "cover_topics_using",
     "credential_tick_config",
     "encryption_key_usable",
@@ -106,6 +110,16 @@ def project_cover_offer(session: AsyncSession) -> ProjectCoverOffer:
     )
 
     return ProjectCoverOffer(session)
+
+
+def cover_review_hold() -> SessionCoverReviewHold:
+    """The hold of a run's Telegram review while a website cover changes slide 1."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.modules.autopilot.infrastructure.cover_review_hold import (
+        SessionCoverReviewHold,
+    )
+
+    return SessionCoverReviewHold(get_session_maker())
 
 
 async def cover_topics_using(

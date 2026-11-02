@@ -89,6 +89,16 @@ TEXT_COVER_RENDER_FAILED = (
     "🖼️ A troca da capa do slide 1 não renderizou. Os slides não mudaram; "
     "abra o carrossel no dashboard e gere de novo."
 )
+# A website cover switching slide 1 while the run waits for the owner's review:
+# the run is held in ``reworking`` (the worker waits) until the switch is done.
+COVER_REVIEW_HOLD_PHASE = "website_cover"
+COVER_REVIEW_HOLD_MAX_SECONDS = 15 * 60.0
+REASON_COVER_REVIEW_HOLD = "website_cover_switch"
+REASON_COVER_REVIEW_KEPT = "website_cover_kept"
+ANSWER_REVIEW_REPLACED = "Esta revisão foi substituída"
+TEXT_REVIEW_REPLACED = (
+    "🖼️ Esta revisão foi substituída por uma nova. Use a mensagem mais recente."
+)
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
 COVER_SCOPE_THESIS = "thesis"
 
@@ -112,6 +122,7 @@ __all__ = [
     "ANSWER_COVER_OFF",
     "ANSWER_COVER_ON",
     "ANSWER_COVER_SAME",
+    "ANSWER_REVIEW_REPLACED",
     "BUTTON_COVER_OFF_NEWS",
     "BUTTON_COVER_OFF_POV",
     "BUTTON_COVER_ON",
@@ -123,6 +134,8 @@ __all__ = [
     "COVER_ASSET_ID_MAX_CHARS",
     "COVER_MAX_AGE_HOURS",
     "COVER_NOTICE_KEY",
+    "COVER_REVIEW_HOLD_MAX_SECONDS",
+    "COVER_REVIEW_HOLD_PHASE",
     "COVER_REWORK_PHASE",
     "COVER_SCOPE_THESIS",
     "COVER_SOURCE_URL_MAX_CHARS",
@@ -157,6 +170,8 @@ __all__ = [
     "REASON_COVER_ASSET_USED",
     "REASON_COVER_MISSING",
     "REASON_COVER_RENDER_FAILED",
+    "REASON_COVER_REVIEW_HOLD",
+    "REASON_COVER_REVIEW_KEPT",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
     "SKIP_COVER_NO_CONSENT",
@@ -167,6 +182,7 @@ __all__ = [
     "TABLE_COVER_ASSETS",
     "TEXT_COVER_RENDER_FAILED",
     "TEXT_COVER_SWITCHING",
+    "TEXT_REVIEW_REPLACED",
     "UPLOAD_READ_SLACK_BYTES",
     "UPLOAD_STATUS_BY_CODE",
 ]

@@ -39,6 +39,10 @@ from rag_backend.modules.autopilot.application.schedule_steps import (
     SCHEDULED_PUBLISH_NOW_STEP,
     UNSCHEDULE_STEP,
 )
+from rag_backend.modules.autopilot.cover_constants import (
+    ANSWER_REVIEW_REPLACED,
+    TEXT_REVIEW_REPLACED,
+)
 from rag_backend.modules.autopilot.domain.callback_parse import ParsedCallback
 from rag_backend.modules.autopilot.domain.gate import ResumeStatus
 from rag_backend.modules.autopilot.domain.messages import (
@@ -57,6 +61,7 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.pov_schedule import is_pov_run
 from rag_backend.modules.autopilot.domain.recommend import reason_text
+from rag_backend.modules.autopilot.domain.review_replaced import is_replaced_review
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     day_label,
@@ -141,7 +146,14 @@ class PublishChoiceActions:
         )
 
     async def handle(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
-        """Dispatch one of this module's callback kinds."""
+        """Dispatch one callback kind; a replaced review's buttons do nothing."""
+        if is_replaced_review(
+            await self._deps.runs.get(parsed.run_id), update.message_id
+        ):
+            await self._replies.finish(
+                update, ANSWER_REVIEW_REPLACED, TEXT_REVIEW_REPLACED
+            )
+            return
         handler = _HANDLERS[parsed.kind]
         await handler(self, update, parsed)
 

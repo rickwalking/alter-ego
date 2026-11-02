@@ -3,8 +3,9 @@
 ``EditorialCoverLibrary`` reads the owner's slide-1 photos (role ``hook``,
 stored file present) and stages one where a project's slides render;
 ``cover_pick_service`` builds the picker over it, the given GrokBot offer
-source, the covers Grok generated for the carousel, and the cover switch
-(lock-version CAS + republish).
+source, the covers Grok generated for the carousel, the cover switch
+(lock-version CAS + republish) and ``EditorialReviewState``, the approval the
+picker checks before an approved or published carousel would be re-rendered.
 
 The ORM, repositories and the carousel services are imported lazily (the
 editorial facade loads while the ORM registry is still initialising).
@@ -67,6 +68,26 @@ class EditorialCoverLibrary:
         )
 
 
+class EditorialReviewState:
+    """``ReviewStateSource``: the row's ``workflow_status`` through the ACL."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def workflow_status(self, project_id: str) -> str:
+        """``approved_for_publish`` once approved; empty for an unknown carousel."""
+        from rag_backend.modules.editorial.infrastructure import (
+            CarouselProjectWriteOwner,
+            LegacyCarouselAcl,
+        )
+
+        acl = LegacyCarouselAcl(self._session, CarouselProjectWriteOwner(self._session))
+        view = await acl.load_editorial(project_id)
+        if view is None:
+            return ""
+        return view.project.workflow.workflow_status
+
+
 def cover_pick_service(
     session: AsyncSession, offers: CoverOfferSource
 ) -> CoverPickService:
@@ -84,9 +105,10 @@ def cover_pick_service(
             library=EditorialCoverLibrary(session),
             offers=offers,
             switcher=slide_cover_switch_service(session),
+            review=EditorialReviewState(session),
             generated=EditorialGeneratedCovers(session),
         )
     )
 
 
-__all__ = ["EditorialCoverLibrary", "cover_pick_service"]
+__all__ = ["EditorialCoverLibrary", "EditorialReviewState", "cover_pick_service"]

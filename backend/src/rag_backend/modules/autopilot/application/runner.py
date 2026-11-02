@@ -113,6 +113,7 @@ class AutopilotRunner:
                 autofix=deps.autofix,
                 covers=deps.covers,
                 cover_switch=deps.cover_switch,
+                clock=deps.clock,
             )
         )
         self._repair = GateRepairStep(

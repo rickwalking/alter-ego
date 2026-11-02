@@ -102,11 +102,25 @@ def _project(**changes: object) -> CarouselProject:
     return project
 
 
+class DraftReview:
+    """A carousel waiting for its first approval."""
+
+    @staticmethod
+    async def workflow_status(project_id: str) -> str:
+        del project_id
+        return "draft"
+
+
 def _service(
     library: _Library, offers: _Offers | None = None
 ) -> tuple[CoverPickService, _Switcher]:
     switcher = _Switcher()
-    deps = CoverPickDeps(library=library, offers=offers or _Offers(), switcher=switcher)
+    deps = CoverPickDeps(
+        library=library,
+        offers=offers or _Offers(),
+        switcher=switcher,
+        review=DraftReview(),
+    )
     return CoverPickService(deps), switcher
 
 

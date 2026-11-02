@@ -20,6 +20,10 @@ from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReviewStateSource,
+    cover_switch_refusal,
+)
 from rag_backend.application.services.carousel.slide_cover_switch import (
     HookPhotoChoice,
     SlideCoverSwitchCommand,
@@ -37,6 +41,9 @@ from rag_backend.domain.constants.carousel_cover_pick import (
 )
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.domain.constants.cover_generation import COVER_SOURCE_GENERATED
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+)
 from rag_backend.domain.constants.slide_cover import COVER_KIND_AI_IMAGE
 from rag_backend.domain.content_mode import is_pov_family
 from rag_backend.domain.models import CarouselProject, CarouselStatus
@@ -102,11 +109,12 @@ class CoverSwitcher(Protocol):
 
 @dataclass(frozen=True, kw_only=True)
 class CoverPickDeps:
-    """Where the options come from and how a pick is applied."""
+    """Where the options come from, how a pick is applied, and the approval."""
 
     library: CoverLibrary
     offers: CoverOfferSource
     switcher: CoverSwitcher
+    review: ReviewStateSource
     generated: GeneratedCoverSource = field(default_factory=_NoGeneratedCovers)
 
 
@@ -204,9 +212,16 @@ class CoverPickService:
         )
 
     async def pick(self, command: CoverPickCommand) -> SlideCoverSwitchResult:
-        """Stage, store and re-render; raises ``CoverPickError`` when refused."""
+        """Stage, store and re-render; raises ``CoverPickError`` when refused.
+
+        An approved (or scheduled) or published carousel is refused with
+        ``cover_switch_requires_review``: its slide 1 would change unapproved.
+        """
         project = command.project
         _assert_switchable(project)
+        status = await self._deps.review.workflow_status(str(project.id))
+        if cover_switch_refusal(project, status) is not None:
+            raise CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW)
         found = await self._candidates(project)
         offer = found.offer
         if offer is not None and offer.asset_id == command.asset_id:

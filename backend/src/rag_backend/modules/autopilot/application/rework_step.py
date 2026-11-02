@@ -8,12 +8,19 @@ A "Fix issues" tap is queued the same way (phase marker
 ``AUTOFIX_REWORK_PHASE``). The tick runs the deterministic repair and
 re-render, then hands the run to the normal final-review stop, which moves it
 back to ``awaiting_owner`` and stages the fresh review (new lock version).
+
+A website cover switching slide 1 holds the run (phase marker
+``COVER_REVIEW_HOLD_PHASE``): the tick waits until the switch releases it, or,
+when the hold outlives its task (a restart), drops it and lets the final-review
+stop send the review at the current lock version.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import timedelta
 
+from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.run_recovery import RunRecovery
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
@@ -22,6 +29,8 @@ from rag_backend.modules.autopilot.constants import (
     REASON_REVISION_CAP,
 )
 from rag_backend.modules.autopilot.cover_constants import (
+    COVER_REVIEW_HOLD_MAX_SECONDS,
+    COVER_REVIEW_HOLD_PHASE,
     COVER_REWORK_PHASE,
     REASON_COVER_MISSING,
     REASON_COVER_RENDER_FAILED,
@@ -48,7 +57,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository
+from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.recovery_constants import REASON_REWORK_RETRY
 from rag_backend.modules.autopilot.webhook_constants import AUTOFIX_REWORK_PHASE
@@ -60,7 +69,7 @@ class ReworkDependencies:
     """Ports the rework step shares with the runner.
 
     ``covers`` / ``cover_switch`` are the owner's GrokBot cover choice and the
-    slide-1 re-render.
+    slide-1 re-render; ``clock`` ages a website cover hold.
     """
 
     runs: AutopilotRunRepository
@@ -70,6 +79,7 @@ class ReworkDependencies:
     autofix: ContentAutofixer | None = None
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
+    clock: Clock = field(default_factory=SystemClock)
 
 
 class ReworkStep:
@@ -100,6 +110,7 @@ class ReworkStep:
         special = {
             AUTOFIX_REWORK_PHASE: self._autofix,
             COVER_REWORK_PHASE: self._cover,
+            COVER_REVIEW_HOLD_PHASE: self._held,
         }.get(run.rework_phase)
         if special is not None:
             return await special(run, snapshot, project_id)
@@ -159,6 +170,21 @@ class ReworkStep:
         if status is CoverSwitchStatus.RENDER_FAILED:
             await self._escalate(run, project_id, REASON_COVER_RENDER_FAILED)
             return 1
+        await self._deps.recovery.clear_rework(run.run_id)
+        return None
+
+    async def _held(
+        self,
+        run: AutopilotRun,
+        snapshot: GateSnapshot,
+        project_id: str,
+    ) -> int | None:
+        """Wait for the website cover switch; an outlived hold is dropped."""
+        del snapshot, project_id
+        held_since = run.updated_at
+        limit = timedelta(seconds=COVER_REVIEW_HOLD_MAX_SECONDS)
+        if held_since is not None and self._deps.clock.now() < held_since + limit:
+            return 0
         await self._deps.recovery.clear_rework(run.run_id)
         return None
 
