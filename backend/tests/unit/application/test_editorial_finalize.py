@@ -6,12 +6,25 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel import editorial_finalize
 from rag_backend.application.services.carousel.editorial_finalize import (
     export_and_complete_carousel,
     finalize_carousel_after_images_approval,
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus
+
+
+@pytest.fixture(autouse=True)
+def _no_cover_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests use a mock session; the cover guard has its own Postgres tests."""
+
+    async def _allowed(db: AsyncSession, project: CarouselProject) -> str | None:
+        del db, project
+        return None
+
+    monkeypatch.setattr(editorial_finalize, "unreviewed_cover_refusal", _allowed)
 
 
 @pytest.mark.asyncio

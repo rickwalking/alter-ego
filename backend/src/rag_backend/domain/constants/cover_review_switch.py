@@ -14,6 +14,7 @@ back.
 from __future__ import annotations
 
 ERR_COVER_SWITCH_REQUIRES_REVIEW = "cover_switch_requires_review"
+ERR_COVER_CHANGE_REQUIRES_REVIEW = "cover_change_requires_review"
 
 REASON_AUTO_SELECT_APPROVED = "carousel_approved"
 REASON_AUTO_SELECT_PUBLISHED = "carousel_published"
@@ -29,6 +30,7 @@ LOG_COVER_REVIEW_ROLLED_BACK = "cover_review_rolled_back"
 LOG_COVER_REVIEW_ROLLBACK_FAILED = "cover_review_rollback_failed"
 
 __all__ = [
+    "ERR_COVER_CHANGE_REQUIRES_REVIEW",
     "ERR_COVER_SWITCH_REQUIRES_REVIEW",
     "LOG_COVER_REVIEW_ROLLBACK_FAILED",
     "LOG_COVER_REVIEW_ROLLED_BACK",
