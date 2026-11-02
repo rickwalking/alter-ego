@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-01
 decision-makers: Pedro Marins
 consulted: Claude (AE-0588)
@@ -45,6 +45,8 @@ slide would block again at the gate. How do these two steps keep the owner's voi
 
 ## Decision Outcome
 
+Accepted by Pedro (2026-11-02).
+
 Chosen option: **2**, as an amendment to ADR-003 scoped to these two budget-bound field
 rewrites only. Every other AI-generated content keeps going through `enforce()`.
 
@@ -67,7 +69,7 @@ rewrites only. Every other AI-generated content keeps going through `enforce()`.
 - Good: no extra `enforce()` call per rewritten field; one judge call per changed slide.
 - Bad: the rewritten field is not restyled by `enforce()`; voice drift under the floor is caught
   only by the rescore, not prevented.
-- Neutral: the Persona Engine rule text in `CLAUDE.md` is unchanged until this ADR is accepted.
+- Neutral: the Persona Engine rule in `CLAUDE.md` names this exception.
 
 ### Confirmation
 
@@ -78,5 +80,5 @@ rewrites only. Every other AI-generated content keeps going through `enforce()`.
 
 ## More Information
 
-- ADR-003: Implement Persona-Driven AI Content (amended by this ADR once accepted).
+- ADR-003: Implement Persona-Driven AI Content (amended by this ADR).
 - Ticket: `.agent/tasks/AE-0588-copy-fits-slide-budgets.md`.
