@@ -10,6 +10,7 @@ projects).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -108,11 +109,14 @@ async def republish_carousel(
         )
     _reject_if_run_active(project.phase_status)
 
+    rendered_from = datetime.now(UTC)
     result = await republish_completed_carousel(db, str(project_id))
     if not result.completed:
         raise_republish_failure(result.errors)
 
-    await CarouselProjectWriteOwner(db).clear_needs_republish(str(project_id))
+    await CarouselProjectWriteOwner(db).clear_needs_republish(
+        str(project_id), rendered_from
+    )
     await db.commit()
 
     return CarouselRepublishResponse(

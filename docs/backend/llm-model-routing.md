@@ -8,7 +8,7 @@ by the OpenCode Go OpenAI-compatible endpoint (`GLM_BASE_URL`, default
 | Role | Setting (env) | Default | Per-call timeout | Used for |
 |---|---|---|---|---|
 | reasoning | `LLM_MODEL_REASONING` | `deepseek-v4-pro` | 240 s | research synthesis, outline, quality/rubric judgement |
-| fast | `LLM_MODEL_FAST` | `deepseek-v4.1-flash` | 120 s | slide drafting (+ persona enforce), PT→EN translation, caption, LinkedIn/blog distribution copy, refinement, AE-0367 autofix re-translate, persona scoring |
+| fast | `LLM_MODEL_FAST` | `deepseek-v4.1-flash` | 120 s | slide drafting (+ persona enforce), PT→EN translation, copy-budget shorten step (pre-validation), content-gate field repair, caption, LinkedIn/blog distribution copy, refinement, AE-0367 autofix re-translate, persona scoring |
 | fast fallback | `LLM_MODEL_FALLBACK` | `qwen3.8-flash` | 180 s | a fast call that failed 5 attempts |
 | reasoning fallback | `LLM_MODEL_FALLBACK_REASONING` | `qwen3.8-max` | 180 s | a reasoning call that failed 5 attempts |
 

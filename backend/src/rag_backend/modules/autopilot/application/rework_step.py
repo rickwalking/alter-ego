@@ -8,29 +8,45 @@ A "Fix issues" tap is queued the same way (phase marker
 ``AUTOFIX_REWORK_PHASE``). The tick runs the deterministic repair and
 re-render, then hands the run to the normal final-review stop, which moves it
 back to ``awaiting_owner`` and stages the fresh review (new lock version).
+
+"Usar capa do Grok" also applies on an approved carousel (a cancelled
+schedule): the switch drops the approval with the write, and the final-review
+stop then sends the review of the new render (Pedro's decision, 2026-11-02).
+
+A website cover switching slide 1 holds the run (phase marker
+``COVER_REVIEW_HOLD_PHASE``): the tick waits until the switch releases it, or,
+when the hold outlives its task (a restart), escalates the run, since slide 1
+may then carry a cover no render shows.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.run_recovery import RunRecovery
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
+    PHASE_STATUS_APPROVED,
     PHASE_STATUS_AWAITING,
     REASON_PROJECT_MISSING,
     REASON_REVISION_CAP,
 )
 from rag_backend.modules.autopilot.cover_constants import (
+    COVER_REVIEW_HOLD_PHASE,
     COVER_REWORK_PHASE,
     REASON_COVER_MISSING,
     REASON_COVER_RENDER_FAILED,
+    REASON_COVER_REQUIRES_REVIEW,
+    REASON_COVER_REVIEW_INTERRUPTED,
+    REASON_REWORK_AFTER_APPROVAL,
 )
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
     AutofixStatus,
     ContentAutofixer,
 )
+from rag_backend.modules.autopilot.domain.cover_hold import hold_active
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverOffers,
     CoverSwitchCommand,
@@ -48,7 +64,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository
+from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.recovery_constants import REASON_REWORK_RETRY
 from rag_backend.modules.autopilot.webhook_constants import AUTOFIX_REWORK_PHASE
@@ -60,7 +76,7 @@ class ReworkDependencies:
     """Ports the rework step shares with the runner.
 
     ``covers`` / ``cover_switch`` are the owner's GrokBot cover choice and the
-    slide-1 re-render.
+    slide-1 re-render; ``clock`` ages a website cover hold.
     """
 
     runs: AutopilotRunRepository
@@ -70,6 +86,7 @@ class ReworkDependencies:
     autofix: ContentAutofixer | None = None
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
+    clock: Clock = field(default_factory=SystemClock)
 
 
 class ReworkStep:
@@ -86,6 +103,9 @@ class ReworkStep:
         dropped and the caller drives the run as usual.
 
         "Fix issues" and "Usar capa do Grok" are special reworks, not a revise.
+        A fix or revise queued on a carousel approved meanwhile (on the website)
+        cannot run there: the run is escalated, so the owner is told and the
+        due tick never publishes the content they asked to change.
         """
         if run.rework_phase is None:
             return None
@@ -94,13 +114,23 @@ class ReworkStep:
             await self._end(run, AutopilotRunState.ESCALATED, REASON_PROJECT_MISSING)
             return 1
         snapshot = await self._deps.editorial.read_gate(project_id)
-        if not _at_final_review(snapshot):
+        return await self._route(run, snapshot, project_id)
+
+    async def _route(
+        self, run: AutopilotRun, snapshot: GateSnapshot, project_id: str
+    ) -> int | None:
+        rework_phase = run.rework_phase or ""
+        if _approved_meanwhile(snapshot, rework_phase):
+            await self._escalate(run, project_id, REASON_REWORK_AFTER_APPROVAL)
+            return 1
+        if not _at_final_review(snapshot, rework_phase):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
         special = {
             AUTOFIX_REWORK_PHASE: self._autofix,
             COVER_REWORK_PHASE: self._cover,
-        }.get(run.rework_phase)
+            COVER_REVIEW_HOLD_PHASE: self._held,
+        }.get(rework_phase)
         if special is not None:
             return await special(run, snapshot, project_id)
         return await self._apply(run, snapshot, project_id)
@@ -153,14 +183,32 @@ class ReworkStep:
         status = await switcher.switch(command)
         if status is CoverSwitchStatus.CONFLICT:
             return 1
-        if status is CoverSwitchStatus.MISSING:
-            await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_COVER_MISSING)
+        back = _BACK_TO_OWNER.get(status)
+        if back is not None:
+            await self._end(run, AutopilotRunState.AWAITING_OWNER, back)
             return 1
         if status is CoverSwitchStatus.RENDER_FAILED:
             await self._escalate(run, project_id, REASON_COVER_RENDER_FAILED)
             return 1
         await self._deps.recovery.clear_rework(run.run_id)
         return None
+
+    async def _held(
+        self,
+        run: AutopilotRun,
+        snapshot: GateSnapshot,
+        project_id: str,
+    ) -> int | None:
+        """Wait for the website cover switch; an outlived hold is escalated.
+
+        The switch's task died (a restart): slide 1 may carry a cover no render
+        shows, so the owner is told instead of being sent a review.
+        """
+        del snapshot
+        if hold_active(run, self._deps.clock.now()):
+            return 0
+        await self._escalate(run, project_id, REASON_COVER_REVIEW_INTERRUPTED)
+        return 1
 
     async def _apply(
         self,
@@ -205,10 +253,35 @@ class ReworkStep:
         )
 
 
-def _at_final_review(snapshot: GateSnapshot) -> bool:
+_BACK_TO_OWNER: dict[CoverSwitchStatus, str] = {
+    CoverSwitchStatus.MISSING: REASON_COVER_MISSING,
+    CoverSwitchStatus.REQUIRES_REVIEW: REASON_COVER_REQUIRES_REVIEW,
+}
+"""Cover switch outcomes that leave slide 1 as it was and reopen the review."""
+
+
+def _approved_meanwhile(snapshot: GateSnapshot, rework_phase: str) -> bool:
+    """A fix or revise (not the GrokBot cover, not a website hold) at a final
+    review that is already approved."""
     return (
         snapshot.phase == GATE_FINAL_REVIEW
-        and snapshot.phase_status == PHASE_STATUS_AWAITING
+        and snapshot.phase_status == PHASE_STATUS_APPROVED
+        and rework_phase not in _APPROVED_REWORKS
+    )
+
+
+_APPROVED_REWORKS = frozenset({COVER_REWORK_PHASE, COVER_REVIEW_HOLD_PHASE})
+
+
+def _at_final_review(snapshot: GateSnapshot, rework_phase: str) -> bool:
+    """Waiting in final review; the GrokBot cover also runs once approved there."""
+    if snapshot.phase != GATE_FINAL_REVIEW:
+        return False
+    if snapshot.phase_status == PHASE_STATUS_AWAITING:
+        return True
+    return (
+        rework_phase == COVER_REWORK_PHASE
+        and snapshot.phase_status == PHASE_STATUS_APPROVED
     )
 
 

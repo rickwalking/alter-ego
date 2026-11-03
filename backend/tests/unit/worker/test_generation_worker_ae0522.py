@@ -29,6 +29,7 @@ from rag_backend.modules.generation_queue.infrastructure.pgq_gateway import (
     run_id_of,
 )
 from rag_backend.worker import healthcheck, periodic
+from rag_backend.worker.drain import DrainFiles, DrainSwitch, JobGate
 from rag_backend.worker.main import (
     WorkerConfigError,
     is_provider_error,
@@ -73,6 +74,12 @@ class _Handler:
         return self.verdict
 
 
+def _gate(tmp_path: Path) -> JobGate:
+    return JobGate(
+        DrainSwitch(DrainFiles(drain=tmp_path / "drain", busy=tmp_path / "busy"))
+    )
+
+
 def _job(payload: bytes | None) -> Job:
     return Job.model_validate({
         "id": 1,
@@ -89,27 +96,29 @@ def _job(payload: bytes | None) -> Job:
     })
 
 
-async def test_entrypoint_maps_verdicts_to_pgqueuer_signals() -> None:
+async def test_entrypoint_maps_verdicts_to_pgqueuer_signals(tmp_path: Path) -> None:
     """Scenario: A drive with nothing to do comes back later"""
     run_id = uuid4()
+    gate = _gate(tmp_path)
     done = _Handler(Verdict(VerdictKind.DONE))
-    await job_entrypoint(done)(_job(job_payload(run_id)))
+    await job_entrypoint(done, gate)(_job(job_payload(run_id)))
     assert done.seen == [run_id]
     retry = _Handler(Verdict(VerdictKind.RETRY, timedelta(seconds=60)))
     with pytest.raises(RetryRequested) as raised:
-        await job_entrypoint(retry)(_job(job_payload(run_id)))
+        await job_entrypoint(retry, gate)(_job(job_payload(run_id)))
     assert raised.value.delay == timedelta(seconds=60)
     with pytest.raises(DeadLetteredError):
-        await job_entrypoint(_Handler(Verdict(VerdictKind.HOLD)))(
+        await job_entrypoint(_Handler(Verdict(VerdictKind.HOLD)), gate)(
             _job(job_payload(run_id))
         )
 
 
-async def test_entrypoint_ignores_a_foreign_payload() -> None:
+async def test_entrypoint_ignores_a_foreign_payload(tmp_path: Path) -> None:
     """Scenario: A permanent failure parks the run with its reason"""
     handler = _Handler(Verdict(VerdictKind.DONE))
-    await job_entrypoint(handler)(_job(b"not-a-uuid"))
-    await job_entrypoint(handler)(_job(None))
+    gate = _gate(tmp_path)
+    await job_entrypoint(handler, gate)(_job(b"not-a-uuid"))
+    await job_entrypoint(handler, gate)(_job(None))
     assert handler.seen == []
     assert run_id_of(b"\xff") is None
 

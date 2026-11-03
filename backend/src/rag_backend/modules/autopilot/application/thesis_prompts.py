@@ -109,7 +109,9 @@ class ThesisPromptService:
             )
             return 0
         log = record_status(log, key, result.message_id)
-        await self._deps.notices.save(SaveNoticeLog(run_id=run.run_id, log=log))
+        await self._deps.notices.save(
+            SaveNoticeLog(run_id=run.run_id, log=log, base=run.notice_log)
+        )
         logger.info(LOG_THESIS, run_id=str(run.run_id), outcome=LOG_PROMPT_SENT)
         return 1
 
@@ -140,7 +142,9 @@ class ThesisPromptService:
             )
             return run.notice_log
         log = record_status(run.notice_log, key, result.message_id)
-        await self._deps.notices.save(SaveNoticeLog(run_id=run.run_id, log=log))
+        await self._deps.notices.save(
+            SaveNoticeLog(run_id=run.run_id, log=log, base=run.notice_log)
+        )
         return log
 
 

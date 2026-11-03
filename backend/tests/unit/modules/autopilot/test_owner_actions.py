@@ -48,6 +48,7 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, ReviewRecord
 from rag_backend.modules.autopilot.domain.owner_ports import (
     CallbackAnswer,
     ForceReplyPrompt,
@@ -88,6 +89,8 @@ _OWNER = "42"
 _STRANGER = "99"
 _PROJECT = "11111111-1111-4111-8111-111111111111"
 _FEEDBACK = "darker palette, no robots"
+REVIEWED = NoticeLog(reviews=(ReviewRecord(revision=4, album_ids=(1,), keyboard_id=9),))
+"""The review the owner taps (``_tap`` message 9) was sent at lock version 4."""
 
 
 class _Clock:
@@ -529,6 +532,7 @@ def _world() -> _World:
         state_reason=None,
         publish_attempts=0,
         telegram_message_ids=(),
+        notice_log=REVIEWED,
         ig_container_id=None,
         ig_post_id=None,
         ig_permalink=None,

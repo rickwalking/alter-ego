@@ -161,7 +161,7 @@ Feature: Carousel generation runs in a capped PgQueuer worker
   Scenario: The deploy installs the queue schema and drains the worker
     Given the deploy workflow
     Then the queue one-shot runs before the stack comes up and its failure fails the job at the end
-    And the worker is stopped with a 300 s grace before the stack goes down
+    And the worker is drained (deploy_drains_worker_ae0598.feature) and stopped before the stack goes down
 
   Scenario: The worker container is capped and hardened
     Given the production compose file

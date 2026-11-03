@@ -24,6 +24,7 @@ from rag_backend.application.services.carousel.artifact_manifest import (
     ArtifactSlideFileEntry,
     CarouselArtifactManifest,
 )
+from rag_backend.application.services.carousel.cover_render_guard import cover_identity
 from rag_backend.domain.constants import (
     HD_SUBDIR_NAME,
     LANGUAGE_EN,
@@ -111,6 +112,7 @@ def build_manifest(
         en_source_hash=compute_slides_fingerprint(request.slides),
         raw_image_hashes=collect_raw_images(request, staging_dir),
         avatar_hash=creator_asset_hash(request.project),
+        slide_one_cover=cover_identity(request.project),
         standard_slides_pt=collect_standard_slides(staging_dir / LANGUAGE_PT, expected),
         standard_slides_en=collect_standard_slides(staging_dir / LANGUAGE_EN, expected),
         hd_slides_pt=collect_hd_slides(staging_dir / LANGUAGE_PT, expected),

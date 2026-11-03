@@ -3,6 +3,7 @@
 A mixin of ``Settings``, split out to keep ``settings.py`` under 400 lines.
 ``GENERATION_WORKER_CONCURRENCY`` is how many carousels generate at a time
 (Pedro: 1); the worker's own DB pool stays small so the web pool is never starved.
+The drain and busy files are how a deploy pauses the worker and sees it idle.
 """
 
 from __future__ import annotations
@@ -18,6 +19,10 @@ DEFAULT_WORKER_DB_POOL_SIZE = 3
 DEFAULT_WORKER_DB_MAX_OVERFLOW = 2
 ALIVE_FILE_NAME = "generation-worker.alive"
 DEFAULT_WORKER_ALIVE_FILE = str(Path(tempfile.gettempdir()) / ALIVE_FILE_NAME)
+DRAIN_FILE_NAME = "generation-worker.drain"
+BUSY_FILE_NAME = "generation-worker.busy"
+DEFAULT_WORKER_DRAIN_FILE = str(Path(tempfile.gettempdir()) / DRAIN_FILE_NAME)
+DEFAULT_WORKER_BUSY_FILE = str(Path(tempfile.gettempdir()) / BUSY_FILE_NAME)
 
 
 class GenerationQueueSettings(BaseSettings):
@@ -48,6 +53,18 @@ class GenerationQueueSettings(BaseSettings):
         default=DEFAULT_WORKER_ALIVE_FILE,
         validation_alias=AliasChoices(
             "GENERATION_WORKER_ALIVE_FILE", "generation_worker_alive_file"
+        ),
+    )
+    generation_worker_drain_file: str = Field(
+        default=DEFAULT_WORKER_DRAIN_FILE,
+        validation_alias=AliasChoices(
+            "GENERATION_WORKER_DRAIN_FILE", "generation_worker_drain_file"
+        ),
+    )
+    generation_worker_busy_file: str = Field(
+        default=DEFAULT_WORKER_BUSY_FILE,
+        validation_alias=AliasChoices(
+            "GENERATION_WORKER_BUSY_FILE", "generation_worker_busy_file"
         ),
     )
 

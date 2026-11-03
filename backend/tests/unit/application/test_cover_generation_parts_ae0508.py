@@ -32,6 +32,7 @@ from rag_backend.application.services.carousel.slide_cover_switch import (
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.slide_cover import CoverAssetError, SlideCover
+from tests.unit.application.test_cover_pick_ae0445 import DraftReview
 
 _OWNER = "00000000-0000-4000-8000-000000000508"
 
@@ -123,6 +124,7 @@ class TestPicker:
                 library=_Library(),
                 offers=_NoOffer(),
                 switcher=switcher,
+                review=DraftReview(),
                 generated=_Generated((made,)),
             )
         )
@@ -145,7 +147,12 @@ class TestPicker:
     async def test_picker_without_generated_source_lists_none(self) -> None:
         """Scenario: The generated cover is a cover option and can be picked."""
         service = CoverPickService(
-            CoverPickDeps(library=_Library(), offers=_NoOffer(), switcher=_Switcher())
+            CoverPickDeps(
+                library=_Library(),
+                offers=_NoOffer(),
+                switcher=_Switcher(),
+                review=DraftReview(),
+            )
         )
         assert (await service.options(_project())).options == ()
 

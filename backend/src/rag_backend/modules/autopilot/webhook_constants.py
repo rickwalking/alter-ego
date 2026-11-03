@@ -53,6 +53,10 @@ TEXT_REWORKING = "Reworking {phase}."
 TEXT_REVISION_CAP = "Revision cap reached."
 TEXT_APPROVE_FAILED = "Could not approve."
 TEXT_APPROVE_REFUSED = "Could not approve. The review is still open."
+TEXT_APPROVE_RENDER_PENDING = (
+    "Os slides ainda estão sendo renderizados. A revisão continua aberta; "
+    "tente aprovar de novo em alguns minutos."
+)
 
 REASON_OWNER_APPROVED = "owner_approved"
 REASON_OWNER_REJECTED = "owner_rejected"
@@ -99,6 +103,7 @@ SET_WEBHOOK_EXIT_USAGE = 2
 LEDGER_PENDING = "pending"
 LEDGER_PENDING_OWNER = "owner"
 LEDGER_PENDING_PHASE = "phase"
+LEDGER_PENDING_REVISION = "revision"
 REWORK_SCAN_LIMIT = 20
 
 CALLBACK_ACTION_PATTERN = (

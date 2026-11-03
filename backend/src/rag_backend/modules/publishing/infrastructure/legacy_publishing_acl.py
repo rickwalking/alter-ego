@@ -52,7 +52,10 @@ from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
 from rag_backend.domain.constants.blog_post import BlogPostStatus
-from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_PUBLISHED,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_run import (
@@ -95,10 +98,13 @@ class LegacyPublishingAcl:
         """Mark the carousel publicly released; return the released entity.
 
         Reads the row's ``lock_version`` and runs ``UPDATE ... SET is_public,
-        current_phase WHERE id AND lock_version = seen``, then commits ONCE via
-        the UoW. A concurrent writer that bumped the version in between makes the
-        UPDATE match no row; the release (which writes only those two columns)
-        re-reads and tries again, and raises ``version_conflict`` after
+        current_phase WHERE id AND lock_version = seen AND workflow_status =
+        approved_for_publish``, then commits ONCE via the UoW. A carousel that
+        is not approved (a slide-1 switch dropped its approval after the caller
+        read it) is never released: ``version_conflict`` at once. A concurrent
+        writer that bumped the version in between makes the UPDATE match no
+        row; the release (which writes only those two columns) re-reads and
+        tries again, and raises ``version_conflict`` after
         ``_RELEASE_ATTEMPTS``. No other column is written, so a caption edit
         landing after the route loaded ``project`` is never overwritten. A
         missing row writes and commits nothing.
@@ -127,13 +133,17 @@ class LegacyPublishingAcl:
         row = (
             await self._session.execute(
                 select(
-                    CarouselProjectModel.lock_version, CarouselProjectModel.run_epoch
+                    CarouselProjectModel.lock_version,
+                    CarouselProjectModel.run_epoch,
+                    CarouselProjectModel.workflow_status,
                 ).where(CarouselProjectModel.id == project_id)
             )
         ).one_or_none()
         if row is None:
             return None
-        seen, epoch = row
+        seen, epoch, workflow_status = row
+        if workflow_status != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
+            raise ValueError(ERR_VERSION_CONFLICT)
         _ensure_current_epoch(project_id, epoch)
         result = await self._session.execute(
             update(CarouselProjectModel)
@@ -141,6 +151,8 @@ class LegacyPublishingAcl:
                 CarouselProjectModel.id == project_id,
                 CarouselProjectModel.lock_version == seen,
                 CarouselProjectModel.run_epoch == epoch,
+                CarouselProjectModel.workflow_status
+                == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
             )
             .values(is_public=True, current_phase=PHASE_PUBLISHED)
         )

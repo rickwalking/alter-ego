@@ -1,0 +1,29 @@
+---
+name: carousel_copy_budget_slide_limits
+version: "2.0.0"
+description: "This slide's copy limits, rendered from the presentation contract the validator enforces; emphasis cost per locale; items only when the role asks for them"
+
+template: |
+  Copy limits of this slide ({{ slide_type }}). Code checks every limit after
+  you answer and blocks the slide when one is exceeded; characters include
+  spaces, punctuation and emphasis marks.
+  {% for limit in limits -%}
+  - {{ limit.field }}: at most {{ limit.max_characters }} characters
+    {%- if limit.max_lines %}, at most {{ limit.max_lines }} {{ 'line' if limit.max_lines == 1 else 'lines' }}{% endif %}
+    {%- if limit.max_words %}, at most {{ limit.max_words }} words{% endif %}
+    {%- if limit.min_words %}, at least {{ limit.min_words }} words{% endif %}
+  {% endfor -%}
+  Write each field inside its limit from the first version, a little below it,
+  with complete sentences: never rely on the text being cut later.
+  The item limits (features, summary_points, actions) apply only to items this
+  slide's role asks for; a listed item limit is not a request to add items.
+  The limits apply to the Portuguese copy and to any English copy you write.
+  Portuguese emphasis is **...** (4 characters of markup); English emphasis is
+  <strong>...</strong> (17 characters of markup). Both count toward the limit.
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-11-02"
+  tags: ["carousel", "copy-budget", "content", "emphasis"]

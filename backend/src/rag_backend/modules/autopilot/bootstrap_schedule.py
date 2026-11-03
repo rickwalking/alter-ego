@@ -8,6 +8,10 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.application.reopen_recovery import (
+    ReopenRecovery,
+    ReopenRecoveryDeps,
+)
 from rag_backend.modules.autopilot.application.scheduled_publish import (
     ScheduledPublishDependencies,
     ScheduledPublishSweep,
@@ -25,6 +29,8 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
 from rag_backend.modules.autopilot.infrastructure.schedule_store import (
+    EditorialCarouselRowLock,
+    EditorialReopenedReviews,
     SqlScheduledRuns,
 )
 
@@ -34,14 +40,26 @@ def scheduled_publish_sweep(
 ) -> ScheduledPublishSweep:
     """The due sweep on the tick's session."""
     repo = SqlAlchemyAutopilotRepository(session)
+    scheduled = SqlScheduledRuns(session)
+    recovery = ReopenRecovery(
+        ReopenRecoveryDeps(
+            runs=repo,
+            scheduled=scheduled,
+            reviews=EditorialReopenedReviews(session),
+            checkpoint=repo,
+            clock=SystemClock(),
+        )
+    )
     return ScheduledPublishSweep(
         ScheduledPublishDependencies(
             runs=repo,
-            scheduled=SqlScheduledRuns(session),
+            scheduled=scheduled,
             source=PublishingCarouselSource(session, public_base_url),
             release=PublishingCarouselReleaser(session),
             notifier=OutboxPublishNotifier(session),
             checkpoint=repo,
             clock=SystemClock(),
+            lock=EditorialCarouselRowLock(session),
+            recovery=recovery,
         )
     )

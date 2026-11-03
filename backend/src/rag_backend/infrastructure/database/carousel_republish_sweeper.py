@@ -24,7 +24,13 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.domain.constants.carousel_slide_edit import LOG_EVENT_REPUBLISH_SWEPT
+from rag_backend.domain.constants.carousel_slide_edit import (
+    LOG_EVENT_REPUBLISH_COVER_REFUSED,
+    LOG_EVENT_REPUBLISH_SWEPT,
+)
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_CHANGE_REQUIRES_REVIEW,
+)
 from rag_backend.domain.models.carousel import CarouselStatus
 from rag_backend.domain.models.carousel_conflict import CarouselConflictError
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -49,9 +55,15 @@ class CarouselRepublishSweeperRepository:
 
     def __init__(self, config: CarouselRepublishSweeperConfig) -> None:
         self._config = config
+        self._cover_refused: dict[str, int] = {}
 
     async def sweep(self, db: AsyncSession) -> int:
-        """Republish every overdue-marked completed carousel; return the count."""
+        """Republish every overdue-marked completed carousel; return the count.
+
+        A row refused because its slide-1 cover would change unreviewed on an
+        approved or public carousel is logged once and skipped until its lock
+        version moves (worker-scoped memory, like the stale-run reaper's counts).
+        """
         cutoff = datetime.now(UTC) - timedelta(seconds=self._config.min_age_seconds)
         rows = await self._overdue_rows(db)
         republished = 0
@@ -59,8 +71,16 @@ class CarouselRepublishSweeperRepository:
             marker = row.needs_republish_since
             if marker is None or _as_utc(marker) > cutoff:
                 continue
-            if await _republish_row(db, str(row.id)):
+            project_id, version = str(row.id), int(row.lock_version or 1)
+            if self._cover_refused.get(project_id) == version:
+                continue
+            errors = await _republish_row(db, project_id)
+            if errors is None:
                 republished += 1
+                self._cover_refused.pop(project_id, None)
+            elif ERR_COVER_CHANGE_REQUIRES_REVIEW in errors:
+                self._cover_refused[project_id] = version
+                logger.error(LOG_EVENT_REPUBLISH_COVER_REFUSED, project_id=project_id)
         return republished
 
     @staticmethod
@@ -74,25 +94,27 @@ class CarouselRepublishSweeperRepository:
         return list(result.scalars().all())
 
 
-async def _republish_row(db: AsyncSession, project_id: str) -> bool:
-    """Republish one marked project + clear the marker; True on success.
+async def _republish_row(db: AsyncSession, project_id: str) -> tuple[str, ...] | None:
+    """Republish one marked project + clear the marker; None on success.
 
-    A conflict means a client republish holds the lock; it is retried next tick.
+    Otherwise the errors; a conflict means a client republish holds the lock and
+    it is retried next tick.
     """
     from rag_backend.application.services.carousel.carousel_republish import (
         republish_completed_carousel,
     )
     from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
+    rendered_from = datetime.now(UTC)
     try:
         result = await republish_completed_carousel(db, project_id)
-    except CarouselConflictError:
-        return False
+    except CarouselConflictError as exc:
+        return (exc.conflict.code,)
     if not result.completed:
-        return False
-    await CarouselProjectWriteOwner(db).clear_needs_republish(project_id)
+        return result.errors
+    await CarouselProjectWriteOwner(db).clear_needs_republish(project_id, rendered_from)
     logger.info(LOG_EVENT_REPUBLISH_SWEPT, project_id=project_id)
-    return True
+    return None
 
 
 __all__ = [

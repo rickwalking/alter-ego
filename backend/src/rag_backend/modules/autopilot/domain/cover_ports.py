@@ -66,13 +66,15 @@ class CoverSwitchStatus(StrEnum):
     """Outcome of one slide-1 switch on a finished carousel.
 
     ``RENDER_FAILED``: stored, but the re-render failed, so it is never reported as
-    switched.
+    switched. ``REQUIRES_REVIEW``: the carousel is approved or published, so its
+    slide 1 must not change without a new review; nothing was written.
     """
 
     SWITCHED = "switched"
     CONFLICT = "conflict"
     MISSING = "missing"
     RENDER_FAILED = "render_failed"
+    REQUIRES_REVIEW = "requires_review"
 
 
 @dataclass(frozen=True, kw_only=True)

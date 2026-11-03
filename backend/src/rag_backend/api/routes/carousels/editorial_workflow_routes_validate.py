@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
@@ -31,6 +32,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_BUILD_IN_PROGRESS,
     CONFLICT_CODE_MUTATION_IN_PROGRESS,
     CONFLICT_CODE_REVISION_CAP_EXCEEDED,
     CONFLICT_CODE_RUN_IN_PROGRESS,
@@ -161,6 +163,23 @@ def ensure_resume_not_in_progress(
     )
 
 
+async def ensure_rendered_before_approve(db: AsyncSession, project_id: str) -> None:
+    """Refuse a final-review approve while a re-render is still pending."""
+    found = (
+        await db.execute(
+            select(
+                CarouselProjectModel.needs_republish_since,
+                CarouselProjectModel.current_phase,
+            ).where(CarouselProjectModel.id == project_id)
+        )
+    ).one_or_none()
+    if found is None or found[0] is None or found[1] != PHASE_FINAL_REVIEW:
+        return
+    raise CarouselConflictError(
+        CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
+    )
+
+
 async def ensure_no_artifact_mutation_in_progress(
     db: AsyncSession,
     project_id: str,
@@ -197,8 +216,14 @@ async def validate_resume_workflow_gates(
     """Validate revision cap and persona score before accepting resume.
 
     The revision-cap conflict names the charged phase (the target on a send-back), which
-    the typed 409 client copy reads.
+    the typed 409 client copy reads. A final-review approve while the carousel's
+    slides wait for a re-render (the needs-republish marker: a slide-1 cover switch
+    or a slide edit not rendered yet) is refused as ``build_in_progress``: it would
+    approve artifacts that do not show the carousel's content. Approves at earlier
+    gates are unaffected.
     """
+    if body.action == REVIEW_ACTION_APPROVE:
+        await ensure_rendered_before_approve(ctx.db, ctx.project_id)
     if workflow_state is None:
         return
     if body.action == REVIEW_ACTION_REVISE:
