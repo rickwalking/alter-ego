@@ -22,6 +22,14 @@ pt-BR caption as strict JSON, 2 runs): `qwen3.8-flash` 9-11 s, `qwen3.8-max` 14-
 `mimo-v2.6-flash` 7-19 s, `kimi-k2.6` 44-47 s, all valid JSON. `claude-haiku-5-5`,
 `gpt-5.6-luna`, `minimax-m2.7` and `grok-4.6` answer `ModelProtocolUnsupported` on this endpoint.
 
+**Step deadlines shorter than the role's (AE-0607).** A step that wraps its call in its own
+deadline shorter than the role's path to the fallback (300 s per call, several tries) cancels the
+primary before the fallback can run. The copy-budget shorten step bounds an attempt at 180 s, so it
+splits it: the primary gets 120 s (`COPY_BUDGET_FIT_PRIMARY_SECONDS`), then the role's fallback
+(`fallback_runnable_for(fast)`, the rest of the queue) gets what is left (`copy_budget_fit_fallback_used`
+log, traced under `copy budget fit`). The content-gate field repair has the same 180 s shape and
+no split yet.
+
 ## Model queue and circuit breaker (AE-0399)
 
 When `LLM_MODEL_QUEUE_FAST` / `LLM_MODEL_QUEUE_REASONING` is set, the role is served by a
