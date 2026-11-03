@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_rubric_judge import CarouselRubricJudge
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
+from rag_backend.agents.llm_json_retry import JsonRetryAnswers
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.research_enrichment import enrich_sources
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
@@ -30,6 +31,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
+from rag_backend.domain.constants.ai_agents import AGENT_EN_TRANSLATION
 from rag_backend.domain.constants.copy_budget_fit import COPY_BUDGET_TRACE_DETAIL
 from rag_backend.domain.protocols import ResearchEnrichmentParams
 from rag_backend.infrastructure.database.carousel_recent_hooks import (
@@ -74,6 +76,7 @@ class CarouselEditorialOrchestrator:
                 ),
                 budget_fit_fallback=fallback_runnable_for(roles.fast),
                 rubric_judge=CarouselRubricJudge(llm=roles.reasoning),
+                translation_answers=JsonRetryAnswers(roles.fast, AGENT_EN_TRANSLATION),
             )
         )
         self._engine = CarouselWorkflowEngine(
