@@ -95,7 +95,8 @@ async def test_a_wrong_current_password_changes_nothing(tmp_path: Path) -> None:
 async def test_the_same_password_is_refused(tmp_path: Path) -> None:
     async with _env(tmp_path) as (env, admin, editor):
         temp = await reset_by_admin(env, admin, editor)
-        async with env.client_for(editor) as client:
+        token = await login(env, (EDITOR_EMAIL, temp))
+        async with env.client(bearer(token)) as client:
             resp = await client.post(CHANGE_URL, json=change_body(temp, temp))
 
         assert resp.status_code == 400
@@ -161,8 +162,9 @@ async def test_a_flagged_admin_is_refused_on_role_guarded_endpoints(
     tmp_path: Path,
 ) -> None:
     async with _env(tmp_path) as (env, admin, _editor):
-        await reset_by_admin(env, admin, admin)
-        async with env.client_for(admin) as client:
+        temp = await reset_by_admin(env, admin, admin)
+        token = await login(env, (ADMIN_EMAIL, temp))
+        async with env.client(bearer(token)) as client:
             users = await client.get("/api/admin/users")
             rubrics = await client.get("/api/rubrics")
 
@@ -197,8 +199,9 @@ async def test_a_flagged_user_is_anonymous_on_optional_endpoints(
     tmp_path: Path,
 ) -> None:
     async with _env(tmp_path) as (env, admin, editor):
-        await reset_by_admin(env, admin, editor)
-        async with env.client_for(editor) as client:
+        temp = await reset_by_admin(env, admin, editor)
+        token = await login(env, (EDITOR_EMAIL, temp))
+        async with env.client(bearer(token)) as client:
             resp = await client.post(CONVERSATIONS_URL, json={"title": "As visitor"})
 
         assert resp.status_code == 201

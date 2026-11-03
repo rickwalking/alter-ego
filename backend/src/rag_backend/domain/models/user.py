@@ -53,9 +53,14 @@ class User:
         self.updated_at = utc_now()
 
     def reset_password(self, hashed_password: str) -> None:
-        """Store an admin-issued temporary hash; the user must change it next."""
+        """Store an admin-issued temporary hash; the user must change it next.
+
+        Also bumps the token version, so every access token issued to the user
+        before the reset is refused from now on.
+        """
         self.hashed_password = hashed_password
         self.must_change_password = True
+        self.token_version += 1
 
     def change_password(self, hashed_password: str) -> None:
         """Store the user's own new hash and clear the forced-change flag.
