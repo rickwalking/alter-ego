@@ -229,6 +229,33 @@ assert the reopen, or the fallback when no checkpoint reopen is wired).
   approve restores `approved_for_publish` (the route itself only queues the
   resume for the generation worker).
 
+### 2026-11-02 (review round 2)
+
+- No run waits forever in `reworking`:
+  - the worker's final-review stop hands a run whose carousel is approved
+    (on the website, after a reopen or an AE-0594 hold) back to the owner and
+    sends the review; the kept-time approve then schedules it;
+  - the due tick also takes `reworking` runs with a kept time (new
+    transitions `reworking -> publishing` and `reworking -> expired`): when
+    the time comes an approved carousel is published, otherwise the run
+    expires (`schedule_withdrawn`), the scheduler's missed-slot rule.
+- The render wait is bounded: after 15 minutes (`RENDER_PENDING_MAX_SECONDS`)
+  a final review still owed a render is escalated (`render_stuck`, owner text
+  "Os slides não foram renderizados de novo..."). This applies to every
+  final-review stop, so a plain rework with a marker that never clears is no
+  longer silent.
+- A checkpoint that cannot reopen answers `review_not_reopened` (409) with its
+  own pt/en text on the publish page, not "already published".
+- A hook photo on a carousel that is not completed is refused when it is
+  approved or released (an approval normally means completed; this guards an
+  inconsistent row).
+- The recovery pages through every waiting scheduled run, so none is starved.
+- **Behaviour note:** a scheduled carousel sent back on the website (a revise
+  or reject that leaves it at `final_review / awaiting_human`, draft) is now
+  sent a fresh Telegram review by the due tick's recovery, after the grace,
+  instead of quietly expiring at its time. A send-back to an earlier phase is
+  not matched (the carousel is no longer at the final review).
+
 ## Test Evidence
 
 See `.agent/reports/AE-0597.dev-summary.md` (AC to test mapping, gate
