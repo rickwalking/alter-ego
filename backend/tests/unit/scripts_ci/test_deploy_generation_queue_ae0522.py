@@ -17,7 +17,7 @@ DEV = REPO_ROOT / "docker-compose.yml"
 COMPOSE = "docker compose -f docker-compose.prod.yml"
 STEP = "python -m rag_backend.scripts.generation_queue_schema --apply --verify"
 ARCHIVED_STEP = "python -m rag_backend.scripts.carousel_archived_at --apply --verify"
-DRAIN = f"{COMPOSE} stop -t 300 generation-worker || true"
+DRAIN = f"{COMPOSE} stop -t 60 generation-worker || true"
 WORKER = "generation-worker"
 WORKER_COMMAND = [
     "pgq",

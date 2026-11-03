@@ -266,6 +266,11 @@ services:
   opencode:
     build:
       context: ops/opencode
+    # AE-0598: opencode ran as PID 1, which the kernel shields from every signal
+    # it has no handler for, so SIGTERM did nothing and each `down` waited its
+    # full timeout (120 s) before the SIGKILL. Docker's init (tini) is PID 1 now,
+    # forwards SIGTERM, and opencode exits on it as a normal process.
+    init: true
     environment:
       OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
       # Optional Cloudflare Worker egress (ops/egress-worker): when set, the

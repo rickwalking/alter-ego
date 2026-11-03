@@ -7,6 +7,7 @@ and its Alembic gates are never touched.
 from __future__ import annotations
 
 import asyncio
+import tempfile
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -87,6 +88,7 @@ from rag_backend.modules.generation_queue.infrastructure.repository import (
     SqlGenerationRunStore,
 )
 from rag_backend.modules.generation_queue.public import hold_project_drive
+from rag_backend.worker.drain import DrainFiles, DrainSwitch, JobGate
 from rag_backend.worker.main import job_entrypoint
 from tests.integration.pg_schema_support import PG_URL, requires_postgres
 from tests.unit.modules.generation_queue.queue_fakes import (
@@ -218,6 +220,14 @@ class _Recorder:
         return StepOutcome.DONE
 
 
+def _open_gate() -> JobGate:
+    """A gate in a fresh folder without a drain flag: never drained here."""
+    folder = Path(tempfile.mkdtemp())
+    return JobGate(
+        DrainSwitch(DrainFiles(drain=folder / "drain", busy=folder / "busy"))
+    )
+
+
 async def _run_worker(
     engine: AsyncEngine, recorder: _Recorder, run_ids: list[str]
 ) -> SqlGenerationRunStore:
@@ -239,7 +249,7 @@ async def _run_worker(
     async with asyncpg_connection(engine) as connection:
         pgq = PgQueuer(AsyncpgDriver(connection))
         pgq.entrypoint(ENTRYPOINT, concurrency_limit=1, on_failure="hold")(
-            job_entrypoint(handler)
+            job_entrypoint(handler, _open_gate())
         )
         dispatcher = Dispatcher(
             DispatcherDependencies(
@@ -405,12 +415,17 @@ async def test_worker_factory_wires_the_queue(
         await conn.run_sync(db_config.Base.metadata.create_all)
     await schema.apply(engine)
     alive = tmp_path / "alive"
+    drain, busy = tmp_path / "drain", tmp_path / "busy"
+    drain.touch()
+    busy.touch()
     settings = Settings(
         secret_key="s",
         anon_secret_key="a",
         carousel_checkpoint_backend="postgres",
         autopilot_enabled=True,
         generation_worker_alive_file=str(alive),
+        generation_worker_drain_file=str(drain),
+        generation_worker_busy_file=str(busy),
         workflow_worker_interval_seconds=3600,
     )
 
@@ -430,6 +445,9 @@ async def test_worker_factory_wires_the_queue(
     try:
         async with main.create_pgqueuer() as pgq:
             assert ENTRYPOINT in pgq.qm.entrypoint_registry
+            # Scenario: The worker clears the drain flag when it starts
+            assert not drain.exists()
+            assert not busy.exists()
             limit = pgq.qm.entrypoint_registry[ENTRYPOINT].parameters
             assert limit.concurrency_limit == 1
             assert limit.on_failure == "hold"
