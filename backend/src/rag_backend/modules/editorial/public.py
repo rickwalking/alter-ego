@@ -24,7 +24,9 @@ The facade exposes:
 * ``CarouselAutomationAcl`` and the ``build_start_input`` /
   ``build_resume_input`` / ``content_approve_blocker`` / ``is_provider_outage``
   helpers — the in-process automation seam the autopilot module drives the
-  workflow through (QA r1), so it imports no legacy carousel code.
+  workflow through (QA r1), so it imports no legacy carousel code;
+* ``settle_abandoned_carousel`` / ``AbandonedCarouselSettle`` — rejects the
+  carousel of an abandoned autopilot escalation that still waits unchanged.
 
 Consumers SHALL NOT import internals such as
 ``rag_backend.modules.editorial.application.service`` or
@@ -108,6 +110,10 @@ from rag_backend.modules.editorial.domain.status import (
     REVIEW_ACTION_REVISE,
     REVIEW_ACTIONS,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
+from rag_backend.modules.editorial.infrastructure.abandoned_carousel import (
+    AbandonedCarouselSettle,
+    settle_abandoned_carousel,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     AutomationResume,
@@ -270,6 +276,7 @@ __all__ = [
     "REVIEW_ACTION_REJECT",
     "REVIEW_ACTION_REVISE",
     "WORKFLOW_STATUS_APPROVED_FOR_PUBLISH",
+    "AbandonedCarouselSettle",
     "AclApprovalAdapter",
     "AclOptimisticLockingAdapter",
     "AclPublicReleaseAdapter",
@@ -372,6 +379,7 @@ __all__ = [
     "run_slide_fix",
     "schedule_autopilot_cover",
     "selecting_cover_task",
+    "settle_abandoned_carousel",
     "slide_cover_switch_service",
     "slides_in_config",
     "store_cover_image",

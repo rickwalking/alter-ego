@@ -9,7 +9,7 @@ Two enforcement mechanisms live here, both registered once at import time
    SAME flush UPDATE — transition INTO ``in_progress`` stamps
    ``run_started_at``/``run_heartbeat_at``; transition to any non-in_progress
    value clears them. This covers the three write-owner bypass sites
-   (``workflow_timeout_repository._reject``, the phase-5 migration backfill,
+   (``workflow_timeout_repository.reject``, the phase-5 migration backfill,
    and the ``update_from_entity`` hydrator) without per-site edits, and a
    crash can never leave a terminal row with a live-looking run.
 
