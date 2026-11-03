@@ -130,6 +130,19 @@ class CarouselProjectWriteOwner:
         project.phase_status = phase_status
         await self.commit()
 
+    async def mark_phase_failed_and_commit(self, project_id: str, cause: str) -> None:
+        """Set ``phase_status=failed`` with the safe failure cause and commit.
+
+        ``error_message`` keeps the last failure cause; ``phase_status`` says
+        whether it is current. Skipped when the project is absent.
+        """
+        project = await self._session.get(CarouselProjectModel, project_id)
+        if project is None:
+            return
+        project.phase_status = PHASE_STATUS_FAILED
+        project.error_message = cause
+        await self.commit()
+
     async def mark_needs_republish(self, project_id: str) -> None:
         """Stamp the republish marker (flush only; caller commits).
 

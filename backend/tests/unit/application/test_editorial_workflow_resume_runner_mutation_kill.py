@@ -165,6 +165,7 @@ class TestRunFinishedOnFailurePaths:
                 project_id=_PROJECT_ID,
                 message=ERR_BACKGROUND_RESUME_FAILED,
                 recoverable=True,
+                cause="RuntimeError: unclassified",
             )
         )
         run_finished.assert_awaited_once_with(
