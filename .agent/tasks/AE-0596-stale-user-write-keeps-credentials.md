@@ -1,6 +1,6 @@
 # AE-0596 — A stale user write must never restore an old password hash or token version
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bugfix
