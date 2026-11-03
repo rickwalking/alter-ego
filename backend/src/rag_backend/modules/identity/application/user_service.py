@@ -127,18 +127,22 @@ class UserService:
         return to_user_view(user)
 
     async def update(self, command: UpdateUserCommand) -> UserView:
-        """Apply partial profile changes to a user (committed once)."""
+        """Apply partial profile changes to a user (committed once).
+
+        The user is read with its row locked until the commit, and only the
+        fields the command assigns are saved.
+        """
         async with self._unit_of_work:
-            user = await self._require_user(command.user_id)
+            user = await self._require_locked_user(command.user_id)
             self._apply_updates(user, command)
             updated = await self._repository.update(user)
             view = to_user_view(updated)
         return view
 
     async def assign_role(self, command: AssignRoleCommand) -> UserView:
-        """Assign a role to a user (committed once)."""
+        """Assign a role to a user (committed once), from the user read locked."""
         async with self._unit_of_work:
-            user = await self._require_user(command.user_id)
+            user = await self._require_locked_user(command.user_id)
             user.set_role(command.role)
             updated = await self._repository.update(user)
             view = to_user_view(updated)
@@ -150,8 +154,8 @@ class UserService:
             deleted = await self._repository.delete(command.user_id)
         return deleted
 
-    async def _require_user(self, user_id: UUID) -> User:
-        user = await self._repository.get_by_id(user_id)
+    async def _require_locked_user(self, user_id: UUID) -> User:
+        user = await self._repository.get_by_id_for_update(user_id)
         if user is None:
             raise UserNotFoundError(ERR_USER_NOT_FOUND)
         return user
@@ -159,11 +163,15 @@ class UserService:
     @staticmethod
     def _apply_updates(user: User, command: UpdateUserCommand) -> None:
         if command.full_name is not None:
-            user.full_name = command.full_name
+            user.rename(command.full_name)
         if command.email is not None:
-            user.email = command.email
-        if command.is_active is not None:
-            user.is_active = command.is_active
+            user.change_email(command.email)
+        if command.is_active is None:
+            return
+        if command.is_active:
+            user.activate()
+            return
+        user.deactivate()
 
 
 __all__ = [
