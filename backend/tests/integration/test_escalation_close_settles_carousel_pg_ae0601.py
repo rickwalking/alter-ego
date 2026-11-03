@@ -214,7 +214,7 @@ async def test_closing_an_abandoned_escalation_rejects_its_carousel() -> None:
         assert carousel.phase_status == PHASE_STATUS_REJECTED
         assert carousel.status == AUTO_REJECT_CAROUSEL_STATUS
         assert carousel.error_message == ESCALATION_EXPIRED_REJECT_MESSAGE
-        assert carousel.lock_version == _VERSION
+        assert carousel.lock_version == _VERSION + 1
         events = await _phase_events(engine, project_id)
         assert len(events) == 1
         assert events[0].payload == {

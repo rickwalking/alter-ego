@@ -1,6 +1,6 @@
 # AE-0604 — A carousel reject bumps lock_version so a stale owner review is refused
 
-Status: In Progress
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -75,15 +75,15 @@ that drives a rejected carousel.
 
 ## Acceptance Criteria
 
-- [ ] AC1: after the stuck sweep rejects a carousel the owner read at version N, the owner's resume at
+- [x] AC1: after the stuck sweep rejects a carousel the owner read at version N, the owner's resume at
   `expected_version=N` is refused with 409 `version_conflict`, and the row stays rejected.
-- [ ] AC2: the same after the abandoned-escalation settle rejects it.
-- [ ] AC3: the reject leaves `lock_version` at N+1 (one bump per reject); a carousel the sweep or the settle leaves
+- [x] AC2: the same after the abandoned-escalation settle rejects it.
+- [x] AC3: the reject leaves `lock_version` at N+1 (one bump per reject); a carousel the sweep or the settle leaves
   alone keeps its version.
-- [ ] AC4: a resume at the current version on a carousel that was not rejected is still accepted (202).
-- [ ] AC5: the settle guard (`lock_version == escalated_version` read under `FOR UPDATE`) still settles once and a
+- [x] AC4: a resume at the current version on a carousel that was not rejected is still accepted (202).
+- [x] AC5: the settle guard (`lock_version == escalated_version` read under `FOR UPDATE`) still settles once and a
   second sweep does nothing; AE-0601 tests green (the one assertion that pinned the old, unbumped version updated).
-- [ ] AC6: no gate, allowlist, baseline or threshold loosened.
+- [x] AC6: no gate, allowlist, baseline or threshold loosened.
 
 ## Gherkin Scenarios
 
@@ -169,13 +169,31 @@ Feature: A carousel reject bumps lock_version so a stale owner review is refused
 
 Root cause confirmed in code (above). Ticket and feature file written; failing Postgres route test next.
 
+Commit 1: ticket, feature, Postgres route test. On the unfixed code 3 of 4 fail: both stale approves return 202
+and flip the rejected row to `in_progress` (the bug), and the post-reject version is still N.
+
+Commit 2: `reject` bumps `lock_version`; the carousel model's `lock_version` is declared `Mapped[int]` so the ORM
+write type-checks (same column, schema-drift PASS); the AE-0601 Postgres assertion that pinned the unbumped version
+now expects `_VERSION + 1`; unit tests for the bump.
+
 ## Files Touched
 
-- TBD
+- `backend/src/rag_backend/infrastructure/database/workflow_timeout_repository.py` — `reject` bumps `lock_version`.
+- `backend/src/rag_backend/infrastructure/database/models/carousel.py` — `lock_version: Mapped[int]` (same column).
+- `backend/tests/features/reject_bumps_lock_version_ae0604.feature` (new).
+- `backend/tests/integration/test_reject_bumps_lock_version_pg_ae0604.py` (new).
+- `backend/tests/unit/infrastructure/test_reject_bumps_lock_version_ae0604.py` (new).
+- `backend/tests/integration/test_escalation_close_settles_carousel_pg_ae0601.py` — settled version is `_VERSION + 1`.
 
 ## Test Evidence
 
-- TBD
+- New Postgres route test: 4 passed (3 failed before the fix).
+- New unit tests: 3 passed.
+- AE-0601 unit (9) and Postgres (10) tests: passed.
+- 31 related test files (stuck auto-reject, run guard, workflow workers, archive, resume routes, manual recovery,
+  run recovery, escalation settle) plus the new ones, in collection order: 250 passed.
+- Single gates: format, lint, lint-diff, strict-diff, type, comments, docstrings, gherkin-refs, blanket-ignore,
+  integrity, schema-drift PASS; `check_carousel_raw_updates.py` OK. Full gate: lead's heavy slot.
 
 ## QA Report
 
@@ -186,6 +204,8 @@ Pending.
 - ORM bump instead of a raw CAS `UPDATE`: the row is already in the session (the sweep loaded it, the settle holds it
   under `FOR UPDATE`), and a raw `update(CarouselProjectModel)` would need a new entry in the carousel raw-update
   allowlist. The bump is flushed in the same `UPDATE` as `phase_status=rejected`.
+- `lock_version` on `CarouselProjectModel` declared `Mapped[int] = mapped_column(...)` instead of a bare `Column`:
+  mypy strict rejects an `int` assignment to `Column[int]`. Same type, default and nullability; schema-drift PASS.
 - No new rejected-state guard on the resume route: the brief asked to keep what the route does today for a rejected
   carousel, and today it accepts a resume at the current version.
 
@@ -193,6 +213,20 @@ Pending.
 
 None.
 
+## Follow-ups (not done here)
+
+- Resume route has no `phase_status=rejected` guard: an approve at the post-reject version is accepted (202) and
+  flips the rejected row to `in_progress`. Needs Pedro's call on whether a system-rejected carousel may be resumed
+  from the website.
+- The stuck sweep reads its rows without `FOR UPDATE`; an owner CAS committing between that read and the reject
+  flush is overwritten (pre-existing, very narrow).
+- Telegram: a review tap at N on a carousel rejected at N+1 now moves the run to `reworking` (`review_outdated`),
+  where the policy WAITs on the rejected carousel; nothing closes a `reworking` run on a rejected carousel.
+- `tests/unit/infrastructure/test_carousel_run_guard.py::test_timeout_auto_reject_clears_leftover_run_columns`
+  fails when run after `test_workflow_timeout_repository.py` (shared session engine, leftover rows); passes in
+  collection order. Pre-existing, unrelated to this change.
+
 ## Final Summary
 
-Pending.
+A system reject (stuck sweep or escalation settle) now bumps `lock_version` in the same flush, so an owner review
+sent with the pre-reject version gets the existing 409 `version_conflict`. Awaiting QA.

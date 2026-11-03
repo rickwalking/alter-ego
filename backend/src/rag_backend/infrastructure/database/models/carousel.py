@@ -121,7 +121,7 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     workflow_status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="", server_default=""
     )
-    lock_version = Column(Integer, default=1, nullable=False)
+    lock_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     run_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
