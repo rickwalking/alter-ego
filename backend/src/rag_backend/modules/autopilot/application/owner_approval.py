@@ -28,6 +28,7 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 )
 from rag_backend.modules.autopilot.domain.ports import CarouselPublishSource
 from rag_backend.modules.editorial.public import (
+    PHASE_STATUS_REJECTED,
     REVIEW_ACTION_APPROVE,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
@@ -54,6 +55,12 @@ class FinalReviewApproval:
         if await self._already_approved(project_id):
             return None
         return (await self.editorial.read_gate(project_id)).lock_version
+
+    async def carousel_rejected(self, run: AutopilotRun) -> bool:
+        """True when the run's carousel is in the terminal rejected state."""
+        project_id = run.carousel_project_id or ""
+        snapshot = await self.editorial.read_gate(project_id)
+        return snapshot.phase_status == PHASE_STATUS_REJECTED
 
     async def approve(
         self, run: AutopilotRun, revision: int | None = None

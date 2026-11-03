@@ -12,6 +12,12 @@ says which way to go:
 - the current review could not be delivered (its attempts are exhausted): no
   bounce, the owner is pointed at the dashboard (``website``);
 - otherwise a newer review is already in the chat (``replaced``).
+
+A carousel rejected since the review was sent (the stuck-workflow sweep or the
+abandoned-escalation settle; both bump the lock version, so every older tap is
+outdated) has nothing left to review: the run closes ``awaiting_owner ->
+rejected`` with the recovery's own ``carousel_rejected`` reason, instead of
+going to ``reworking``, where nothing would ever close it (``rejected``).
 """
 
 from __future__ import annotations
@@ -42,6 +48,8 @@ from rag_backend.modules.autopilot.notify_constants import (
     ATTEMPT_REVIEW_PREFIX,
     NOTIFY_MAX_ATTEMPTS,
 )
+from rag_backend.modules.autopilot.recovery_constants import REASON_CAROUSEL_REJECTED
+from rag_backend.modules.autopilot.webhook_constants import TEXT_REJECTED
 
 _S = AutopilotRunState
 
@@ -53,12 +61,14 @@ class OutdatedTap(StrEnum):
     REPLACED = "replaced"
     RESENDING = "resending"
     WEBSITE = "website"
+    REJECTED = "rejected"
 
 
 TEXT_BY_OUTDATED: dict[OutdatedTap, str] = {
     OutdatedTap.REPLACED: TEXT_REVIEW_REPLACED,
     OutdatedTap.RESENDING: TEXT_REVIEW_RESENDING,
     OutdatedTap.WEBSITE: TEXT_REVIEW_ON_WEBSITE,
+    OutdatedTap.REJECTED: TEXT_REJECTED,
 }
 
 
@@ -85,6 +95,15 @@ class RevisionGuard:
         current = await self.approval.current_revision(run)
         if current is None or current == tapped.revision:
             return OutdatedTap.CURRENT
+        if await self.approval.carousel_rejected(run):
+            await self.runs.transition(
+                TransitionCommand.moving(run, _S.REJECTED, REASON_CAROUSEL_REJECTED)
+            )
+            return OutdatedTap.REJECTED
+        return await self._outdated(run, current)
+
+    async def _outdated(self, run: AutopilotRun, current: int) -> OutdatedTap:
+        """Point at the newer review, the dashboard, or resend the review."""
         if is_review_complete(run.notice_log, current):
             return OutdatedTap.REPLACED
         key = f"{ATTEMPT_REVIEW_PREFIX}{current}"

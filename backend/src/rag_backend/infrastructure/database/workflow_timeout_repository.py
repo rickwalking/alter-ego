@@ -14,7 +14,8 @@ is excluded (a workflow may be running or resuming) and terminal states
 
 ``reject`` is the one terminal transition: the stuck sweep calls it with the
 stuck cause, and the editorial settle of an abandoned autopilot escalation
-calls it with its own cause, so both write the same row state and the same
+calls it with its own cause, so both write the same row state (including the
+``lock_version`` bump that fences stale owner actions) and the same
 phase-changed event.
 """
 
@@ -124,12 +125,18 @@ class WorkflowTimeoutRepository:
     ) -> None:
         """Move ``project`` to the terminal rejected state and emit the event.
 
-        The caller chose the row and commits. The phase-changed payload carries
-        the previous phase and status, the reason and the time window.
+        The caller chose the row and commits. The reject bumps ``lock_version``
+        in the same flush as the phase-status flip: the owner review routes
+        compare ``lock_version`` only, so an owner action sent with the version
+        read before the reject fails its compare-and-swap with the usual
+        version conflict instead of driving a rejected carousel. The
+        phase-changed payload carries the previous phase and status, the reason
+        and the time window.
         """
         project_id = str(project.id)
         previous_phase = project.current_phase
         previous_phase_status = project.phase_status
+        project.lock_version = int(project.lock_version or 1) + 1
         project.phase_status = PHASE_STATUS_REJECTED
         project.status = AUTO_REJECT_CAROUSEL_STATUS
         project.error_message = cause.reason
