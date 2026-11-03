@@ -38,3 +38,11 @@ Feature: A carousel reject bumps lock_version so a stale owner review is refused
     When the reject transition runs on it
     Then the carousel is rejected at lock version N plus 1
     And a carousel the sweep leaves alone keeps its lock version
+
+  Scenario: A Telegram review tap after a reject closes the run
+    Given an autopilot run waiting for the owner on a Telegram review sent at lock version N
+    And the carousel was rejected since, at lock version N plus 1
+    When the owner taps approve, publish now or schedule on that review
+    Then nothing is approved and nothing moves toward publishing
+    And the run is rejected with reason carousel_rejected
+    And the run is not left in reworking
