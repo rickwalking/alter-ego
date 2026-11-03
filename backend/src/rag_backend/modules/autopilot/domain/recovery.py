@@ -1,7 +1,8 @@
 """Ports and commands for run recovery (QA round 1).
 
-Rework queued by the webhook, the lock version recorded on escalation, and
-the rollback the runner needs before it records an engine failure.
+Rework queued by the webhook, the lock version recorded on escalation, the
+rollback the runner needs before it records an engine failure, and the settle
+of an abandoned escalation's carousel.
 """
 
 from __future__ import annotations
@@ -52,6 +53,30 @@ class UnnotifiedMark:
 
     run_id: UUID
     at: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
+class CarouselSettle:
+    """An abandoned escalation's carousel and the lock version it escalated at.
+
+    ``idle_hours`` is the window the run sat unfixed (recorded on the event).
+    """
+
+    project_id: str
+    expected_version: int
+    idle_hours: int
+
+
+class CarouselSettler(Protocol):
+    """Rejects an abandoned escalation's carousel. The caller commits."""
+
+    async def settle_abandoned(self, settle: CarouselSettle) -> bool:
+        """Reject the carousel if it still waits for a human at the version.
+
+        False, and nothing written, when it is no longer waiting or was changed
+        since. A failure never undoes the caller's own writes.
+        """
+        ...
 
 
 class RunRecoveryStore(Protocol):

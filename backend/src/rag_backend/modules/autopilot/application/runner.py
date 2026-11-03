@@ -374,6 +374,7 @@ def _recovery_deps(deps: RunnerDependencies) -> RecoveryDependencies:
         recovery=deps.recovery,
         clock=deps.clock,
         notifier_configured=deps.notifier_configured,
+        carousels=deps.carousels,
     )
 
 

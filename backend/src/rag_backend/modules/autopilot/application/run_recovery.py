@@ -10,6 +10,11 @@
   and a carousel back at final review at a new lock version is never closed.
   Without a notifier such a run is first recorded as ``notifier_unconfigured``
   (which restarts its 72 hours); only then may it close (QA r3 Q3).
+* Settle: once an abandoned escalation is closed, its carousel, if it still
+  waits for a human at the version the run escalated at, is rejected the way
+  the stuck-workflow auto-reject would, so the run and the carousel agree. The
+  run closes first (its transition is the claim); a settle failure is logged
+  and leaves the carousel to the stuck auto-reject.
 * Containment: an engine error the driver did not classify ends the run
   with a reason instead of rolling back the whole worker tick forever.
 
@@ -43,6 +48,8 @@ from rag_backend.modules.autopilot.domain.notice_log import is_review_complete
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.domain.recovery import (
+    CarouselSettle,
+    CarouselSettler,
     EscalatedScan,
     EscalationMark,
     RunRecoveryStore,
@@ -57,6 +64,8 @@ from rag_backend.modules.autopilot.recovery_constants import (
     ENGINE_ERROR_DETAIL_MAX_CHARS,
     ESCALATED_SCAN_LIMIT,
     EXPIRY_SCAN_LIMIT,
+    LOG_ESCALATION_CAROUSEL_SETTLED,
+    LOG_ESCALATION_SETTLE_FAILED,
     LOG_RUNNER_ENGINE_ERROR,
     LOG_RUNNER_WAKE_FAILED,
     OWNER_REVIEW_EXPIRY_HOURS,
@@ -82,7 +91,11 @@ _CONTAINED: dict[AutopilotRunState, AutopilotRunState] = {
 
 @dataclass(frozen=True, kw_only=True)
 class RecoveryDependencies:
-    """Ports shared with the runner for one worker tick."""
+    """Ports shared with the runner for one worker tick.
+
+    ``carousels`` settles a closed escalation's carousel (None: left to the
+    stuck-workflow auto-reject).
+    """
 
     runs: AutopilotRunRepository
     editorial: EditorialDriver
@@ -90,6 +103,7 @@ class RecoveryDependencies:
     recovery: RunRecoveryStore
     clock: Clock
     notifier_configured: bool
+    carousels: CarouselSettler | None = None
 
 
 class RunRecovery:
@@ -191,10 +205,34 @@ class RunRecovery:
         return moved
 
     async def _close_one(self, run: AutopilotRun) -> int:
-        """Close an abandoned escalation unless its carousel was fixed."""
+        """Close an abandoned escalation unless its carousel was fixed.
+
+        The carousel is settled only after the run's own close was applied.
+        """
         if await self._keeps_open(run):
             return 0
-        return int(await self._move(run, _S.REJECTED, REASON_ESCALATION_EXPIRED))
+        if not await self._move(run, _S.REJECTED, REASON_ESCALATION_EXPIRED):
+            return 0
+        await self._settle_carousel(run)
+        return 1
+
+    async def _settle_carousel(self, run: AutopilotRun) -> None:
+        """Reject the closed run's carousel if it still waits unchanged.
+
+        A failure is logged and never undoes the close.
+        """
+        settler = self._deps.carousels
+        settle = _settle_for(run)
+        if settler is None or settle is None:
+            return
+        log = logger.bind(run_id=str(run.run_id), project_id=settle.project_id)
+        try:
+            settled = await settler.settle_abandoned(settle)
+        except Exception:
+            log.exception(LOG_ESCALATION_SETTLE_FAILED)
+            return
+        if settled:
+            log.info(LOG_ESCALATION_CAROUSEL_SETTLED)
 
     async def _keeps_open(self, run: AutopilotRun) -> bool:
         if run.carousel_project_id is None:
@@ -287,6 +325,17 @@ def engine_error_reason(exc: BaseException) -> str:
         detail=str(exc),
     )
     return reason[:ENGINE_ERROR_DETAIL_MAX_CHARS]
+
+
+def _settle_for(run: AutopilotRun) -> CarouselSettle | None:
+    """The settle for a closed run; None without a carousel or escalation version."""
+    if run.carousel_project_id is None or run.escalated_version is None:
+        return None
+    return CarouselSettle(
+        project_id=run.carousel_project_id,
+        expected_version=run.escalated_version,
+        idle_hours=OWNER_REVIEW_EXPIRY_HOURS,
+    )
 
 
 def _at_final_review(snapshot: GateSnapshot) -> bool:
