@@ -13,10 +13,11 @@ from rag_backend.modules.autopilot.domain.recommend import ScheduleSignals
 @dataclass(frozen=True, kw_only=True)
 class DueScheduleQuery:
     """Runs whose time is at or before ``now``, oldest first: ``scheduled``
-    ones and reopened ones waiting for the owner with their time kept."""
+    ones and reopened ones waiting with their time kept. ``offset`` pages."""
 
     now: datetime
     limit: int
+    offset: int = 0
 
 
 class ScheduledRunSource(Protocol):

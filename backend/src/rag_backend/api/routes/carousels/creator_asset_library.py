@@ -83,7 +83,12 @@ from .creator_assets import (
     to_creator_asset_response,
 )
 from .editorial_workflow_routes_support import checkpoint_reopener
-from .hook_photo_guard import HookPhotoChange, refuse_published, switch_hook_photo
+from .hook_photo_guard import (
+    HookPhotoChange,
+    refuse_published,
+    refuse_reviewed,
+    switch_hook_photo,
+)
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -281,12 +286,13 @@ async def select_hook_photo(
         creator_asset_id=body.creator_asset_id,
         output_root=default_output_root(project),
     )
-    await refuse_published(library.session, str(project_id))
     if project.status != CarouselStatus.COMPLETED:
+        await refuse_reviewed(library.session, str(project_id))
         updated = await _bind_photo(library, command)
         return HookPhotoResponse(
             project_id=updated.id, hook_asset_id=body.creator_asset_id
         )
+    await refuse_published(library.session, str(project_id))
     change = HookPhotoChange(
         session=library.session,
         service=library.service,

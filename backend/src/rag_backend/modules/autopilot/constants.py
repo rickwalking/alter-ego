@@ -296,6 +296,7 @@ REASON_UNEXPECTED_PHASE = "unexpected_phase"
 REASON_PASSED = "passed"
 REASON_WAITING = "waiting"
 REASON_RENDER_PENDING = "render_pending"
+RENDER_PENDING_MAX_SECONDS = 15 * 60
 
 PROMPT_DOMAIN_AUTOPILOT = "autopilot"
 PROMPT_REVISE_FEEDBACK = "revise_feedback"

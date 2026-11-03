@@ -16,9 +16,10 @@ on that row, lands either before (the run expires) or after (the switch finds
 the carousel released and is refused).
 
 A reopened review (Pedro's decision, 2026-11-02) keeps its time on an
-``awaiting_owner`` run: at that time it expires the same way, unless the
-carousel was approved again on the website, in which case it is published as
-the scheduled run would have been.
+``awaiting_owner`` or ``reworking`` run (still waiting for its new review, or
+for a render that never landed): at that time it expires the same way, unless
+the carousel was approved again on the website, in which case it is published
+as the scheduled run would have been.
 """
 
 from __future__ import annotations

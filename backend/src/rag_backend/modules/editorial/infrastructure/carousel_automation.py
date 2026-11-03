@@ -287,16 +287,17 @@ class CarouselAutomationAcl:
             await self._repo.get_slides_by_project(project.id), project
         )
 
-    async def render_pending(self, project_id: str) -> bool:
-        """True while slide changes still owe a render (the needs-republish
-        marker), read fresh: a review sent now would show the old slides."""
+    async def render_pending_since(self, project_id: str) -> datetime | None:
+        """When slide changes started to owe a render (the needs-republish
+        marker), read fresh; None when nothing is owed. A review sent while it
+        is set would show the old slides."""
         from sqlalchemy import select
 
         model = _carousel_model()
-        marker = await self._session.scalar(
+        marker: datetime | None = await self._session.scalar(
             select(model.needs_republish_since).where(model.id == project_id)
         )
-        return marker is not None
+        return marker
 
     async def heartbeat(self, project_id: str) -> RunHeartbeat | None:
         """Phase status and run heartbeat, or None when the row is missing."""

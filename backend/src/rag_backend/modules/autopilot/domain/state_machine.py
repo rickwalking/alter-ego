@@ -10,7 +10,9 @@ run waits in ``awaiting_thesis`` for the owner's thesis before generating. ``sch
 holds the owner's publish time: cancel reopens the review, a carousel no longer approved
 at the due time expires the run, and the owner may move a scheduled run to another day
 or time; a slide-1 change that drops the approval sends it to ``reworking`` for a
-new review, keeping its time. ``(escalated, generating)`` is the owner's "Tentar
+new review, keeping its time; when that time comes the due tick publishes it
+(approved again) or expires it, even while it is still ``reworking``.
+``(escalated, generating)`` is the owner's "Tentar
 de novo" on a run the generation queue parked: the run resumes from its
 checkpoint.
 """
@@ -55,6 +57,8 @@ ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
         (_S.SCHEDULED, _S.EXPIRED),
         (_S.SCHEDULED, _S.SCHEDULED),
         (_S.SCHEDULED, _S.REWORKING),
+        (_S.REWORKING, _S.PUBLISHING),
+        (_S.REWORKING, _S.EXPIRED),
     })
 )
 

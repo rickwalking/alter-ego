@@ -8,8 +8,9 @@ needs-republish marker and, on an approved carousel (Pedro's decision,
 2026-11-02), the dropped approval; then the render, before the caller asks for
 a new Telegram review. A released carousel is refused with
 ``cover_switch_requires_review`` (409), checked again under the lock. A
-carousel that is not completed has no render or approval to protect; it is only
-refused when released (``refuse_published``).
+carousel that is not completed has no render to reopen a review with: it is
+refused when released or approved (``refuse_reviewed``; an approval normally
+means a completed carousel).
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
+    cover_switch_refusal,
     reopen_refusal,
 )
 from rag_backend.application.services.carousel.creator_asset_service import (
@@ -54,10 +56,23 @@ async def refuse_published(session: AsyncSession, project_id: str) -> None:
     """409 ``cover_switch_requires_review`` for a released carousel."""
     state = await EditorialReviewState(session).review_state(project_id)
     if state is not None and reopen_refusal(state) is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ERR_COVER_SWITCH_REQUIRES_REVIEW,
-        )
+        raise _requires_review()
+
+
+async def refuse_reviewed(session: AsyncSession, project_id: str) -> None:
+    """409 for a released or approved carousel that is not completed: it has
+    no render to reopen a review with (an approval normally implies a
+    completed carousel, so this only guards an inconsistent row)."""
+    state = await EditorialReviewState(session).review_state(project_id)
+    if state is not None and cover_switch_refusal(state) is not None:
+        raise _requires_review()
+
+
+def _requires_review() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -94,4 +109,9 @@ async def switch_hook_photo(
     )
 
 
-__all__ = ["HookPhotoChange", "refuse_published", "switch_hook_photo"]
+__all__ = [
+    "HookPhotoChange",
+    "refuse_published",
+    "refuse_reviewed",
+    "switch_hook_photo",
+]

@@ -53,6 +53,7 @@ from rag_backend.domain.constants.carousel_autofix import (
 )
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
 )
 from rag_backend.domain.models.slide_cover import SlideCover
 from rag_backend.domain.protocols import CarouselRepository
@@ -152,9 +153,12 @@ class SlideCoverSwitchService:
             )
         except AutofixConflictError:
             return SlideCoverSwitchResult(status=AUTOFIX_STATUS_CONFLICT)
-        except (_SwitchRefusedError, ReopenRefusedError):
+        except _SwitchRefusedError:
             await self._deps.db.rollback()
             return SlideCoverSwitchResult(status=ERR_COVER_SWITCH_REQUIRES_REVIEW)
+        except ReopenRefusedError as refused:
+            await self._deps.db.rollback()
+            return SlideCoverSwitchResult(status=_refusal_status(refused))
         rendered_from = datetime.now(UTC)
         errors = await self._deps.renderer.render(command.project_id)
         marker = self._deps.marker
@@ -203,6 +207,14 @@ class SlideCoverSwitchService:
         if self._deps.reopener is None:
             raise _SwitchRefusedError
         return True
+
+
+def _refusal_status(refused: ReopenRefusedError) -> str:
+    """``review_not_reopened`` when the review could not reopen (a checkpoint
+    or a row that changed); ``cover_switch_requires_review`` once released."""
+    if refused.reason == REASON_REVIEW_NOT_REOPENED:
+        return REASON_REVIEW_NOT_REOPENED
+    return ERR_COVER_SWITCH_REQUIRES_REVIEW
 
 
 __all__ = [

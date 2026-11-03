@@ -1503,6 +1503,7 @@
       "conflict": "O carrossel mudou desde que você abriu esta página. Recarregue a página e tente de novo.",
       "failed": "Não foi possível trocar a capa.",
       "requiresReview": "Este carrossel já foi publicado, então a capa não pode mudar. As capas geradas ficam aqui como opção.",
+      "reviewNotReopened": "Não foi possível reabrir a revisão deste carrossel, então a capa não mudou. Recarregue a página e tente de novo.",
       "loadFailed": "Não foi possível carregar as fotos.",
       "generatedLabel": "Capa gerada {number}",
       "generatedShort": "Grok",

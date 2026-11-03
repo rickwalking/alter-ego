@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
 )
 from rag_backend.modules.autopilot.cover_constants import (
     LOG_COVER,
@@ -43,6 +44,7 @@ _SWITCH_STATUS: dict[str, CoverSwitchStatus] = {
     AUTOFIX_STATUS_FIXED: CoverSwitchStatus.SWITCHED,
     AUTOFIX_STATUS_CONFLICT: CoverSwitchStatus.CONFLICT,
     ERR_COVER_SWITCH_REQUIRES_REVIEW: CoverSwitchStatus.REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED: CoverSwitchStatus.REQUIRES_REVIEW,
 }
 
 

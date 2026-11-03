@@ -5,7 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import { COVER_SWITCH_REQUIRES_REVIEW } from "@/modules/publishing/distribution/constants";
+import {
+  COVER_REVIEW_NOT_REOPENED,
+  COVER_SWITCH_REQUIRES_REVIEW,
+} from "@/modules/publishing/distribution/constants";
 import { CoverPickerSection } from "./cover-picker-section";
 
 /**
@@ -29,6 +32,7 @@ vi.mock("next-intl", () => ({
       conflict: "Recarregue a página.",
       failed: "Não foi possível trocar a capa.",
       requiresReview: "A capa não pode mudar sem nova revisão.",
+      reviewNotReopened: "A revisão não reabriu.",
       loadFailed: "Não foi possível carregar as fotos.",
       empty: "Nenhuma foto na biblioteca.",
     };
@@ -276,6 +280,18 @@ describe("CoverPickerSection", () => {
     await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
     expect((await screen.findByRole("alert")).textContent).toBe(
       "A capa não pode mudar sem nova revisão.",
+    );
+  });
+
+  // Scenario: A switch that cannot reopen the review refuses an approved carousel
+  it("explains a review that could not reopen", async () => {
+    const refused = new ApiError(409, "refused");
+    refused.detail = COVER_REVIEW_NOT_REOPENED;
+    routeApi(OPTIONS, refused);
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "A revisão não reabriu.",
     );
   });
 

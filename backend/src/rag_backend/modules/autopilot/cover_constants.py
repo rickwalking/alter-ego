@@ -115,6 +115,12 @@ TEXT_COVER_REVIEW_UNSAFE = (
     "renderizado com segurança. A aprovação fica bloqueada até os slides serem "
     "renderizados de novo; confira o slide 1 no dashboard."
 )
+REASON_RENDER_STUCK = "render_stuck"
+TEXT_RENDER_STUCK = (
+    "🖼️ Os slides não foram renderizados de novo depois da última mudança. "
+    "A revisão fica bloqueada até a renderização dar certo; confira o "
+    "carrossel no dashboard."
+)
 TEXT_COVER_REVIEW_INTERRUPTED = (
     "🖼️ A troca da capa gerada no site foi interrompida. Abra o carrossel no "
     "dashboard e confira o slide 1 antes de aprovar."
@@ -212,6 +218,7 @@ __all__ = [
     "REASON_COVER_REVIEW_UNSAFE",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
+    "REASON_RENDER_STUCK",
     "REASON_REVIEW_OUTDATED",
     "REOPEN_RECOVERY_GRACE_SECONDS",
     "SKIP_COVER_NO_CONSENT",
@@ -225,6 +232,7 @@ __all__ = [
     "TEXT_COVER_REVIEW_INTERRUPTED",
     "TEXT_COVER_REVIEW_UNSAFE",
     "TEXT_COVER_SWITCHING",
+    "TEXT_RENDER_STUCK",
     "TEXT_REVIEW_ON_WEBSITE",
     "TEXT_REVIEW_REPLACED",
     "TEXT_REVIEW_RESENDING",

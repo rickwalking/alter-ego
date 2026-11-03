@@ -59,6 +59,7 @@ from rag_backend.domain.constants.carousel_cover_pick import (
 )
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject
@@ -120,10 +121,12 @@ def _refused(error: CoverPickError) -> HTTPException:
 
 
 def raise_unless_switched(result: SlideCoverSwitchResult) -> None:
-    """Conflict or approved meanwhile → 409; a vanished cover → 422; a failed
-    re-render → 422/409."""
+    """Conflict, released meanwhile, or a review that could not reopen → 409;
+    a vanished cover → 422; a failed re-render → 422/409."""
     if result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW:
         raise _refused(CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW))
+    if result.status == REASON_REVIEW_NOT_REOPENED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.status)
     if result.status == AUTOFIX_STATUS_CONFLICT:
         raise CarouselConflictError(
             CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)

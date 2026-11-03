@@ -69,16 +69,24 @@ class ReopenRecovery:
         self._deps = deps
 
     async def tick(self) -> int:
-        """How many runs went back for review. Each move commits on its own."""
+        """How many runs went back for review. Each move commits on its own.
+
+        Every page of waiting runs is read, so a run late in the list is never
+        starved; a run that moves shifts the next page, and the next tick
+        reads it again.
+        """
         now = self._deps.clock.now()
-        query = DueScheduleQuery(now=now, limit=SCHEDULE_SCAN_LIMIT)
         settled = now - timedelta(seconds=REOPEN_RECOVERY_GRACE_SECONDS)
-        moved = 0
-        for run in await self._deps.scheduled.waiting(query):
-            if run.updated_at is not None and run.updated_at > settled:
-                continue
-            moved += await self._recover(run)
-        return moved
+        moved, offset = 0, 0
+        while True:
+            query = DueScheduleQuery(now=now, limit=SCHEDULE_SCAN_LIMIT, offset=offset)
+            page = await self._deps.scheduled.waiting(query)
+            for run in page:
+                if run.updated_at is None or run.updated_at <= settled:
+                    moved += await self._recover(run)
+            if len(page) < SCHEDULE_SCAN_LIMIT:
+                return moved
+            offset += SCHEDULE_SCAN_LIMIT
 
     async def _recover(self, run: AutopilotRun) -> int:
         project_id = run.carousel_project_id

@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.constants import (
     MAX_REVISES_PER_PHASE,
     MAX_SLIDES,
     MIN_RESEARCH_SOURCES,
+    PHASE_STATUS_APPROVED,
     PHASE_STATUS_AWAITING,
     PHASE_STATUS_FAILED,
     REASON_DESIGN,
@@ -41,6 +42,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_UNEXPECTED_PHASE,
     REASON_WAITING,
 )
+from rag_backend.modules.autopilot.cover_constants import REASON_RENDER_STUCK
 from rag_backend.modules.autopilot.domain.gate import (
     GateAction,
     GateSnapshot,
@@ -89,15 +91,34 @@ def decide(snapshot: GateSnapshot) -> PolicyDecision:
 
 def _before_gate(snapshot: GateSnapshot) -> PolicyDecision | None:
     """A stale or failed run, then a parked workflow, come first; a final
-    review whose slides still owe a render waits for it."""
+    review whose slides still owe a render waits for it, for a bounded time;
+    one approved meanwhile stops for the owner."""
     terminal = _terminal(snapshot)
     if terminal is not None:
         return terminal
     if snapshot.parked:
         return _parked(snapshot)
     if snapshot.render_pending and snapshot.phase == GATE_FINAL_REVIEW:
-        return PolicyDecision(action=GateAction.WAIT, reason=REASON_RENDER_PENDING)
+        return _render_pending(snapshot)
+    if _approved_final_review(snapshot):
+        return PolicyDecision(action=GateAction.STOP, reason=REASON_READY)
     return None
+
+
+def _render_pending(snapshot: GateSnapshot) -> PolicyDecision:
+    """Wait for the render a slide change owes; escalate one that never lands."""
+    if snapshot.render_overdue:
+        return PolicyDecision(action=GateAction.ESCALATE, reason=REASON_RENDER_STUCK)
+    return PolicyDecision(action=GateAction.WAIT, reason=REASON_RENDER_PENDING)
+
+
+def _approved_final_review(snapshot: GateSnapshot) -> bool:
+    """Approved meanwhile (on the website): hand the run back to the owner,
+    whose review then keeps a kept time, instead of waiting forever."""
+    return (
+        snapshot.phase == GATE_FINAL_REVIEW
+        and snapshot.phase_status == PHASE_STATUS_APPROVED
+    )
 
 
 def _terminal(snapshot: GateSnapshot) -> PolicyDecision | None:
