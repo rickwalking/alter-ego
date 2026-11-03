@@ -8,6 +8,7 @@ from typing import Protocol
 
 from rag_backend.domain.persona_score import lowest_overall, stored_overall
 from rag_backend.modules.generation_queue.application.generation_events import (
+    note_workflow_failure,
     record_generation_event,
     set_generation_event_project,
 )
@@ -44,24 +45,29 @@ class GenerationTrace(Protocol):
 
 @dataclass(frozen=True, kw_only=True)
 class WorkflowOutcomeObservation:
-    """The business outcome, distinct from the queue drive's completion."""
+    """The business outcome, distinct from the queue drive's completion.
+
+    ``reason`` is the failure's short safe code (never its message).
+    """
 
     project_id: str
     phase: str | None
     outcome: str
     error_code: str | None = None
     error_type: str | None = None
+    reason: str | None = None
 
 
 async def record_workflow_outcome(observation: WorkflowOutcomeObservation) -> None:
-    """Record workflow success or failure without its raw error message."""
+    """Record workflow success or failure without its raw error message.
+
+    A success supersedes a failure noted earlier in the same run.
+    """
     set_generation_event_project(observation.project_id)
     succeeded = observation.outcome == OUTCOME_SUCCEEDED
-    details: dict[str, object] = (
-        {"error_type": observation.error_type}
-        if observation.error_type is not None
-        else {}
-    )
+    if succeeded:
+        note_workflow_failure(None)
+    details = _outcome_details(observation)
     await record_generation_event(
         GenerationEventInput(
             event_type=(
@@ -76,6 +82,15 @@ async def record_workflow_outcome(observation: WorkflowOutcomeObservation) -> No
             details=details,
         )
     )
+
+
+def _outcome_details(observation: WorkflowOutcomeObservation) -> dict[str, object]:
+    details: dict[str, object] = {}
+    if observation.error_type is not None:
+        details["error_type"] = observation.error_type
+    if observation.reason is not None:
+        details["reason"] = observation.reason
+    return details
 
 
 async def record_phase_artifacts(

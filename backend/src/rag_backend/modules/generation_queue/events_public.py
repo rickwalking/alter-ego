@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.generation_queue.application.generation_events import (
+    note_workflow_failure,
     record_generation_event,
     set_generation_event_project,
 )
@@ -102,6 +103,7 @@ __all__ = [
     "GenerationLogQuery",
     "InvalidGenerationEventCursorError",
     "WorkflowOutcomeObservation",
+    "note_workflow_failure",
     "read_generation_log",
     "record_generation_event",
     "record_phase_artifacts",

@@ -21,6 +21,7 @@ from rag_backend.modules.generation_queue.application.generation_events import (
     NO_EVENT_RECORDER,
     NO_RUN_COMPLETION,
     current_generation_event_project,
+    current_workflow_failure,
     generation_event_run,
     generation_event_scope,
     record_generation_event,
@@ -29,6 +30,10 @@ from rag_backend.modules.generation_queue.application.job_tracker import (
     _Attempt,
     _StaleAttemptError,
     _Tracker,
+)
+from rag_backend.modules.generation_queue.application.job_workflow_failure import (
+    FailedDrive,
+    settle_workflow_failure,
 )
 from rag_backend.modules.generation_queue.constants import (
     ERROR_MESSAGE_MAX_CHARS,
@@ -204,6 +209,12 @@ class GenerationJobHandler:
             await tracker.ensure_started()
             return await self._retry(attempt, _RetryPlan(YIELD_CODE, delay))
         await tracker.ensure_started()
+        cause = current_workflow_failure()
+        if cause is not None:
+            await settle_workflow_failure(
+                self._deps, FailedDrive(attempt, tracker, cause)
+            )
+            return _DONE
         moved = await self._deps.store.mark_succeeded(
             attempt.run.id, attempt.attempt_id
         )

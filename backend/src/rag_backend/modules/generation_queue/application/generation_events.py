@@ -35,6 +35,7 @@ class GenerationEventScope:
     run: GenerationEventRun
     recorder: GenerationEventRecorder
     project_id: str | None = None
+    workflow_failure: str | None = None
 
     def __post_init__(self) -> None:
         if self.project_id is None:
@@ -97,6 +98,23 @@ def current_generation_event_project() -> str | None:
     return scope.project_id if scope is not None else None
 
 
+def note_workflow_failure(cause: str | None) -> None:
+    """Remember why this run's workflow failed; ``None`` forgets it.
+
+    The job handler reads it when the drive ends, so a run whose workflow failed
+    is not marked succeeded. Outside a run scope it is a no-op.
+    """
+    scope = _SCOPE.get()
+    if scope is not None:
+        scope.workflow_failure = cause
+
+
+def current_workflow_failure() -> str | None:
+    """The workflow failure cause noted in the active run scope, if any."""
+    scope = _SCOPE.get()
+    return scope.workflow_failure if scope is not None else None
+
+
 def _allow_timeout_warning() -> bool:
     global _last_timeout_warning_at
     now = time.monotonic()
@@ -144,8 +162,10 @@ __all__ = [
     "NO_RUN_COMPLETION",
     "GenerationEventScope",
     "current_generation_event_project",
+    "current_workflow_failure",
     "generation_event_run",
     "generation_event_scope",
+    "note_workflow_failure",
     "record_generation_event",
     "set_generation_event_project",
 ]

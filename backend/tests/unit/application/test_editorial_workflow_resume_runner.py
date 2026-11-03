@@ -553,6 +553,7 @@ class TestExecuteBackgroundResume:
                     project_id=params.project_id,
                     message=ERR_REVISION_CAP_EXCEEDED,
                     recoverable=False,
+                    cause="ValueError: revision_cap_exceeded",
                 )
             )
             mock_logger.warning.assert_called_once_with(
@@ -606,6 +607,7 @@ class TestExecuteBackgroundResume:
                     project_id=params.project_id,
                     message=ERR_PERSONA_SCORE_TOO_LOW,
                     recoverable=True,
+                    cause="ValueError: persona_score_too_low",
                 )
             )
             mock_logger.warning.assert_called_once_with(
@@ -655,6 +657,7 @@ class TestExecuteBackgroundResume:
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause="ValueError: unclassified",
                 )
             )
             mock_logger.warning.assert_not_called()
@@ -695,6 +698,7 @@ class TestExecuteBackgroundResume:
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause="RuntimeError: unclassified",
                 )
             )
             mock_logger.exception.assert_called_once_with(
@@ -746,6 +750,7 @@ class TestExecuteBackgroundResume:
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause="CancelledError: background_resume_cancelled",
                 )
             )
             mock_logger.warning.assert_called_once_with(
@@ -782,10 +787,12 @@ class TestMarkBackgroundResumeFailed:
                     project_id="proj-1",
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause="ValueError: invalid_json",
                 )
             )
 
         assert project.phase_status == PHASE_STATUS_FAILED
+        assert project.error_message == "ValueError: invalid_json"
         mock_db.get.assert_awaited_once_with(CarouselProjectModel, "proj-1")
         mock_db.commit.assert_awaited_once()
         service.publish_resume_error_event.assert_awaited_once_with(
@@ -816,6 +823,7 @@ class TestMarkBackgroundResumeFailed:
                     project_id="proj-1",
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause="ValueError: invalid_json",
                 )
             )
 
@@ -851,6 +859,7 @@ class TestMarkBackgroundResumeFailed:
                     project_id="proj-1",
                     message=ERR_REVISION_CAP_EXCEEDED,
                     recoverable=False,
+                    cause="ValueError: revision_cap_exceeded",
                 )
             )
 
