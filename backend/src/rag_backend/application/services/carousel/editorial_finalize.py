@@ -16,6 +16,9 @@ from rag_backend.application.services.carousel.artifact_health import (
     evaluate_carousel_artifacts,
     format_artifact_health_errors,
 )
+from rag_backend.application.services.carousel.cover_render_guard import (
+    unreviewed_cover_refusal,
+)
 from rag_backend.application.services.carousel.design_token_utils import (
     merge_design_tokens_with_disk,
 )
@@ -193,6 +196,10 @@ async def export_and_complete_carousel(
 ) -> CarouselFinalizeResult:
     """Re-render bilingual slides and set project status to completed.
 
+    An approved or public carousel whose slide-1 cover differs from the one the
+    active artifact version recorded is refused before any render
+    (``cover_render_guard``): its slides never change to an unreviewed cover.
+
     The terminal write persists the status fields atomically with the presentation
     columns (design_tokens, pdf_path, artifact_version) in one repo.update_project
     commit; moving status to CarouselProjectWriteOwner would split it into two commits,
@@ -202,6 +209,12 @@ async def export_and_complete_carousel(
     project, result = await _guard_project_exists(repo, project_id)
     if result is not None:
         return result
+    refusal = await unreviewed_cover_refusal(db, project)
+    if refusal is not None:
+        logger.warning(
+            "editorial_finalize_cover_refused", project_id=project_id, error=refusal
+        )
+        return CarouselFinalizeResult(completed=False, errors=(refusal,))
 
     updated, errors = await _try_rerender_slides(
         repo, refinement, _RerenderTarget(project=project, project_id=project_id)

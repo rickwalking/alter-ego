@@ -271,19 +271,31 @@ class CreatorAssetService:
         Any chosen ``slide_cover`` is cleared, as the cover picker does for a
         library photo, so the owner's latest choice is what slide 1 shows.
         """
+        asset = await self.hook_photo_asset(command)
+        command.project.hook_asset_id = asset.id
+        command.project.hook_asset_staged_path = asset.relative_path
+        command.project.slide_cover = None
+        updated = await self._carousel_repo.update_project(command.project)
+        self.stage_hook_photo(command, asset)
+        return updated
+
+    async def hook_photo_asset(self, command: HookPhotoCommand) -> CarouselCreatorAsset:
+        """The photo the command may bind; raises ``CreatorAssetValidationError``
+        before anything is written."""
         self._assert_owner_or_admin(command.project, command.user)
         asset = await self._asset_repo.get_by_id(command.creator_asset_id)
         if asset is None:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
         self._assert_asset_access(asset, command.project, command.user)
-        command.project.hook_asset_id = asset.id
-        command.project.hook_asset_staged_path = asset.relative_path
-        command.project.slide_cover = None
-        updated = await self._carousel_repo.update_project(command.project)
+        return asset
+
+    def stage_hook_photo(
+        self, command: HookPhotoCommand, asset: CarouselCreatorAsset
+    ) -> None:
+        """Copy the photo where the project's slides render."""
         self.stage_into_candidate_artifact(
             StageCreatorAssetCommand(asset=asset, staging_root=command.output_root)
         )
-        return updated
 
     async def _persist_normalized_asset(
         self,

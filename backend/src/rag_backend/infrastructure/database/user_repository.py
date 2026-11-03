@@ -1,13 +1,25 @@
 """PostgreSQL user repository implementation."""
 
+from collections.abc import Callable
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.domain.models import User, UserRole
+from rag_backend.domain.models import User, UserField, UserRole
 from rag_backend.domain.protocols import UserRepository
 from rag_backend.infrastructure.database.models import UserModel
+
+_COLUMN_VALUES: dict[UserField, Callable[[User], object]] = {
+    UserField.EMAIL: lambda user: user.email,
+    UserField.FULL_NAME: lambda user: user.full_name,
+    UserField.CREDENTIAL_HASH: lambda user: user.hashed_password,
+    UserField.ROLE: lambda user: user.role.value,
+    UserField.IS_ACTIVE: lambda user: user.is_active,
+    UserField.CREDENTIAL_CHANGE_REQUIRED: lambda user: user.must_change_password,
+    UserField.SESSION_VERSION: lambda user: user.token_version,
+    UserField.UPDATED_AT: lambda user: user.updated_at,
+}
 
 
 class PostgresUserRepository(UserRepository):
@@ -100,9 +112,12 @@ class PostgresUserRepository(UserRepository):
         return [m.to_entity() for m in result.scalars().all()]
 
     async def update(self, user: User) -> User:
-        """Update an existing user.
+        """Save the fields of ``user`` that changed, and only those.
 
-        When ``updated_at`` is unchanged the column's ``onupdate`` sets it in
+        Only ``user.changed_fields()`` are written, so a save from an entity
+        read earlier never puts back a column it did not change (a password
+        hash or token version committed meanwhile survives a profile edit).
+        When ``updated_at`` is not written the column's ``onupdate`` sets it in
         the database and the flush expires it; the model is refreshed before
         mapping so the entity never triggers a lazy load inside the async
         session (that lazy load raised ``MissingGreenlet`` → HTTP 500).
@@ -111,7 +126,7 @@ class PostgresUserRepository(UserRepository):
             user: User entity with updated fields.
 
         Returns:
-            Updated user entity.
+            Updated user entity, as stored.
         """
         result = await self._session.execute(
             select(UserModel).where(UserModel.id == str(user.id))
@@ -120,14 +135,8 @@ class PostgresUserRepository(UserRepository):
         if model is None:
             raise ValueError(f"User with id {user.id} not found")
 
-        model.email = user.email
-        model.full_name = user.full_name
-        model.hashed_password = user.hashed_password
-        model.role = user.role.value
-        model.is_active = user.is_active
-        model.must_change_password = user.must_change_password
-        model.token_version = user.token_version
-        model.updated_at = user.updated_at
+        for changed in user.changed_fields():
+            setattr(model, changed.value, _COLUMN_VALUES[changed](user))
 
         await self._session.flush()
         await self._session.refresh(model)
@@ -185,7 +194,8 @@ class PostgresUserRepository(UserRepository):
 
         The rows are selected ``FOR UPDATE`` (Postgres refuses it on
         ``count(*)``, so the ids are counted here) and stay locked until the
-        transaction ends. Two admins deactivating each other at once are then
+        transaction ends, in id order so two transactions lock them in the same
+        order. Two admins deactivating each other at once are then
         serialized: the second waits, re-reads after the first commits and sees
         one active admin, so the last-admin guard refuses it. SQLite ignores the
         lock.
@@ -199,6 +209,7 @@ class PostgresUserRepository(UserRepository):
         result = await self._session.execute(
             select(UserModel.id)
             .where(UserModel.role == role.value, UserModel.is_active.is_(True))
+            .order_by(UserModel.id)
             .with_for_update()
         )
         return len(result.scalars().all())

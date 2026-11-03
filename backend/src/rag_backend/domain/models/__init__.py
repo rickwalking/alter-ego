@@ -42,7 +42,7 @@ from rag_backend.domain.models.source_comment import (
     EditorialComment,
     SourceType,
 )
-from rag_backend.domain.models.user import User, UserRole
+from rag_backend.domain.models.user import User, UserField, UserRole
 
 __all__ = [
     "CarouselArtifactBuild",
@@ -80,5 +80,6 @@ __all__ = [
     "SourceType",
     "ToneAttributes",
     "User",
+    "UserField",
     "UserRole",
 ]

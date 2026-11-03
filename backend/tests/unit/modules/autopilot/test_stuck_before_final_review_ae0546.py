@@ -129,6 +129,7 @@ def _acl() -> MagicMock:
     acl.slide_total = AsyncMock(return_value=7)
     acl.hero_image_total = AsyncMock(return_value=0)
     acl.is_pov = AsyncMock(return_value=False)
+    acl.render_pending_since = AsyncMock(return_value=None)
     acl.load_project = AsyncMock(return_value=None)
     return acl
 

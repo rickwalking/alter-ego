@@ -13,7 +13,10 @@ The owner's choice always wins: a cover chosen before the job was scheduled,
 or any change to ``slide_cover`` / ``hook_asset_id`` since, is a logged skip.
 A carousel that already reached the owner's review (completed or at
 ``final_review``) is skipped too: no re-render and no re-approval, the cover
-stays a picker option. A CAS
+stays a picker option. The one exception is a selection that carries a
+``review`` switch (the owner's website generation): a completed carousel still
+waiting for its first approval is then switched and re-rendered by
+``cover_review_switch``. A CAS
 conflict or a held lock is a logged skip, never retried.
 """
 
@@ -22,7 +25,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 import structlog
@@ -55,6 +58,11 @@ from rag_backend.domain.constants.cover_autoselect import (
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 
+if TYPE_CHECKING:
+    from rag_backend.application.services.carousel.cover_review_switch import (
+        ReviewSwitch,
+    )
+
 logger = structlog.get_logger(__name__)
 
 
@@ -77,19 +85,33 @@ def cover_baseline(project: CarouselProject) -> CoverBaseline:
 
 @dataclass(frozen=True, kw_only=True)
 class AutoCoverSelection:
-    """The carousel, the succeeded generation and the scheduling baseline."""
+    """The carousel, the succeeded generation and the scheduling baseline.
+
+    ``review`` switches a completed carousel in final review (the website
+    generation); without it a completed carousel is skipped.
+    """
 
     project_id: str
     generation_id: UUID
     baseline: CoverBaseline
+    review: ReviewSwitch | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectAtVersion:
-    """A fresh read of the project and the lock version it was read at."""
+    """A fresh read of the project, its lock version and its approval."""
 
     project: CarouselProject
     lock_version: int
+    workflow_status: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class FoundCover:
+    """The project read at a gate and the succeeded generation's asset."""
+
+    found: ProjectAtVersion
+    asset_id: UUID
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -141,14 +163,23 @@ def choice_refusal(
     return None
 
 
-def _phase_refusal(project: CarouselProject) -> str | None:
-    """The owner's review already started, or the carousel or phase ended."""
+def _phase_refusal(project: CarouselProject, *, review: bool) -> str | None:
+    """The owner's review already started, or the carousel or phase ended.
+
+    With ``review`` a completed carousel goes on to the review switch.
+    """
     if project.status == CarouselStatus.FAILED:
         return REASON_AUTO_SELECT_FAILED
+    if review and project.status == CarouselStatus.COMPLETED:
+        return _ended(project)
     if project.status == CarouselStatus.COMPLETED:
         return REASON_AUTO_SELECT_COMPLETED
     if project.current_phase == PHASE_FINAL_REVIEW:
         return REASON_AUTO_SELECT_COMPLETED
+    return _ended(project)
+
+
+def _ended(project: CarouselProject) -> str | None:
     if project.phase_status in _ENDED_PHASE_STATUSES:
         return REASON_AUTO_SELECT_FAILED
     return None
@@ -200,9 +231,24 @@ class AutoCoverSelector:
         asset_id = await self._store.result_asset(selection.generation_id)
         if asset_id is None:
             return _skip(selection, REASON_AUTO_SELECT_NO_RESULT)
-        found = await self._paused(selection.project_id)
+        found = await self._paused(selection)
         if isinstance(found, str):
             return _skip(selection, found)
+        if selection.review is not None and found.project.status == (
+            CarouselStatus.COMPLETED
+        ):
+            target = FoundCover(found=found, asset_id=asset_id)
+            switched = await _switch_in_review(selection, target)
+            return _settle_review(selection, switched)
+        return await self._select_paused(
+            selection, FoundCover(found=found, asset_id=asset_id)
+        )
+
+    async def _select_paused(
+        self, selection: AutoCoverSelection, target: FoundCover
+    ) -> str:
+        """The owner-choice rules, then the write, on a carousel paused at a gate."""
+        found, asset_id = target.found, target.asset_id
         refusal = choice_refusal(found.project, selection.baseline, asset_id)
         if refusal == OUTCOME_AUTO_SELECT_ALREADY:
             return _log(selection, refusal)
@@ -224,14 +270,15 @@ class AutoCoverSelector:
             return _log(selection, OUTCOME_AUTO_SELECT_SELECTED)
         return _skip(selection, _WRITE_REFUSALS.get(status, status))
 
-    async def _paused(self, project_id: str) -> ProjectAtVersion | str:
+    async def _paused(self, selection: AutoCoverSelection) -> ProjectAtVersion | str:
         """The project once paused at a gate, or why the wait ended."""
         waited = 0.0
+        review = selection.review is not None
         while True:
-            found = await self._store.load(project_id)
+            found = await self._store.load(selection.project_id)
             if found is None:
                 return REASON_AUTO_SELECT_NO_PROJECT
-            refusal = _phase_refusal(found.project)
+            refusal = _phase_refusal(found.project, review=review)
             if refusal is not None:
                 return refusal
             if found.project.phase_status != PHASE_STATUS_IN_PROGRESS:
@@ -242,6 +289,21 @@ class AutoCoverSelector:
             waited += self._polling.interval_seconds
 
 
+async def _switch_in_review(selection: AutoCoverSelection, target: FoundCover) -> str:
+    from rag_backend.application.services.carousel.cover_review_switch import (
+        switch_in_review,
+    )
+
+    return await switch_in_review(selection, target)
+
+
+def _settle_review(selection: AutoCoverSelection, result: str) -> str:
+    """Log the review switch: selected / already selected, else a skip."""
+    if result in {OUTCOME_AUTO_SELECT_SELECTED, OUTCOME_AUTO_SELECT_ALREADY}:
+        return _log(selection, result)
+    return _skip(selection, _WRITE_REFUSALS.get(result, result))
+
+
 __all__ = [
     "AutoCoverPolling",
     "AutoCoverSelection",
@@ -249,6 +311,7 @@ __all__ = [
     "AutoCoverStore",
     "AutoCoverWrite",
     "CoverBaseline",
+    "FoundCover",
     "ProjectAtVersion",
     "choice_refusal",
     "cover_baseline",

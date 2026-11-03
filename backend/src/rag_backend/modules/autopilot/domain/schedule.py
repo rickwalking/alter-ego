@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from rag_backend.modules.autopilot.cover_constants import REASON_COVER_REVIEW_REOPENED
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
@@ -36,6 +37,7 @@ from rag_backend.modules.autopilot.schedule_constants import (
 
 _TIME = re.compile(TIME_PATTERN)
 _DATE_TIME = re.compile(DATE_TIME_PATTERN)
+_KEEPS_SCHEDULE = frozenset({REASON_SCHEDULE_DUE, REASON_COVER_REVIEW_REOPENED})
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -114,11 +116,12 @@ def from_epoch(epoch: int) -> datetime:
 def clears_schedule(command: TransitionCommand) -> bool:
     """Leaving ``scheduled`` other than by the due tick drops ``scheduled_at``.
 
-    The due tick keeps it, so the published notice can say how late it was.
+    The due tick keeps it, so the published notice can say how late it was. A
+    reopened review keeps it too: the run waits for a new approve at that time.
     """
     if command.expected is not AutopilotRunState.SCHEDULED:
         return False
-    return command.reason != REASON_SCHEDULE_DUE
+    return command.reason not in _KEEPS_SCHEDULE
 
 
 def _utc(day: date, clock: time) -> datetime:

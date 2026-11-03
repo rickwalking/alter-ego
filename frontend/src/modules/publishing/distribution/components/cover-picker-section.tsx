@@ -5,8 +5,13 @@ import { useTranslations } from "next-intl";
 import { TEXT_DIM } from "@/constants/neon";
 import { HTTP_STATUS } from "@/constants/api";
 import { ApiError } from "@/lib/api-client";
-import { SECTION_CARD_STYLE } from "@/modules/publishing/distribution/constants";
 import {
+  COVER_REVIEW_NOT_REOPENED,
+  COVER_SWITCH_REQUIRES_REVIEW,
+  SECTION_CARD_STYLE,
+} from "@/modules/publishing/distribution/constants";
+import {
+  type CoverPickResponse,
   useCoverOptions,
   usePickCover,
 } from "@/modules/publishing/distribution/hooks/use-cover-picker";
@@ -21,11 +26,38 @@ import type {
 
 const SOURCE_LIBRARY = "library";
 
-function failureKey(error: Error | null): "conflict" | "failed" {
-  if (error instanceof ApiError && error.status === HTTP_STATUS.CONFLICT) {
+type FailureKey =
+  | "requiresReview"
+  | "reviewNotReopened"
+  | "conflict"
+  | "failed";
+
+const FAILURE_BY_DETAIL: Readonly<Record<string, FailureKey>> = {
+  [COVER_SWITCH_REQUIRES_REVIEW]: "requiresReview",
+  [COVER_REVIEW_NOT_REOPENED]: "reviewNotReopened",
+};
+
+/** The message for a refused pick: published, a review that could not
+ * reopen, a stale page, or other. */
+function failureKey(error: Error | null): FailureKey {
+  if (!(error instanceof ApiError)) {
+    return "failed";
+  }
+  const known = FAILURE_BY_DETAIL[String(error.detail)];
+  if (known) {
+    return known;
+  }
+  if (error.status === HTTP_STATUS.CONFLICT) {
     return "conflict";
   }
   return "failed";
+}
+
+/** The success line: an approved carousel's switch reopened its review. */
+function successKey(
+  response: CoverPickResponse | undefined,
+): "reopened" | "success" {
+  return response?.review_reopened ? "reopened" : "success";
 }
 
 /** Swap slide 1 to a chosen asset (ignored while busy or for the current one). */
@@ -57,7 +89,8 @@ function useCoverPick({
   return { pick, switched, handleChoose };
 }
 
-/** "Switching…" while the swap runs, then the success line. */
+/** "Switching…" while the swap runs, then the success line (an approved
+ * carousel's line says it is back in final review). */
 function PickStatus({
   pending,
   switched,
@@ -133,7 +166,7 @@ export function CoverPickerSection({
           pending={pick.isPending}
           switched={switched}
           switchingText={t("switching")}
-          successText={t("success")}
+          successText={t(successKey(pick.data))}
         />
       </div>
       {pick.isError && (

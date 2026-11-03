@@ -116,6 +116,7 @@ class CarouselArtifactManifestPayload(BaseModel):
     en_source_hash: str
     raw_image_hashes: list[ArtifactRawImageRecord] = Field(default_factory=list)
     avatar_hash: str | None = None
+    slide_one_cover: str | None = None
     standard_slides_pt: list[ArtifactSlideFileRecord] = Field(default_factory=list)
     standard_slides_en: list[ArtifactSlideFileRecord] = Field(default_factory=list)
     hd_slides_pt: list[ArtifactSlideFileRecord] = Field(default_factory=list)
@@ -208,6 +209,7 @@ class CarouselArtifactManifest:
     hd_slides_pt: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
     hd_slides_en: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
     pdfs: tuple[ArtifactPdfEntry, ...] = field(default_factory=tuple)
+    slide_one_cover: str | None = None
 
     def to_payload(self) -> CarouselArtifactManifestPayload:
         return CarouselArtifactManifestPayload(
@@ -231,6 +233,7 @@ class CarouselArtifactManifest:
                 for entry in self.raw_image_hashes
             ],
             avatar_hash=self.avatar_hash,
+            slide_one_cover=self.slide_one_cover,
             standard_slides_pt=_slide_records(self.standard_slides_pt),
             standard_slides_en=_slide_records(self.standard_slides_en),
             hd_slides_pt=_slide_records(self.hd_slides_pt),
@@ -272,6 +275,7 @@ def manifest_from_payload(
             for entry in payload.raw_image_hashes
         ),
         avatar_hash=payload.avatar_hash,
+        slide_one_cover=payload.slide_one_cover,
         standard_slides_pt=_slide_entries(payload.standard_slides_pt),
         standard_slides_en=_slide_entries(payload.standard_slides_en),
         hd_slides_pt=_slide_entries(payload.hd_slides_pt),

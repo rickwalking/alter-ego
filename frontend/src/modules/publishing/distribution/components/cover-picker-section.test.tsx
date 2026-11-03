@@ -5,12 +5,17 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import {
+  COVER_REVIEW_NOT_REOPENED,
+  COVER_SWITCH_REQUIRES_REVIEW,
+} from "@/modules/publishing/distribution/constants";
 import { CoverPickerSection } from "./cover-picker-section";
 
 /**
  * Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature and
  * frontend/tests/features/workflow-lock-version-ae0447.feature (backend
- * contract: backend/tests/features/carousel_cover_pick_ae0445.feature).
+ * contract: backend/tests/features/carousel_cover_pick_ae0445.feature and
+ * backend/tests/features/reopen_review_on_cover_switch_ae0597.feature).
  */
 
 vi.mock("next-intl", () => ({
@@ -23,8 +28,11 @@ vi.mock("next-intl", () => ({
       current: "Atual",
       switching: "Trocando a capa…",
       success: "Capa trocada.",
+      reopened: "Capa trocada. Aprove de novo.",
       conflict: "Recarregue a página.",
       failed: "Não foi possível trocar a capa.",
+      requiresReview: "A capa não pode mudar sem nova revisão.",
+      reviewNotReopened: "A revisão não reabriu.",
       loadFailed: "Não foi possível carregar as fotos.",
       empty: "Nenhuma foto na biblioteca.",
     };
@@ -181,6 +189,22 @@ describe("CoverPickerSection", () => {
     expect(onSwitched).toHaveBeenCalledWith("sha256-new");
   });
 
+  // Scenario: A cover switch reopens the review of an approved carousel
+  it("says an approved carousel is back in final review", async () => {
+    routeApi(OPTIONS, {
+      project_id: PROJECT,
+      status: "switched",
+      current_asset_id: "b",
+      artifact_version: "sha256-new",
+      review_reopened: true,
+    });
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect(
+      await screen.findByText("Capa trocada. Aprove de novo."),
+    ).toBeTruthy();
+  });
+
   it("passes a null artifact version through", async () => {
     routeApi(OPTIONS, {
       project_id: PROJECT,
@@ -244,6 +268,40 @@ describe("CoverPickerSection", () => {
     await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Recarregue a página.",
+    );
+  });
+
+  // Scenario: The picker explains that a published carousel cannot change
+  it("explains a published carousel", async () => {
+    const refused = new ApiError(409, "refused");
+    refused.detail = COVER_SWITCH_REQUIRES_REVIEW;
+    routeApi(OPTIONS, refused);
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "A capa não pode mudar sem nova revisão.",
+    );
+  });
+
+  // Scenario: A switch that cannot reopen the review refuses an approved carousel
+  it("explains a review that could not reopen", async () => {
+    const refused = new ApiError(409, "refused");
+    refused.detail = COVER_REVIEW_NOT_REOPENED;
+    routeApi(OPTIONS, refused);
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "A revisão não reabriu.",
+    );
+  });
+
+  /** Scenario: Any other failure is visible */
+  it("keeps the generic failure for an error that is not an ApiError", async () => {
+    routeApi(OPTIONS, new Error("network down"));
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Não foi possível trocar a capa.",
     );
   });
 

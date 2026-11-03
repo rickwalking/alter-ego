@@ -3,8 +3,10 @@
 ``EditorialCoverLibrary`` reads the owner's slide-1 photos (role ``hook``,
 stored file present) and stages one where a project's slides render;
 ``cover_pick_service`` builds the picker over it, the given GrokBot offer
-source, the covers Grok generated for the carousel, and the cover switch
-(lock-version CAS + republish).
+source, the covers Grok generated for the carousel, the cover switch
+(lock-version CAS + republish) and ``EditorialReviewState``, the approval the
+picker and the switch check: a published carousel is refused, an approved one
+has its review reopened.
 
 The ORM, repositories and the carousel services are imported lazily (the
 editorial facade loads while the ORM registry is still initialising).
@@ -35,6 +37,9 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.cover_pick import (
         CoverOfferSource,
         CoverPickService,
+    )
+    from rag_backend.modules.editorial.infrastructure.review_reopen import (
+        CheckpointReopener,
     )
 
 
@@ -68,9 +73,14 @@ class EditorialCoverLibrary:
 
 
 def cover_pick_service(
-    session: AsyncSession, offers: CoverOfferSource
+    session: AsyncSession,
+    offers: CoverOfferSource,
+    checkpoint: CheckpointReopener | None = None,
 ) -> CoverPickService:
-    """The picker of one session over ``offers`` (the autopilot's GrokBot cover)."""
+    """The picker of one session over ``offers`` (the autopilot's GrokBot cover).
+
+    With ``checkpoint`` a pick on an approved carousel reopens its review.
+    """
     from rag_backend.application.services.carousel.cover_pick import (
         CoverPickDeps,
         CoverPickService,
@@ -78,12 +88,16 @@ def cover_pick_service(
     from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
         EditorialGeneratedCovers,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_review_state import (
+        EditorialReviewState,
+    )
 
     return CoverPickService(
         CoverPickDeps(
             library=EditorialCoverLibrary(session),
             offers=offers,
-            switcher=slide_cover_switch_service(session),
+            switcher=slide_cover_switch_service(session, checkpoint),
+            review=EditorialReviewState(session),
             generated=EditorialGeneratedCovers(session),
         )
     )

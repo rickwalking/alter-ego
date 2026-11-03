@@ -58,6 +58,7 @@ from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 from tests.unit.modules.autopilot.test_owner_actions import (
     _OWNER,
     _PROJECT,
+    REVIEWED,
     _Claims,
     _Editorial,
     _Messenger,
@@ -168,6 +169,7 @@ def _world(
         state_reason=None,
         publish_attempts=0,
         telegram_message_ids=(),
+        notice_log=REVIEWED,
         ig_container_id=None,
         ig_post_id=None,
         ig_permalink=None,

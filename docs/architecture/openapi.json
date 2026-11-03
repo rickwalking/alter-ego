@@ -4257,7 +4257,7 @@
         "type": "object"
       },
       "CoverPickResponse": {
-        "description": "The switch was stored and the slides + PDFs re-rendered.",
+        "description": "The switch was stored and the slides + PDFs re-rendered;\n``review_reopened`` when it dropped the carousel's approval (the owner\napproves the new render again).",
         "properties": {
           "artifact_version": {
             "anyOf": [
@@ -4285,6 +4285,11 @@
           "project_id": {
             "title": "Project Id",
             "type": "string"
+          },
+          "review_reopened": {
+            "default": false,
+            "title": "Review Reopened",
+            "type": "boolean"
           },
           "status": {
             "title": "Status",
@@ -15500,7 +15505,7 @@
     },
     "/api/carousels/{project_id}/cover": {
       "put": {
-        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.\n\nThe fresh artifacts reflect every pending copy edit too, so the needs-republish\nmarker is cleared as a republish does.",
+        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.\n\nThe switch stamps the needs-republish marker with the new slide 1 and clears\nit (compare-and-clear) once its render settled, as a republish does. When\nit reopened an approved carousel's review, the autopilot run (scheduled or\nwaiting for the owner) is sent back for a new Telegram review, whatever\nthe render did (the worker waits for a settled render before sending it).",
         "operationId": "pick_cover_api_carousels__project_id__cover_put",
         "parameters": [
           {
@@ -16121,7 +16126,7 @@
     },
     "/api/carousels/{project_id}/hook-photo": {
       "put": {
-        "description": "Use one of the owner's photos on slide 1 of a POV carousel.",
+        "description": "Use one of the owner's photos on slide 1 of a POV carousel.\n\nRefused (409) on a released carousel. A completed one goes through the\ncover switch (CAS, one commit, render; ``hook_photo_guard``); when that\nreopened an approved carousel's review, its autopilot run is sent back for\na new Telegram review, whatever the render did. The photo is validated\nbefore anything is written.",
         "operationId": "select_hook_photo_api_carousels__project_id__hook_photo_put",
         "requestBody": {
           "content": {
@@ -16152,6 +16157,9 @@
           },
           "404": {
             "description": "Carousel project not found"
+          },
+          "409": {
+            "description": "cover_switch_requires_review"
           },
           "422": {
             "content": {
