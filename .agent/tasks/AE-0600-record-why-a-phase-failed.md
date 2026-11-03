@@ -147,11 +147,25 @@ See `backend/tests/features/phase_failure_cause_ae0600.feature`.
 
 ### 2026-11-03
 
-Ticket created from the worker brief; findings above.
+Ticket created from the worker brief; findings above. Feature + failing tests
+written first (translation: 3 red incl. a `list` answer crashing with
+`AttributeError`; runner/handler: import errors on the missing seams), then the fix.
+First version imported `ainvoke_json` into the application layer; the imports and
+integrity gates rejected the new edge, so the caller is injected instead.
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/agents/llm_json_retry.py` — `JsonRetryAnswers` adapter
+- `backend/src/rag_backend/agents/carousel_editorial_orchestrator.py` — injects it
+- `backend/src/rag_backend/application/services/carousel/json_answers.py` (new) — port
+- `backend/src/rag_backend/application/services/carousel/editorial_distribution_generation.py` — translation through the injected caller; list/shape answers fail with the code
+- `backend/src/rag_backend/application/services/carousel/editorial_distribution_pack.py`, `phase_artifact_runner.py` — thread `translation_answers`
+- `backend/src/rag_backend/application/services/carousel/workflow_failure_cause.py` (new), `backend/src/rag_backend/domain/constants/workflow_failure.py` (new) — safe cause
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_resume_runner.py`, `editorial_workflow_resume_failures.py` — cause on row, event, run note
+- `backend/src/rag_backend/modules/editorial/infrastructure/carousel_project_write_owner.py` — `mark_phase_failed_and_commit`
+- `backend/src/rag_backend/modules/generation_queue/application/{generation_events,generation_log_steps,job_handler,job_workflow_failure}.py`, `constants.py`, `events_public.py` — run-scoped failure note, event `reason`, `dead_letter` settle
+- `backend/src/rag_backend/domain/constants/ai_agents.py` — `AGENT_EN_TRANSLATION`
+- Tests: `backend/tests/features/phase_failure_cause_ae0600.feature`, `test_en_translation_fallback_ae0600.py`, `test_resume_failure_cause_ae0600.py`, `test_workflow_failure_run_status_ae0600.py`; existing runner tests now assert the `cause`
 
 ## Test Evidence
 
@@ -185,6 +199,16 @@ Pending.
 - **The event keeps `error_code=resume_validation_failed`** (dashboards group on
   it) and adds the specific code under the existing allowed detail key `reason`.
 - **Prod read skipped**: host key unknown on this machine; not trusted blindly.
+- **The retrying translation caller is injected, not imported.** A direct
+  `application → agents.llm_json_retry` import breaks the `application-no-agents`
+  import contract (per-edge baseline, no growth allowed). Following the
+  copy-budget fitter pattern, `application/services/carousel/json_answers.py`
+  defines the `JsonAnswers` port; `agents.llm_json_retry.JsonRetryAnswers` wraps
+  `ainvoke_json`, and `CarouselEditorialOrchestrator` injects it on the fast model
+  as `PhaseArtifactRunnerConfig.translation_answers` → `DistributionBuildContext`
+  → `_generate_en_translations`. Without an injected caller (unit tests, scripts)
+  the translation stays one plain traced call; the production orchestrator always
+  injects it (tested).
 
 ## Blockers
 
