@@ -83,6 +83,7 @@ class _FakeUserRepository:
     def __init__(self) -> None:
         self.persisted: dict[UUID, User] = {}
         self._staged: dict[UUID, User] = {}
+        self.locked: list[UUID] = []
 
     def flush_to_store(self) -> None:
         self.persisted.update(self._staged)
@@ -96,6 +97,10 @@ class _FakeUserRepository:
         return user
 
     async def get_by_id(self, user_id: UUID) -> User | None:
+        return self.persisted.get(user_id)
+
+    async def get_by_id_for_update(self, user_id: UUID) -> User | None:
+        self.locked.append(user_id)
         return self.persisted.get(user_id)
 
     async def get_by_email(self, email: str) -> User | None:

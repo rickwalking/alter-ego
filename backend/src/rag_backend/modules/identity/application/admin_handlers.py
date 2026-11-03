@@ -138,6 +138,10 @@ class _AdminChange:
     role: UserRole | None
     is_active: bool | None
 
+    def touches_admin_status(self) -> bool:
+        """Whether the edit sets a role or the active state."""
+        return self.role is not None or self.is_active is not None
+
 
 @dataclass(frozen=True)
 class AdminUserDeps:
@@ -198,21 +202,24 @@ class AdminUserHandler:
 
         Mirrors the legacy route ordering: the user is required (404) before the
         role is validated (422), so a missing user always yields 404 regardless
-        of the supplied role. The guard runs before any mutation, so a refused
-        update changes nothing.
+        of the supplied role. The user is then read again with its row locked
+        until the commit, and only the fields the edit assigns are saved, so a
+        password change or reset committed meanwhile is never undone. An edit of
+        the role or active state first locks the active admins, then the user:
+        every writer takes the rows in that order, so none deadlock. The guard
+        runs on the locked user before any mutation, so a refused update
+        changes nothing.
         """
         async with self._unit_of_work:
-            user = await self._require_user(command.user_id)
-            new_role = None if command.role is None else _parse_role(command.role)
-            await self._reject_losing_last_active_admin(
-                user, _AdminChange(role=new_role, is_active=command.is_active)
+            await self._require_user(command.user_id)
+            change = _AdminChange(
+                role=None if command.role is None else _parse_role(command.role),
+                is_active=command.is_active,
             )
-            if new_role is not None:
-                user.set_role(new_role)
-            if command.is_active is not None:
-                _apply_active(user, is_active=command.is_active)
-            if command.full_name is not None:
-                user.rename(command.full_name)
+            active_admins = await self._lock_active_admins(change)
+            user = await self._require_locked_user(command.user_id)
+            _reject_losing_last_active_admin(user, change, active_admins)
+            _apply_change(user, change, command.full_name)
             updated = await self._repository.update(user)
             view = to_user_view(updated)
         return view
@@ -245,27 +252,14 @@ class AdminUserHandler:
             await self._repository.update(user)
         return temp_password
 
-    async def _reject_losing_last_active_admin(
-        self, user: User, change: _AdminChange
-    ) -> None:
-        """Refuse a change that would leave the app without an active admin.
+    async def _lock_active_admins(self, change: _AdminChange) -> int | None:
+        """Lock and count the active admins when the edit touches role or state.
 
-        Only an active admin who would stop being one (demoted, deactivated or
-        both) is checked, against the ACTIVE admins: inactive admins cannot sign
-        in, so they never keep the admin area reachable. A demotion wins over a
-        deactivation when the change does both.
+        ``None`` when the edit only renames: no admin row is locked then.
         """
-        if not (user.is_admin() and user.is_active):
-            return
-        demoted = change.role is not None and change.role != UserRole.ADMIN
-        deactivated = change.is_active is False
-        if not (demoted or deactivated):
-            return
-        if await self._repository.count_active_by_role(UserRole.ADMIN) > 1:
-            return
-        if demoted:
-            raise LastAdminError(ERR_LAST_ADMIN)
-        raise LastActiveAdminDeactivationError(ERR_LAST_ACTIVE_ADMIN_DEACTIVATION)
+        if not change.touches_admin_status():
+            return None
+        return await self._repository.count_active_by_role(UserRole.ADMIN)
 
     async def _reject_last_admin_removal(self, user: User) -> None:
         if user.role != UserRole.ADMIN:
@@ -295,6 +289,37 @@ class AdminUserHandler:
             return None, password
         generated = _generate_secure_password()
         return generated, generated
+
+
+def _reject_losing_last_active_admin(
+    user: User, change: _AdminChange, active_admins: int | None
+) -> None:
+    """Refuse a change that would leave the app without an active admin.
+
+    Only an active admin who would stop being one (demoted, deactivated or
+    both) is checked, against the ACTIVE admins counted (and locked) for this
+    edit: inactive admins cannot sign in, so they never keep the admin area
+    reachable. A demotion wins over a deactivation when the change does both.
+    """
+    if active_admins is None or not (user.is_admin() and user.is_active):
+        return
+    demoted = change.role is not None and change.role != UserRole.ADMIN
+    deactivated = change.is_active is False
+    if not (demoted or deactivated) or active_admins > 1:
+        return
+    if demoted:
+        raise LastAdminError(ERR_LAST_ADMIN)
+    raise LastActiveAdminDeactivationError(ERR_LAST_ACTIVE_ADMIN_DEACTIVATION)
+
+
+def _apply_change(user: User, change: _AdminChange, full_name: str | None) -> None:
+    """Apply the parsed edit through the aggregate mutators."""
+    if change.role is not None:
+        user.set_role(change.role)
+    if change.is_active is not None:
+        _apply_active(user, is_active=change.is_active)
+    if full_name is not None:
+        user.rename(full_name)
 
 
 def _apply_active(user: User, *, is_active: bool) -> None:
