@@ -61,6 +61,9 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
+          # AE-0598: the default 10m ran out on 2026-11-02 (run 41529209741) with
+          # the post-start checks still to run. 15m covers the bounded worker drain.
+          command_timeout: 15m
           script: |
             set -e
             cd /opt/alter-ego
@@ -203,7 +206,13 @@ jobs:
             # Build images first so the migration one-shot below uses the freshly
             # built backend image (and the app start that follows is cache-warm).
             docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml stop -t 300 generation-worker || true
+            # Drain the generation worker (AE-0598, Pedro's decision 2026-11-02):
+            # pause new job pickup and wait up to 240 s for the job in flight to
+            # reach its phase boundary, then stop with a 60 s grace (the same 300 s
+            # in total the stop alone had). Never blocks the deploy; a run killed
+            # past the bound resumes from its last checkpoint on the new worker.
+            bash scripts/deploy/drain-generation-worker.sh drain docker-compose.prod.yml 240 5
+            docker compose -f docker-compose.prod.yml stop -t 60 generation-worker || true
             docker compose -f docker-compose.prod.yml down -t 120 --remove-orphans
 
             # --- Database migrations (AE-0207) --------------------------------
@@ -352,6 +361,10 @@ jobs:
 
             # Wait for services to start
             sleep 10
+
+            # The new worker removed any drain flag when it started; clearing it
+            # again is a backstop that only warns (AE-0598).
+            bash scripts/deploy/drain-generation-worker.sh clear docker-compose.prod.yml
 
             # Forced password change flag, second chance (AE-0511): without the
             # column every sign-in 500s, so a failed one-shot is retried once in
