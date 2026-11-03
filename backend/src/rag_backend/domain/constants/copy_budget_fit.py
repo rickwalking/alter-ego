@@ -6,7 +6,9 @@ budget goes to the fast model, which rewrites it within the limit. At most
 the normal validation. The limits themselves are never stored here: they come
 from the presentation contract through the validator's resolvers.
 ``REJECT_*`` name why a rewrite was dropped (counted in the done log); the
-fit prompt renders from ``COPY_BUDGET_PROMPT_VERSION`` and the drafting
+fit prompt renders from ``COPY_BUDGET_PROMPT_VERSION`` (v3: room for the fast
+model's reasoning before the answer; v1's 4096-token cap was spent on reasoning
+alone and every answer came back empty) and the drafting
 "Copy limits of this slide" block from ``COPY_BUDGET_LIMITS_PROMPT_VERSION``.
 """
 
@@ -18,7 +20,7 @@ COPY_BUDGET_FIT_MAX_ATTEMPTS: Final[int] = 2
 COPY_BUDGET_FIT_TIMEOUT_SECONDS: Final[float] = 180.0
 
 COPY_BUDGET_PROMPT_DOMAIN: Final[str] = "carousel_copy_budget"
-COPY_BUDGET_PROMPT_VERSION: Final[str] = "v1"
+COPY_BUDGET_PROMPT_VERSION: Final[str] = "v3"
 COPY_BUDGET_LIMITS_PROMPT_VERSION: Final[str] = "v2"
 COPY_BUDGET_PROMPT_FIT: Final[str] = "fit_fields"
 COPY_BUDGET_PROMPT_LIMITS: Final[str] = "slide_limits"

@@ -437,7 +437,7 @@ class TestLlmFitter:
         llm.bind.assert_called_once_with(
             temperature=model_cfg["temperature"], max_tokens=model_cfg["max_tokens"]
         )
-        assert model_cfg == {"temperature": 0.3, "max_tokens": 4096}
+        assert model_cfg == {"temperature": 0.3, "max_tokens": 32000}
         assert '"max_characters": 220' in prompt and '"min_words": 8' in prompt
         assert '"portuguese_source": "Um body longo."' in prompt
         assert "Never say game changer." in prompt

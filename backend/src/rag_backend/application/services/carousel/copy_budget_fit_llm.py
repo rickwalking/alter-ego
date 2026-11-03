@@ -61,6 +61,10 @@ class FitRequest:
     style_guide: str = ""
 
 
+class EmptyFitAnswerError(ValueError):
+    """The model answered no content (e.g. its whole token budget went to reasoning)."""
+
+
 class CopyBudgetFitter(Protocol):
     """Rewrite the requested fields within their limits; answers keyed by id."""
 
@@ -129,7 +133,10 @@ class LlmCopyBudgetFitter:
         """Render the prompt, bind its model config, call the model once, parse.
 
         The YAML's ``temperature`` and ``max_tokens`` are bound per call, as the
-        content drafter does, so the prompt file controls the sampling.
+        content drafter does, so the prompt file controls the sampling (the bound
+        ``max_tokens`` goes to the provider as ``max_completion_tokens`` and
+        replaces the model's default). An answer with no content raises
+        ``EmptyFitAnswerError``, a model failure the step logs.
         """
         prompt, model_cfg = render_fit_prompt(request)
         bind = model_bind_kwargs(model_cfg)
@@ -140,11 +147,15 @@ class LlmCopyBudgetFitter:
         response = await runnable.ainvoke(
             [HumanMessage(content=prompt)], self._config.runnable_config()
         )
-        return parse_fixes(str(response.content))
+        content = str(response.content)
+        if not content.strip():
+            raise EmptyFitAnswerError
+        return parse_fixes(content)
 
 
 __all__ = [
     "CopyBudgetFitter",
+    "EmptyFitAnswerError",
     "FitRequest",
     "FitTarget",
     "LlmCopyBudgetConfig",
