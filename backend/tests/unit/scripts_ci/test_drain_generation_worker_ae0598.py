@@ -9,6 +9,7 @@ real ones. Feature file: tests/features/deploy_drains_worker_ae0598.feature
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess  # noqa: S404  # integrity-ok: a test for a bash deploy step must invoke a subprocess (mirrors test_check_env_permissions.py)
 import sys
@@ -25,6 +26,9 @@ EXIT_OK = 0
 EXIT_USAGE = 2
 WARNING = "::warning::"
 CLI = "rag_backend.worker.drain_cli"
+IDLE_POLL_SECONDS = 20
+BUSY_POLL_SECONDS = 2
+WATCH_SECONDS = 0.05
 
 STUB = """#!/usr/bin/env bash
 echo "$*" >> "$STUB_LOG"
@@ -120,12 +124,63 @@ def test_the_deploy_waits_until_the_worker_is_idle(tmp_path: Path) -> None:
 
 
 def test_an_idle_worker_is_stopped_at_once(tmp_path: Path) -> None:
-    """Scenario: The deploy waits until the worker is idle, then stops it"""
+    """Scenario: The deploy waits until the worker is idle, then stops it
+
+    ``$SECONDS`` counts whole seconds, so a wait of a few milliseconds can still
+    report ``1s`` across a second boundary. "At once" is proved by one
+    idle check and a run shorter than one poll interval, so no poll sleep ran.
+    """
     stage = _stage(tmp_path)
-    result = _run(stage.env(running=True), "drain", COMPOSE_FILE, "30", "1")
+    started = time.monotonic()
+    result = _run(
+        stage.env(running=True), "drain", COMPOSE_FILE, "30", str(IDLE_POLL_SECONDS)
+    )
+    elapsed = time.monotonic() - started
     assert result.returncode == EXIT_OK
-    assert "idle after 0s" in result.stdout
+    assert re.search(r"DRAIN: generation-worker idle after \d+s", result.stdout)
+    assert WARNING not in result.stdout
     assert stage.cli_calls("idle") == 1
+    assert elapsed < IDLE_POLL_SECONDS
+
+
+def test_a_worker_busy_on_the_first_check_is_not_stopped_at_once(
+    tmp_path: Path,
+) -> None:
+    """Scenario: The deploy waits until the worker is idle, then stops it
+
+    The counter-case of the idle test: busy on the first check, the
+    script sleeps one poll and checks again, so both "at once" guards (one idle
+    check, a run shorter than the poll) would fail here.
+    """
+    stage = _stage(tmp_path)
+    stage.busy.touch()
+    second_check = threading.Event()
+    watcher = threading.Thread(
+        target=_unlink_busy_at_second_check, args=(stage, second_check)
+    )
+    watcher.start()
+    started = time.monotonic()
+    try:
+        result = _run(
+            stage.env(running=True), "drain", COMPOSE_FILE, "30", str(BUSY_POLL_SECONDS)
+        )
+    finally:
+        second_check.set()
+        watcher.join()
+    elapsed = time.monotonic() - started
+    assert result.returncode == EXIT_OK, result.stdout + result.stderr
+    assert stage.cli_calls("idle") >= 2
+    assert elapsed >= BUSY_POLL_SECONDS
+
+
+def _unlink_busy_at_second_check(stage: _Stage, stop: threading.Event) -> None:
+    """Keep the worker busy until its second idle check is logged.
+
+    Tied to the call log, not a timer, so a slow first check still sees it busy.
+    """
+    while not stop.is_set() and stage.cli_calls("idle") < 2:
+        time.sleep(WATCH_SECONDS)
+    stage.busy.unlink(missing_ok=True)
 
 
 def test_the_drain_wait_is_bounded(tmp_path: Path) -> None:

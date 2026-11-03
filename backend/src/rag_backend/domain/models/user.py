@@ -7,6 +7,27 @@ from rag_backend.domain.clock import utc_now
 from rag_backend.domain.constants import ROLE_ADMIN, ROLE_EDITOR
 
 
+class UserField(StrEnum):
+    """The persisted user fields a save writes when they change.
+
+    Each value is the attribute name on both the entity and the table model
+    (``CREDENTIAL_HASH`` is the password hash, ``SESSION_VERSION`` the token
+    version that logs sessions out).
+    """
+
+    EMAIL = "email"
+    FULL_NAME = "full_name"
+    CREDENTIAL_HASH = "hashed_password"
+    ROLE = "role"
+    IS_ACTIVE = "is_active"
+    CREDENTIAL_CHANGE_REQUIRED = "must_change_password"
+    SESSION_VERSION = "token_version"
+    UPDATED_AT = "updated_at"
+
+
+_TRACKED_FIELDS = frozenset(UserField)
+
+
 class UserRole(StrEnum):
     """Application roles used for authorization checks."""
 
@@ -28,6 +49,29 @@ class User:
     updated_at: datetime = field(default_factory=utc_now)
     must_change_password: bool = False
     token_version: int = 0
+    _changed: set[UserField] = field(
+        default_factory=set, init=False, repr=False, compare=False
+    )
+    _tracking: bool = field(default=False, init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Start recording assignments once every field holds its initial value."""
+        self._tracking = True
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Assign the attribute and, after construction, record a persisted field.
+
+        Recording every assignment (mutator or direct) is what lets a save write
+        only the changed columns, so a save never puts back a value it did not
+        change, such as a password hash or token version committed meanwhile.
+        """
+        object.__setattr__(self, name, value)
+        if name in _TRACKED_FIELDS and self.__dict__.get("_tracking", False):
+            self._changed.add(UserField(name))
+
+    def changed_fields(self) -> frozenset[UserField]:
+        """The persisted fields assigned since this entity was built."""
+        return frozenset(self._changed)
 
     def is_admin(self) -> bool:
         """Return True when the user has the admin role."""
@@ -71,6 +115,11 @@ class User:
         self.hashed_password = hashed_password
         self.must_change_password = False
         self.token_version += 1
+
+    def change_email(self, email: str) -> None:
+        """Change the email address and refresh the updated timestamp."""
+        self.email = email
+        self.updated_at = utc_now()
 
     def rename(self, full_name: str) -> None:
         """Change the display name and refresh the updated timestamp."""
