@@ -93,7 +93,12 @@ class ReviewFacts:
 
 @dataclass(frozen=True, kw_only=True)
 class SaveNoticeLog:
-    """Replace the run's notice ledger without moving ``updated_at``."""
+    """Save the run's notice ledger without moving ``updated_at``.
+
+    ``base`` is the ledger the writer read; only its change (``base -> log``) is
+    applied to the committed ledger, so a concurrent writer's records survive.
+    """
 
     run_id: UUID
     log: NoticeLog
+    base: NoticeLog

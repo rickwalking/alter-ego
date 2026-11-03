@@ -19,6 +19,7 @@ from __future__ import annotations
 
 LOG_EVENT_SLIDE_EDITED = "carousel_completed_slide_edited"
 LOG_EVENT_REPUBLISH_SWEPT = "carousel_republish_marker_swept"
+LOG_EVENT_REPUBLISH_COVER_REFUSED = "carousel_republish_cover_refused"
 
 AUDIT_EVENT_SLIDE_EDITED = "carousel.slide.edited"
 
@@ -35,6 +36,7 @@ REPUBLISH_SWEEP_MIN_AGE_SECONDS = 180
 __all__ = [
     "AUDIT_EVENT_SLIDE_EDITED",
     "ERR_SLIDE_EDIT_NOT_COMPLETED",
+    "LOG_EVENT_REPUBLISH_COVER_REFUSED",
     "LOG_EVENT_REPUBLISH_SWEPT",
     "LOG_EVENT_SLIDE_EDITED",
     "REPUBLISH_SWEEP_MIN_AGE_SECONDS",

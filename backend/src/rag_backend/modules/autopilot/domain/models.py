@@ -55,7 +55,8 @@ class TransitionCommand:
 
     ``scheduled_at`` is the publish time stored when the run enters ``scheduled``;
     ``detail`` is extra escalation copy for the owner, carried on the state-changed
-    event.
+    event. ``updated_at`` keeps the given time instead of now (a move that must not
+    restart the review's 72-hour window).
     """
 
     run_id: UUID
@@ -64,6 +65,7 @@ class TransitionCommand:
     reason: str
     scheduled_at: datetime | None = None
     detail: str = ""
+    updated_at: datetime | None = None
 
     def pair(self) -> TransitionPair:
         """The state pair the domain table judges, ignoring persistence."""

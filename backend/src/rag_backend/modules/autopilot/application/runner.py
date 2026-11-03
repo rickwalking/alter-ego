@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
+from datetime import datetime
 
 import structlog
 
@@ -48,8 +49,9 @@ from rag_backend.modules.autopilot.constants import (
     REASON_REVISION_CAP,
     REASON_START_FAILED,
     REASON_TOPIC_MISSING,
-    RUNS_PER_TICK,
+    RUN_SCAN_LIMIT,
 )
+from rag_backend.modules.autopilot.domain.cover_hold import hold_active
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     GateAction,
@@ -113,6 +115,7 @@ class AutopilotRunner:
                 autofix=deps.autofix,
                 covers=deps.covers,
                 cover_switch=deps.cover_switch,
+                clock=deps.clock,
             )
         )
         self._repair = GateRepairStep(
@@ -126,7 +129,7 @@ class AutopilotRunner:
     async def tick(self) -> int:
         """Sweep expiries and fixed escalations, then step at most one run."""
         swept = await self.sweep()
-        run = await _first_run(self._deps.runs)
+        run = await _first_run(self._deps.runs, self._deps.clock.now())
         if run is None:
             return swept
         return swept + await self.step(run)
@@ -374,10 +377,13 @@ def _recovery_deps(deps: RunnerDependencies) -> RecoveryDependencies:
     )
 
 
-async def _first_run(runs: AutopilotRunRepository) -> AutopilotRun | None:
+async def _first_run(
+    runs: AutopilotRunRepository, now: datetime
+) -> AutopilotRun | None:
+    """The oldest active run, skipping one a website cover switch holds."""
     for state in _ACTIVE:
-        query = RunListQuery(state=state, limit=RUNS_PER_TICK)
-        found = await runs.list_by_state(query)
+        query = RunListQuery(state=state, limit=RUN_SCAN_LIMIT)
+        found = [r for r in await runs.list_by_state(query) if not hold_active(r, now)]
         if found:
             return found[0]
     return None

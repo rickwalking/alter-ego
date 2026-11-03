@@ -17,7 +17,9 @@ re-validate, store the fresh report); a design revise may send the workflow back
 content only. The design recovery hint is emitted with a still-blocking design
 re-interrupt, since direct edits or a send-back resolve violations and a plain revise
 does not; the frontend maps it to i18n copy. Content drafting concurrency is bounded
-because endpoint rate limits are unknown.
+because endpoint rate limits are unknown. ``reopen_review`` is an internal resume of
+the approved hold (never a route action): a changed slide 1 drops the approval and
+the graph waits at the final review again.
 """
 
 PHASE_BRIEF = "brief"
@@ -59,6 +61,7 @@ REVIEW_ACTION_APPROVE = "approve"
 REVIEW_ACTION_REJECT = "reject"
 REVIEW_ACTION_REVISE = "revise"
 REVIEW_ACTION_EDIT = "edit"
+REVIEW_ACTION_REOPEN = "reopen_review"
 
 WORKFLOW_STATUS_APPROVED_FOR_PUBLISH = "approved_for_publish"
 
@@ -89,6 +92,7 @@ ERR_PROVIDER_UNAVAILABLE = "provider_unavailable"
 ERR_WORKFLOW_PHASE_FAILED = "workflow_phase_failed"
 ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
 ERR_RESUME_ALREADY_IN_PROGRESS = "resume_already_in_progress"
+ERR_RESUME_RENDER_PENDING = "resume_render_pending"
 ERR_BACKGROUND_RESUME_FAILED = "background_resume_failed"
 ERR_BACKGROUND_RESUME_STUCK = "background_resume_stuck"
 ERR_NOTHING_TO_REDRIVE = "nothing_to_redrive"

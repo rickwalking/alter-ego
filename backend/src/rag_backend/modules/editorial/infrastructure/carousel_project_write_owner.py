@@ -46,6 +46,9 @@ from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
+    PHASE_FINAL_REVIEW,
+    PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
 )
 from rag_backend.domain.models import CarouselStatus
@@ -139,16 +142,42 @@ class CarouselProjectWriteOwner:
         project.needs_republish_since = datetime.now(UTC)
         await self._session.flush()
 
-    async def clear_needs_republish(self, project_id: str) -> None:
-        """Clear the republish marker and commit (single owner).
+    async def reopen_final_review(self, project_id: str) -> None:
+        """Drop the approval: a draft waiting in final review (flush only).
 
-        Commit lives here (not in the infrastructure/database sweeper) so the
-        ddd:adapter-commit boundary holds — adapters flush, owners commit.
+        Staged in the SAME transaction as the slide-1 write that caused it, so
+        no publish path ever sees the new slide 1 still approved.
         """
-        project = await self._session.get(CarouselProjectModel, project_id)
+        project = await self._session.get(
+            CarouselProjectModel, project_id, with_for_update=True
+        )
         if project is None:
             return
-        project.needs_republish_since = None
+        project.workflow_status = CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+        project.current_phase = PHASE_FINAL_REVIEW
+        project.phase_status = PHASE_STATUS_AWAITING_HUMAN
+        await self._session.flush()
+
+    async def clear_needs_republish(
+        self, project_id: str, rendered_from: datetime
+    ) -> None:
+        """Clear the republish marker if the render started after it; commit.
+
+        Compare-and-clear: a marker stamped after ``rendered_from`` (a write that
+        landed while the render ran) is kept for the next render. Commit lives
+        here (not in the infrastructure/database sweeper) so the
+        ddd:adapter-commit boundary holds — adapters flush, owners commit.
+        """
+        project = await self._session.get(
+            CarouselProjectModel,
+            project_id,
+            with_for_update=True,
+            populate_existing=True,
+        )
+        if project is not None and _stamped_by(
+            project.needs_republish_since, rendered_from
+        ):
+            project.needs_republish_since = None
         await self._session.commit()
 
     async def bump_resume_lock_version(
@@ -173,3 +202,12 @@ class CarouselProjectWriteOwner:
 
 
 __all__ = ["CarouselProjectWriteOwner"]
+
+
+def _stamped_by(marker: datetime | None, rendered_from: datetime) -> bool:
+    """True when a set marker predates the render (SQLite reads it back naive)."""
+    if marker is None:
+        return False
+    if marker.tzinfo is None:
+        marker = marker.replace(tzinfo=UTC)
+    return marker <= rendered_from

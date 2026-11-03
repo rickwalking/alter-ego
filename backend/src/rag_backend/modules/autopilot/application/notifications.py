@@ -320,7 +320,9 @@ class OwnerNotificationService:
         return False
 
     async def _save(self, run: AutopilotRun, log: NoticeLog) -> None:
-        await self._deps.notices.save(SaveNoticeLog(run_id=run.run_id, log=log))
+        await self._deps.notices.save(
+            SaveNoticeLog(run_id=run.run_id, log=log, base=run.notice_log)
+        )
 
 
 def _configured(deps: NotificationDependencies) -> bool:

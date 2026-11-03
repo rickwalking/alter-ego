@@ -12,6 +12,10 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
+)
 from rag_backend.modules.autopilot.cover_constants import (
     LOG_COVER,
     LOG_COVER_RENDER_FAILED,
@@ -25,6 +29,7 @@ from rag_backend.modules.autopilot.domain.cover_ports import (
 from rag_backend.modules.editorial.public import (
     AUTOFIX_STATUS_CONFLICT,
     AUTOFIX_STATUS_FIXED,
+    CheckpointReopener,
     CoverImageRequest,
     CoverSwitchRequest,
     cover_image_file,
@@ -38,6 +43,8 @@ logger = structlog.get_logger()
 _SWITCH_STATUS: dict[str, CoverSwitchStatus] = {
     AUTOFIX_STATUS_FIXED: CoverSwitchStatus.SWITCHED,
     AUTOFIX_STATUS_CONFLICT: CoverSwitchStatus.CONFLICT,
+    ERR_COVER_SWITCH_REQUIRES_REVIEW: CoverSwitchStatus.REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED: CoverSwitchStatus.REQUIRES_REVIEW,
 }
 
 
@@ -74,10 +81,17 @@ class EditorialCoverImages:
 
 
 class EditorialCoverSwitcher:
-    """Re-render a finished carousel with or without the GrokBot cover."""
+    """Re-render a finished carousel with or without the GrokBot cover.
 
-    def __init__(self, session: AsyncSession) -> None:
+    With ``checkpoint`` a switch on an approved carousel (a cancelled
+    schedule) drops its approval; without it that carousel is refused.
+    """
+
+    def __init__(
+        self, session: AsyncSession, checkpoint: CheckpointReopener | None = None
+    ) -> None:
         self._session = session
+        self._checkpoint = checkpoint
 
     async def switch(self, command: CoverSwitchCommand) -> CoverSwitchStatus:
         """Stage, store and re-render; a conflict writes nothing.
@@ -90,6 +104,7 @@ class EditorialCoverSwitcher:
                 project_id=command.project_id,
                 expected_version=command.expected_version,
                 cover=command.cover,
+                checkpoint=self._checkpoint,
             )
         )
         status = _SWITCH_STATUS.get(result.status, CoverSwitchStatus.MISSING)

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by [ADR-0030](0030-persona-check-for-budget-field-rewrites.md) (2026-11-02) for the budget-bound field rewrites.
 
 ## Context
 

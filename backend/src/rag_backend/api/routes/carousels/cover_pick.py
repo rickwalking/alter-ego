@@ -6,7 +6,10 @@ run's GrokBot cover offer) and picks one (``PUT /{id}/cover``) at the
 workflow lock version the page read. The pick is staged, stored under the
 lock-version CAS and re-rendered through the republish path; typed
 409s (stale version, held lock, active run, build in progress) go through the
-app-wide carousel-conflict handler.
+app-wide carousel-conflict handler. A pick on an approved (or scheduled)
+carousel drops its approval with the write and reopens the final review
+(Pedro's decision, 2026-11-02); this layer then asks the autopilot to send
+the Telegram review again. A released carousel is refused (409).
 """
 
 from __future__ import annotations
@@ -23,6 +26,9 @@ from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
+    checkpoint_reopener,
+)
 from rag_backend.api.routes.carousels.republish import raise_republish_failure
 from rag_backend.api.schemas.carousel_conflict import CarouselConflictResponse
 from rag_backend.api.schemas.carousel_cover_pick import (
@@ -51,16 +57,19 @@ from rag_backend.domain.constants.carousel_cover_pick import (
     COVER_PICK_STATUS_SWITCHED,
     ERR_COVER_PICK_ASSET_NOT_ALLOWED,
 )
+from rag_backend.domain.constants.cover_review_switch import (
+    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_conflict import (
     CarouselConflict,
     CarouselConflictError,
 )
-from rag_backend.modules.autopilot import project_cover_offer
+from rag_backend.modules.autopilot import cover_review_hold, project_cover_offer
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
-    CarouselProjectWriteOwner,
     cover_pick_service,
 )
 
@@ -103,13 +112,21 @@ async def get_cover_pick_context(
 
 
 def _refused(error: CoverPickError) -> HTTPException:
+    """409 for a published carousel (its state); 422 otherwise."""
+    if error.code == ERR_COVER_SWITCH_REQUIRES_REVIEW:
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.code)
     return HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=error.code
     )
 
 
-def _raise_unless_switched(result: SlideCoverSwitchResult) -> None:
-    """Conflict → 409; a vanished cover → 422; a failed re-render → 422/409."""
+def raise_unless_switched(result: SlideCoverSwitchResult) -> None:
+    """Conflict, released meanwhile, or a review that could not reopen → 409;
+    a vanished cover → 422; a failed re-render → 422/409."""
+    if result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW:
+        raise _refused(CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW))
+    if result.status == REASON_REVIEW_NOT_REOPENED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.status)
     if result.status == AUTOFIX_STATUS_CONFLICT:
         raise CarouselConflictError(
             CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)
@@ -162,21 +179,28 @@ async def pick_cover(
 ) -> CoverPickResponse:
     """Stage, store under the lock-version CAS, then republish slides + PDFs.
 
-    The fresh artifacts reflect every pending copy edit too, so the needs-republish
-    marker is cleared as a republish does.
+    The switch stamps the needs-republish marker with the new slide 1 and clears
+    it (compare-and-clear) once its render settled, as a republish does. When
+    it reopened an approved carousel's review, the autopilot run (scheduled or
+    waiting for the owner) is sent back for a new Telegram review, whatever
+    the render did (the worker waits for a settled render before sending it).
     """
     command = CoverPickCommand(
         project=ctx.project,
         asset_id=body.asset_id,
         expected_version=body.expected_version,
     )
+    service = cover_pick_service(
+        ctx.db, project_cover_offer(ctx.db), checkpoint_reopener(request)
+    )
     try:
-        result = await ctx.service.pick(command)
+        result = await service.pick(command)
     except CoverPickError as error:
         raise _refused(error) from error
-    _raise_unless_switched(result)
     project_id = str(ctx.project.id)
-    await CarouselProjectWriteOwner(ctx.db).clear_needs_republish(project_id)
+    if result.reopened:
+        await cover_review_hold().reopened(project_id)
+    raise_unless_switched(result)
     await ctx.db.commit()
     updated = await CarouselAutomationAcl(ctx.db).load_project(project_id)
     return CoverPickResponse(
@@ -184,7 +208,8 @@ async def pick_cover(
         status=COVER_PICK_STATUS_SWITCHED,
         current_asset_id=current_cover_asset(updated or ctx.project),
         artifact_version=(updated or ctx.project).artifact_version,
+        review_reopened=result.reopened,
     )
 
 
-__all__ = ["get_cover_pick_context", "router"]
+__all__ = ["get_cover_pick_context", "raise_unless_switched", "router"]

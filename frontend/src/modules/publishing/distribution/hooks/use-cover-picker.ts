@@ -41,6 +41,7 @@ const coverPickResponseSchema = z.object({
   status: z.string(),
   current_asset_id: z.string().nullable(),
   artifact_version: z.string().nullable().optional(),
+  review_reopened: z.boolean().optional(),
 });
 
 export type CoverOptions = z.infer<typeof coverOptionsSchema>;

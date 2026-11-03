@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
+from rag_backend.domain.constants.copy_budget_fit import COPY_BUDGET_TRACE_DETAIL
 from rag_backend.domain.protocols import ResearchEnrichmentParams
 from rag_backend.infrastructure.database.carousel_recent_hooks import (
     SqlRecentHookReader,
@@ -49,7 +52,9 @@ class CarouselEditorialOrchestrator:
         Research and outline run on the reasoning model; drafting, persona scoring and
         distribution copy (translation, caption) run on the fast model; the quality
         rubric judge runs on the reasoning model. The field repair
-        of a blocked content gate also runs on the fast model and is traced in Langfuse.
+        of a blocked content gate and the copy-budget shorten step before the content
+        review also run on the fast model and are traced in Langfuse (the shorten step
+        under its own ``copy budget fit`` run name).
         """
         roles = ChatModelRoles.coerce(llm)
         self._llm = roles.fast
@@ -61,6 +66,9 @@ class CarouselEditorialOrchestrator:
                 image_registry=image_registry,
                 draft_concurrency=roles.draft_concurrency,
                 gate_repair_tracing=get_langfuse_runnable_config,
+                budget_fit_tracing=partial(
+                    get_langfuse_runnable_config, COPY_BUDGET_TRACE_DETAIL
+                ),
                 rubric_judge=CarouselRubricJudge(llm=roles.reasoning),
             )
         )

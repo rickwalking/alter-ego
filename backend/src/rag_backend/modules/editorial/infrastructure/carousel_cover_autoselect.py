@@ -86,7 +86,7 @@ class EditorialAutoCoverStore:
         return generation.result_asset_id
 
     async def load(self, project_id: str) -> ProjectAtVersion | None:
-        """The committed project and its lock version."""
+        """The committed project, its lock version and its approval."""
         from rag_backend.modules.editorial.infrastructure import (
             CarouselProjectWriteOwner,
             LegacyCarouselAcl,
@@ -98,7 +98,9 @@ class EditorialAutoCoverStore:
         if view is None:
             return None
         return ProjectAtVersion(
-            project=view.project.project, lock_version=view.lock_version
+            project=view.project.project,
+            lock_version=view.lock_version,
+            workflow_status=view.project.workflow.workflow_status,
         )
 
     async def write(self, command: AutoCoverWrite) -> str:
