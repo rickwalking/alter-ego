@@ -169,7 +169,7 @@ class TestRunColumnInvariant:
     async def test_timeout_auto_reject_clears_leftover_run_columns(
         self, test_engine
     ) -> None:
-        """Owner-bypass site #1: workflow_timeout_repository._reject flips phase_status
+        """Owner-bypass site #1: workflow_timeout_repository.reject flips phase_status
         directly; leftover run columns must clear with it.
         """
         async with _factory(test_engine)() as db:

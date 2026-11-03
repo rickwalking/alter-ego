@@ -27,7 +27,10 @@ from rag_backend.modules.autopilot.domain.ports import (
     Clock,
     TopicCandidateRepository,
 )
-from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
+from rag_backend.modules.autopilot.domain.recovery import (
+    CarouselSettler,
+    RunRecoveryStore,
+)
 
 
 def _never_retryable(_exc: BaseException) -> bool:
@@ -44,7 +47,8 @@ class RunnerDependencies:
     ``spacing`` keeps a queued run waiting until the previous start is old enough.
     ``retryable`` names the errors the generation queue retries instead.
     ``auto_cover`` schedules one slide-1 cover generation when a fresh carousel
-    starts (None: the step is off).
+    starts (None: the step is off). ``carousels`` rejects the carousel of an
+    escalation closed unfixed (None: the stuck-workflow auto-reject does it later).
     """
 
     runs: AutopilotRunRepository
@@ -63,6 +67,7 @@ class RunnerDependencies:
     cover_switch: CoverSwitcher | None = None
     auto_cover: AutoCoverScheduler | None = None
     spacing: StartSpacing | None = None
+    carousels: CarouselSettler | None = None
     retryable: Callable[[BaseException], bool] = field(default=_never_retryable)
 
 

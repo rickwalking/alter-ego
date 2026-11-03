@@ -11,10 +11,16 @@ application layer gains no new infrastructure import.
 Only non-terminal phase statuses are eligible for auto-reject: ``in_progress``
 is excluded (a workflow may be running or resuming) and terminal states
 (approved, rejected, failed) are excluded by construction.
+
+``reject`` is the one terminal transition: the stuck sweep calls it with the
+stuck cause, and the editorial settle of an abandoned autopilot escalation
+calls it with its own cause, so both write the same row state and the same
+phase-changed event.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -55,6 +61,24 @@ _AUTO_REJECT_ELIGIBLE_PHASE_STATUSES: frozenset[str] = frozenset({
 _EVENT_SOURCE_KEY = "source"
 
 
+@dataclass(frozen=True, kw_only=True)
+class RejectCause:
+    """Why a carousel is rejected: the stored message, event source and window."""
+
+    reason: str
+    source: str
+    timeout_hours: int
+
+    @classmethod
+    def stuck(cls, timeout_hours: int) -> RejectCause:
+        """The stuck-workflow timeout cause."""
+        return cls(
+            reason=AUTO_REJECT_ERROR_MESSAGE,
+            source=AUTO_REJECT_EVENT_SOURCE,
+            timeout_hours=timeout_hours,
+        )
+
+
 class WorkflowTimeoutRepository:
     """ORM-backed auto-reject of timed-out carousel workflows."""
 
@@ -71,8 +95,9 @@ class WorkflowTimeoutRepository:
         """
         cutoff = datetime.now(UTC) - timedelta(hours=timeout_hours)
         stuck = await self._find_stuck(db, cutoff)
+        cause = RejectCause.stuck(timeout_hours)
         for project in stuck:
-            await self._reject(db, project, timeout_hours)
+            await self.reject(db, project, cause)
         return len(stuck)
 
     @staticmethod
@@ -91,24 +116,30 @@ class WorkflowTimeoutRepository:
         )
         return list(result.scalars().all())
 
-    async def _reject(
+    async def reject(
         self,
         db: AsyncSession,
         project: CarouselProjectModel,
-        timeout_hours: int,
+        cause: RejectCause,
     ) -> None:
+        """Move ``project`` to the terminal rejected state and emit the event.
+
+        The caller chose the row and commits. The phase-changed payload carries
+        the previous phase and status, the reason and the time window.
+        """
         project_id = str(project.id)
         previous_phase = project.current_phase
         previous_phase_status = project.phase_status
         project.phase_status = PHASE_STATUS_REJECTED
         project.status = AUTO_REJECT_CAROUSEL_STATUS
-        project.error_message = AUTO_REJECT_ERROR_MESSAGE
+        project.error_message = cause.reason
         logger.warning(
             AUTO_REJECT_LOG_EVENT,
             project_id=project_id,
             previous_phase=previous_phase,
             previous_phase_status=previous_phase_status,
-            timeout_hours=timeout_hours,
+            timeout_hours=cause.timeout_hours,
+            source=cause.source,
         )
         await self._events.emit(
             db,
@@ -119,11 +150,11 @@ class WorkflowTimeoutRepository:
                 AUTO_REJECT_PAYLOAD_PREVIOUS_PHASE: previous_phase,
                 AUTO_REJECT_PAYLOAD_PREVIOUS_PHASE_STATUS: previous_phase_status,
                 AUTO_REJECT_PAYLOAD_NEW_PHASE_STATUS: PHASE_STATUS_REJECTED,
-                AUTO_REJECT_PAYLOAD_REASON: AUTO_REJECT_ERROR_MESSAGE,
-                AUTO_REJECT_PAYLOAD_TIMEOUT_HOURS: timeout_hours,
+                AUTO_REJECT_PAYLOAD_REASON: cause.reason,
+                AUTO_REJECT_PAYLOAD_TIMEOUT_HOURS: cause.timeout_hours,
             },
-            metadata={_EVENT_SOURCE_KEY: AUTO_REJECT_EVENT_SOURCE},
+            metadata={_EVENT_SOURCE_KEY: cause.source},
         )
 
 
-__all__ = ["WorkflowTimeoutRepository"]
+__all__ = ["RejectCause", "WorkflowTimeoutRepository"]

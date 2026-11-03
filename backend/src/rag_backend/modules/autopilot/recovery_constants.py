@@ -7,7 +7,7 @@ Kept beside ``constants.py`` so neither file exceeds the 400-line limit.
 - Design revises at most once (architecture §6); other gates twice.
 - Owner reviews expire after 72 hours in ``awaiting_owner``; escalations close after the
   same window instead of blocking the scan forever, matching the carousel stuck auto-
-  reject.
+  reject. A closed escalation's carousel, still waiting unchanged, is rejected with it.
 - Owner rework is queued by the webhook and applied by the runner.
 - A publish claim is taken over only once its holder cannot still be talking to Graph:
   the slowest possible publish plus a margin. The Story runs under the same claim, up to
@@ -84,6 +84,8 @@ NO_RETRY_REASONS = frozenset({ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN})
 REASON_REVIEW_REOPENED = "review_reopened"
 LOG_RUNNER_ENGINE_ERROR = "autopilot_runner_engine_error"
 LOG_RUNNER_WAKE_FAILED = "autopilot_runner_wake_failed"
+LOG_ESCALATION_CAROUSEL_SETTLED = "autopilot_escalation_carousel_settled"
+LOG_ESCALATION_SETTLE_FAILED = "autopilot_escalation_settle_failed"
 
 TABLE_NOTIFY_CURSOR = "autopilot_notify_cursor"
 NOTIFY_CURSOR_NAME = "telegram"

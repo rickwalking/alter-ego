@@ -22,6 +22,11 @@ AUTO_REJECT_PAYLOAD_TIMEOUT_HOURS = "timeout_hours"
 
 AUTO_REJECT_EVENT_SOURCE = "workflow_timeout"
 
+ESCALATION_EXPIRED_REJECT_MESSAGE = (
+    "Auto-rejected: the autopilot escalation expired with nobody fixing the carousel."
+)
+ESCALATION_EXPIRED_EVENT_SOURCE = "autopilot_escalation_expired"
+
 __all__ = [
     "AUTO_REJECT_CAROUSEL_STATUS",
     "AUTO_REJECT_ERROR_MESSAGE",
@@ -32,4 +37,6 @@ __all__ = [
     "AUTO_REJECT_PAYLOAD_PREVIOUS_PHASE_STATUS",
     "AUTO_REJECT_PAYLOAD_REASON",
     "AUTO_REJECT_PAYLOAD_TIMEOUT_HOURS",
+    "ESCALATION_EXPIRED_EVENT_SOURCE",
+    "ESCALATION_EXPIRED_REJECT_MESSAGE",
 ]

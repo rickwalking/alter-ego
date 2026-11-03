@@ -303,6 +303,9 @@ def runner_dependencies(
 ) -> RunnerDependencies:
     """The runner's ports on ``session`` (the worker tick and the queue bridge)."""
     from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.modules.autopilot.infrastructure.carousel_settler import (
+        carousel_settler,
+    )
     from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
         AutofixerConfig,
         InProcessContentAutofixer,
@@ -365,6 +368,7 @@ def runner_dependencies(
             clock=SystemClock(),
             minimum=timedelta(minutes=config.start_spacing_minutes),
         ),
+        carousels=carousel_settler(session),
     )
 
 
