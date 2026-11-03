@@ -1,6 +1,6 @@
 # AE-0599 — Content gate blocks after the copy budget step
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
@@ -219,7 +219,9 @@ See `backend/tests/features/content_gate_after_copy_budget_ae0599.feature`.
 
 Read-only triage of the three blocked carousels, root cause above. Feature,
 fixtures rebuilt from the recorded shapes and failing tests (4 failing on the
-pre-fix code), then the fix.
+pre-fix code), then the fix (1ac1cab82, 19de7a7b2). Full
+`gate-capture.sh backend` at 19de7a7b2: 26 pass, 0 fail, 1 skip (mutation, CI
+only).
 
 ## Files Touched
 
@@ -228,6 +230,8 @@ See Delta.
 ## Test Evidence
 
 See `.agent/reports/AE-0599.dev-summary.md`.
+
+GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
 
 ## QA Report
 
