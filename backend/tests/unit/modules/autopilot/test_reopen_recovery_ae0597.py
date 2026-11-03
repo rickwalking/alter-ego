@@ -26,6 +26,7 @@ from rag_backend.modules.autopilot.constants import (
 from rag_backend.modules.autopilot.cover_constants import (
     REASON_COVER_REVIEW_REOPENED,
     REASON_RENDER_STUCK,
+    REASON_REWORK_AFTER_APPROVAL,
     REOPEN_RECOVERY_GRACE_SECONDS,
 )
 from rag_backend.modules.autopilot.domain.gate import GateAction, GateSnapshot
@@ -36,6 +37,7 @@ from rag_backend.modules.autopilot.domain.models import (
 from rag_backend.modules.autopilot.domain.policy import decide
 from rag_backend.modules.autopilot.domain.render_wait import RenderFacts, render_facts
 from rag_backend.modules.autopilot.domain.schedule_ports import DueScheduleQuery
+from rag_backend.modules.autopilot.pov_constants import POV_TEXT_BY_REASON
 from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_SCAN_LIMIT
 from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
@@ -211,6 +213,20 @@ class TestRenderPending:
         naive = (_NOW - limit).replace(tzinfo=None)
         assert render_facts(naive, _NOW) == RenderFacts(pending=True, overdue=True)
 
+    # Scenario: The new Telegram review waits for the render
+    def test_the_wait_starts_when_the_review_is_reached(self) -> None:
+        """A marker from before a long rework is timed from the rework's end."""
+        old_marker = _NOW - timedelta(hours=2)
+        just_arrived = _NOW - timedelta(minutes=1)
+        long_arrived = _NOW - timedelta(seconds=RENDER_PENDING_MAX_SECONDS + 1)
+
+        fresh = render_facts(old_marker, _NOW, just_arrived)
+        assert fresh == RenderFacts(pending=True, overdue=False)
+        stale = render_facts(old_marker, _NOW, long_arrived)
+        assert stale == RenderFacts(pending=True, overdue=True)
+        late_marker = render_facts(just_arrived, _NOW, old_marker)
+        assert late_marker == RenderFacts(pending=True, overdue=False)
+
 
 @pytest.mark.unit
 class TestApprovedOnTheWebsite:
@@ -254,3 +270,38 @@ class TestApprovedOnTheWebsite:
 
         assert world.runs.run.state is _S.AWAITING_OWNER
         assert len(notices.ready) == 1
+
+    # Scenario: A fix asked after a website approval is not applied silently
+    @pytest.mark.asyncio
+    async def test_a_fix_on_an_approved_carousel_escalates(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        world = _world()
+        world.runs.run = replace(
+            world.runs.run, state=_S.REWORKING, rework_phase="content"
+        )
+        approved = replace(_snapshot(), phase_status="approved")
+
+        async def _read_gate(project_id: str) -> GateSnapshot:
+            del project_id
+            return approved
+
+        monkeypatch.setattr(world.editorial, "read_gate", _read_gate)
+        runner = AutopilotRunner(
+            RunnerDependencies(
+                runs=world.runs,
+                topics=_Topics(),
+                editorial=world.editorial,
+                notices=_Notices(),
+                recovery=_Recovery(runs=world.runs),
+                owner_user_id="owner",
+                inputs=FakeProjectInputs(),
+            )
+        )
+
+        await runner.tick()
+
+        assert world.runs.run.state is _S.ESCALATED
+        assert world.runs.run.state_reason == REASON_REWORK_AFTER_APPROVAL
+        assert world.editorial.resumes == []
+        assert REASON_REWORK_AFTER_APPROVAL in POV_TEXT_BY_REASON

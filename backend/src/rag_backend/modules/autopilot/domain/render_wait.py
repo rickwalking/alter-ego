@@ -22,14 +22,25 @@ class RenderFacts:
     overdue: bool
 
 
-def render_facts(marked_at: datetime | None, now: datetime) -> RenderFacts:
-    """The facts for a marker stamped at ``marked_at`` (None: no render owed)."""
+def render_facts(
+    marked_at: datetime | None, now: datetime, waiting_since: datetime | None = None
+) -> RenderFacts:
+    """The facts for a marker stamped at ``marked_at`` (None: no render owed).
+
+    The wait is timed from the later of the marker and ``waiting_since`` (the
+    last heartbeat of a run, i.e. when the workflow came to rest at the final
+    review): a marker stamped before a long rework, while the republish sweep
+    could not render, does not escalate the moment the review is reached.
+    """
     if marked_at is None:
         return RenderFacts(pending=False, overdue=False)
-    if marked_at.tzinfo is None:
-        marked_at = marked_at.replace(tzinfo=UTC)
+    start = max(_aware(marked_at), _aware(waiting_since or marked_at))
     limit = timedelta(seconds=RENDER_PENDING_MAX_SECONDS)
-    return RenderFacts(pending=True, overdue=now - marked_at >= limit)
+    return RenderFacts(pending=True, overdue=now - start >= limit)
+
+
+def _aware(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
 __all__ = ["RenderFacts", "render_facts"]

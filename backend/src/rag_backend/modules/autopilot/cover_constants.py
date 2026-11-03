@@ -116,6 +116,12 @@ TEXT_COVER_REVIEW_UNSAFE = (
     "renderizados de novo; confira o slide 1 no dashboard."
 )
 REASON_RENDER_STUCK = "render_stuck"
+REASON_REWORK_AFTER_APPROVAL = "rework_after_approval"
+TEXT_REWORK_AFTER_APPROVAL = (
+    "✏️ O carrossel já foi aprovado no site, então a correção pedida não foi "
+    "aplicada e nada será publicado sem você. Abra o carrossel no dashboard "
+    "para revisar de novo."
+)
 TEXT_RENDER_STUCK = (
     "🖼️ Os slides não foram renderizados de novo depois da última mudança. "
     "A revisão fica bloqueada até a renderização dar certo; confira o "
@@ -220,6 +226,7 @@ __all__ = [
     "REASON_COVER_SWITCH",
     "REASON_RENDER_STUCK",
     "REASON_REVIEW_OUTDATED",
+    "REASON_REWORK_AFTER_APPROVAL",
     "REOPEN_RECOVERY_GRACE_SECONDS",
     "SKIP_COVER_NO_CONSENT",
     "SKIP_COVER_NO_PHOTOS",
@@ -236,6 +243,7 @@ __all__ = [
     "TEXT_REVIEW_ON_WEBSITE",
     "TEXT_REVIEW_REPLACED",
     "TEXT_REVIEW_RESENDING",
+    "TEXT_REWORK_AFTER_APPROVAL",
     "UPLOAD_READ_SLACK_BYTES",
     "UPLOAD_STATUS_BY_CODE",
 ]

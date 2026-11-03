@@ -202,7 +202,9 @@ class InProcessEditorialDriver:
         )
         state[FIELD_PHASE_STATUS] = gate.phase_status
         render = render_facts(
-            await self._acl.render_pending_since(project_id), self._config.clock.now()
+            await self._acl.render_pending_since(project_id),
+            self._config.clock.now(),
+            beat.heartbeat_at if beat is not None else None,
         )
         return assemble_snapshot(
             SnapshotParts(

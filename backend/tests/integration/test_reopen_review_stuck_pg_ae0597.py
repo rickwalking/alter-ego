@@ -145,3 +145,38 @@ async def test_a_run_never_approved_again_expires_at_its_time(
             REASON_SCHEDULE_WITHDRAWN,
         )
         assert (await row(built, project_id)).is_public is False
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_a_queued_change_is_never_published_by_the_due_tick(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Approved on the website, then a fix tapped on Telegram: the kept time
+    comes while the fix is queued, and nothing is published until it settles."""
+    # Scenario: A fix asked after a website approval is not applied silently
+    async with isolated_schema(sweep_tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id = await _switched(built, dirs)
+        await _approve_on_the_website(built, project_id)
+        await _queue_rework(built, project_id, "content")
+        await _time_comes(built, project_id)
+
+        assert await sweep(built) == 0
+
+        assert (await run_row(built, project_id)).state == _S.REWORKING.value
+        assert (await row(built, project_id)).is_public is False
+
+        await _queue_rework(built, project_id, None)
+        assert await sweep(built) == 1
+        assert (await run_row(built, project_id)).state == _S.PUBLISHING.value
+
+
+async def _queue_rework(built: Harness, project_id: str, phase: str | None) -> None:
+    async with built.sessions()() as session:
+        await session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.carousel_project_id == project_id)
+            .values(rework_phase=phase)
+        )
+        await session.commit()

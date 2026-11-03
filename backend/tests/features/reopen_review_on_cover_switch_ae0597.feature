@@ -86,3 +86,9 @@ Feature: A cover switch reopens the final review of an approved carousel (AE-059
     When the worker steps it, or its kept time comes first
     Then the review is sent to the owner, or the due tick publishes it at its time
     And a kept time that passed while the carousel is not approved expires the run
+
+  Scenario: A fix asked after a website approval is not applied silently
+    Given a run with a queued fix or revise whose carousel was approved on the website
+    When the worker or the due tick reaches it
+    Then the due tick never publishes it while the change is queued
+    And the worker escalates the run, telling the owner the fix was not applied

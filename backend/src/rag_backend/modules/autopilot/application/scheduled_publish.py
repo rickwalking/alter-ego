@@ -103,6 +103,10 @@ class ScheduledPublishSweep:
         return moved
 
     async def _fire(self, run: AutopilotRun) -> int:
+        """A run with a queued rework (the owner asked for a change) waits for
+        it to settle; it then publishes or expires at the next tick."""
+        if run.rework_phase is not None:
+            return 0
         snapshot = await self._snapshot(run)
         if not _still_approved(snapshot):
             return int(await self._move(run, _S.EXPIRED, REASON_SCHEDULE_WITHDRAWN))

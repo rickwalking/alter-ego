@@ -256,6 +256,23 @@ assert the reopen, or the fallback when no checkpoint reopen is wired).
   instead of quietly expiring at its time. A send-back to an earlier phase is
   not matched (the carousel is no longer at the final review).
 
+### 2026-11-02 (review round 3)
+
+- The due tick never publishes a run with a queued rework (`rework_phase`
+  set): an owner who approved on the website and then tapped Corrigir /
+  "Fix issues" / "Usar capa do Grok" gets the change first; the run publishes
+  or expires at the next tick once the rework settled.
+- The `render_stuck` clock starts at the later of the marker and the run's
+  last heartbeat (when the workflow came to rest at the final review), so a
+  marker from before a long rework does not escalate on arrival.
+- A fix or revise queued on a carousel approved meanwhile (a website approve
+  after the tap) is no longer dropped silently. Decision: tell the owner
+  instead of keeping it (kept, it could never run on an approved carousel and
+  would wait forever): the run is escalated (`rework_after_approval`, "O
+  carrossel já foi aprovado no site, então a correção pedida não foi
+  aplicada..."), and an escalated run is never published by the due tick. The
+  GrokBot cover and the website hold keep their own paths.
+
 ## Test Evidence
 
 See `.agent/reports/AE-0597.dev-summary.md` (AC to test mapping, gate

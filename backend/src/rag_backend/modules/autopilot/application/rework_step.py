@@ -39,6 +39,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     REASON_COVER_RENDER_FAILED,
     REASON_COVER_REQUIRES_REVIEW,
     REASON_COVER_REVIEW_INTERRUPTED,
+    REASON_REWORK_AFTER_APPROVAL,
 )
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
@@ -102,6 +103,9 @@ class ReworkStep:
         dropped and the caller drives the run as usual.
 
         "Fix issues" and "Usar capa do Grok" are special reworks, not a revise.
+        A fix or revise queued on a carousel approved meanwhile (on the website)
+        cannot run there: the run is escalated, so the owner is told and the
+        due tick never publishes the content they asked to change.
         """
         if run.rework_phase is None:
             return None
@@ -110,14 +114,23 @@ class ReworkStep:
             await self._end(run, AutopilotRunState.ESCALATED, REASON_PROJECT_MISSING)
             return 1
         snapshot = await self._deps.editorial.read_gate(project_id)
-        if not _at_final_review(snapshot, run.rework_phase):
+        return await self._route(run, snapshot, project_id)
+
+    async def _route(
+        self, run: AutopilotRun, snapshot: GateSnapshot, project_id: str
+    ) -> int | None:
+        rework_phase = run.rework_phase or ""
+        if _approved_meanwhile(snapshot, rework_phase):
+            await self._escalate(run, project_id, REASON_REWORK_AFTER_APPROVAL)
+            return 1
+        if not _at_final_review(snapshot, rework_phase):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
         special = {
             AUTOFIX_REWORK_PHASE: self._autofix,
             COVER_REWORK_PHASE: self._cover,
             COVER_REVIEW_HOLD_PHASE: self._held,
-        }.get(run.rework_phase)
+        }.get(rework_phase)
         if special is not None:
             return await special(run, snapshot, project_id)
         return await self._apply(run, snapshot, project_id)
@@ -245,6 +258,19 @@ _BACK_TO_OWNER: dict[CoverSwitchStatus, str] = {
     CoverSwitchStatus.REQUIRES_REVIEW: REASON_COVER_REQUIRES_REVIEW,
 }
 """Cover switch outcomes that leave slide 1 as it was and reopen the review."""
+
+
+def _approved_meanwhile(snapshot: GateSnapshot, rework_phase: str) -> bool:
+    """A fix or revise (not the GrokBot cover, not a website hold) at a final
+    review that is already approved."""
+    return (
+        snapshot.phase == GATE_FINAL_REVIEW
+        and snapshot.phase_status == PHASE_STATUS_APPROVED
+        and rework_phase not in _APPROVED_REWORKS
+    )
+
+
+_APPROVED_REWORKS = frozenset({COVER_REWORK_PHASE, COVER_REVIEW_HOLD_PHASE})
 
 
 def _at_final_review(snapshot: GateSnapshot, rework_phase: str) -> bool:
