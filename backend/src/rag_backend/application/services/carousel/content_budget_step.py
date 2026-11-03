@@ -1,8 +1,8 @@
 """How the content ensure runs the shorten step before the review build.
 
 ``llm_budget_fitter`` builds the fast-model fitter from the orchestrator's chat
-model and its Langfuse tracing (the orchestrator names the trace
-``copy budget fit``). ``run_budget_step`` shortens the drafts' over-budget
+model, the role's fallback model and its Langfuse tracing (the orchestrator
+names the trace ``copy budget fit``). ``run_budget_step`` shortens the drafts' over-budget
 fields, writes the result into the ensure's updates (the drafts, and the EN
 translations when the state has them) and re-scores the persona voice of the
 slides that changed.
@@ -31,6 +31,7 @@ from rag_backend.application.services.carousel.copy_budget_fit_drafts import (
     fit_drafts_to_budgets,
 )
 from rag_backend.application.services.carousel.copy_budget_fit_llm import (
+    ChatRunnable,
     CopyBudgetFitter,
     LlmCopyBudgetConfig,
     LlmCopyBudgetFitter,
@@ -61,12 +62,20 @@ VoiceScorer = Callable[[list[object], object], Awaitable[dict[str, object]]]
 
 
 def llm_budget_fitter(
-    llm: BaseChatModel, tracing: Callable[[], RunnableConfig] | None
+    llm: BaseChatModel,
+    tracing: Callable[[], RunnableConfig] | None,
+    fallback: ChatRunnable | None = None,
 ) -> CopyBudgetFitter | None:
-    """The fast-model fitter, on when tracing is configured."""
+    """The fast-model fitter, on when tracing is configured.
+
+    ``fallback`` is the fast role's fallback model: it answers when the primary
+    misses its window, inside the same attempt deadline.
+    """
     if tracing is None:
         return None
-    return LlmCopyBudgetFitter(LlmCopyBudgetConfig(llm=llm, runnable_config=tracing))
+    return LlmCopyBudgetFitter(
+        LlmCopyBudgetConfig(llm=llm, runnable_config=tracing, fallback=fallback)
+    )
 
 
 @dataclass(frozen=True)

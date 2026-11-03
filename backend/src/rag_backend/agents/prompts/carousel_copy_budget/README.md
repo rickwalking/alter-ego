@@ -19,3 +19,9 @@ slide's role asks for, and the emphasis markup cost per locale is stated. See
 `v2/README.md`. `fit_fields.yaml` stays at v1.
 
 Change a template by adding a new version folder; never edit one in place.
+
+## v3
+
+`fit_fields.yaml` only (AE-0607): same template, `max_tokens` 32000 instead of
+4096, so a reasoning fast model does not spend its whole budget before the
+answer. See `v3/README.md`. `slide_limits.yaml` stays at v2.

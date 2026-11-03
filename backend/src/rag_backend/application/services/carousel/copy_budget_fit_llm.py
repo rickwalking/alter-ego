@@ -4,17 +4,29 @@ One call per attempt carries every field still over its limit (id, slide,
 locale, path, current text, problems, slide heading, limit, PT source for EN
 fields) and the author's style guide. The answer is the gate repair's
 ``{"fixes": [{"id", "text"}]}`` shape, parsed by the same parser. The chat
-model and its Langfuse runnable config are injected by the orchestrator, so
-this module adds no application -> infrastructure import.
+model, the role's fallback model and the Langfuse runnable config are injected
+by the orchestrator, so this module adds no application -> infrastructure
+import.
+
+Deadline order: the step bounds one attempt at ``COPY_BUDGET_FIT_TIMEOUT_SECONDS``
+while the fast role waits up to 300 s per call (several tries) before its own
+queue reaches the fallback, so a slow primary was cancelled before the fallback
+ever ran. With a fallback configured, the primary gets
+``COPY_BUDGET_FIT_PRIMARY_SECONDS``; a primary that times out or answers
+unparseable JSON hands the same prompt to the fallback, which runs in what is
+left of the attempt. Any other failure already went through the role's whole
+queue and is raised as it is.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
+import structlog
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
@@ -39,10 +51,18 @@ from rag_backend.domain.constants.content_gate_repair import (
 )
 from rag_backend.domain.constants.copy_budget_fit import (
     BINDABLE_MODEL_KEYS,
+    COPY_BUDGET_FIT_PRIMARY_SECONDS,
     COPY_BUDGET_VAR_FIELDS_JSON,
     COPY_BUDGET_VAR_STYLE_GUIDE,
     LIMIT_KEY_FIELD,
+    LOG_COPY_BUDGET_FIT_FALLBACK_USED,
 )
+
+logger = structlog.get_logger(__name__)
+
+ChatRunnable = Runnable[LanguageModelInput, BaseMessage]
+
+_FALLBACK_ON: tuple[type[Exception], ...] = (TimeoutError, ValueError, TypeError)
 
 
 @dataclass(frozen=True)
@@ -75,10 +95,16 @@ def _empty_config() -> RunnableConfig:
 
 @dataclass(frozen=True)
 class LlmCopyBudgetConfig:
-    """The fast chat model plus the orchestrator-provided tracing config."""
+    """The fast chat model, its fallback and the orchestrator-provided tracing.
+
+    ``primary_seconds`` is the primary's window when ``fallback`` is set; without
+    a fallback the primary keeps the whole attempt.
+    """
 
     llm: BaseChatModel
     runnable_config: Callable[[], RunnableConfig] = field(default=_empty_config)
+    fallback: ChatRunnable | None = None
+    primary_seconds: float = COPY_BUDGET_FIT_PRIMARY_SECONDS
 
 
 def _field_json(item: FitTarget) -> dict[str, object]:
@@ -126,24 +152,44 @@ class LlmCopyBudgetFitter:
         self._config = config
 
     async def fit(self, request: FitRequest) -> dict[str, str]:
-        """Render the prompt, bind its model config, call the model once, parse.
+        """Render the prompt and ask the primary, then the fallback if it fails.
 
         The YAML's ``temperature`` and ``max_tokens`` are bound per call, as the
-        content drafter does, so the prompt file controls the sampling.
+        content drafter does, so the prompt file controls the sampling. Both
+        calls carry the same Langfuse runnable config.
         """
         prompt, model_cfg = render_fit_prompt(request)
-        bind = model_bind_kwargs(model_cfg)
-        llm = self._config.llm
-        runnable: Runnable[LanguageModelInput, BaseMessage] = (
-            llm.bind(**bind) if bind else llm
-        )
+        call = _Call(prompt, model_bind_kwargs(model_cfg))
+        fallback = self._config.fallback
+        if fallback is None:
+            return await self._ask(self._config.llm, call)
+        try:
+            return await asyncio.wait_for(
+                self._ask(self._config.llm, call), self._config.primary_seconds
+            )
+        except _FALLBACK_ON as exc:
+            logger.warning(LOG_COPY_BUDGET_FIT_FALLBACK_USED, reason=type(exc).__name__)
+        return await self._ask(fallback, call)
+
+    async def _ask(self, model: ChatRunnable, call: _Call) -> dict[str, str]:
+        """One call on ``model`` with the prompt's sampling bound, parsed."""
+        runnable = model.bind(**call.bind) if call.bind else model
         response = await runnable.ainvoke(
-            [HumanMessage(content=prompt)], self._config.runnable_config()
+            [HumanMessage(content=call.prompt)], self._config.runnable_config()
         )
         return parse_fixes(str(response.content))
 
 
+@dataclass(frozen=True)
+class _Call:
+    """The rendered prompt and the sampling kwargs bound on every model."""
+
+    prompt: str
+    bind: dict[str, object]
+
+
 __all__ = [
+    "ChatRunnable",
     "CopyBudgetFitter",
     "FitRequest",
     "FitTarget",

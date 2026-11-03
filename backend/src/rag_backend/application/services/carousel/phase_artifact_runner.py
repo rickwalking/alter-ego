@@ -44,6 +44,7 @@ from rag_backend.application.services.carousel.content_gate_repair_flow import (
     visible_copy_changed,
 )
 from rag_backend.application.services.carousel.copy_budget_fit_llm import (
+    ChatRunnable,
     CopyBudgetFitter,
 )
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
@@ -135,7 +136,9 @@ class PhaseArtifactRunnerConfig:
     with neither it is off. ``rubric_judge`` scores the drafts against the
     carousel's quality rubric (no judge: no scores). ``budget_fitter`` shortens the
     fields over their copy budget right before the content review is built; when
-    unset, ``budget_fit_tracing`` turns on the fast-model fitter built from ``llm``.
+    unset, ``budget_fit_tracing`` turns on the fast-model fitter built from ``llm``
+    and ``budget_fit_fallback`` (the fast role's fallback model, which answers when
+    the primary misses its window inside the fit's deadline).
     """
 
     outline_agent: OutlineAgent
@@ -152,6 +155,7 @@ class PhaseArtifactRunnerConfig:
     rubric_judge: RubricJudge | None = None
     budget_fitter: CopyBudgetFitter | None = None
     budget_fit_tracing: Callable[[], RunnableConfig] | None = None
+    budget_fit_fallback: ChatRunnable | None = None
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
@@ -245,7 +249,7 @@ class PhaseArtifactRunner:
         self._rubric = CarouselRubricStep(db=config.db, judge=config.rubric_judge)
         self._budget_fit_tracing = config.budget_fit_tracing
         self._budget_fitter = config.budget_fitter or llm_budget_fitter(
-            config.llm, config.budget_fit_tracing
+            config.llm, config.budget_fit_tracing, config.budget_fit_fallback
         )
 
     def with_context(
