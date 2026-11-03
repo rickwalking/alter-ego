@@ -20,8 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel import resume_persona
 from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
+    FailedResume,
     MarkFailedParams,
     RevertContext,
+    record_resume_failure,
 )
 from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
     mark_background_resume_failed as _mark_failed_with_factory,
@@ -48,6 +50,9 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     ResumeWorkflowInput,
     publish_workflow_sse_updates,
     resolve_background_resume_sse_error_message,
+)
+from rag_backend.application.services.carousel.workflow_failure_cause import (
+    failure_cause,
 )
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
@@ -93,6 +98,7 @@ _TASK_NAME_PREFIX = "workflow-resume-"
 _ERROR_RESUME_STUCK = "background_resume_stuck"
 _ERROR_RESUME_VALIDATION = "resume_validation_failed"
 _ERROR_STALE_EPOCH = "stale_run_epoch"
+_CAUSE_CANCELLED = "CancelledError: background_resume_cancelled"
 
 
 @dataclass(frozen=True)
@@ -288,16 +294,12 @@ async def _run_background_resume(
                     project_id=params.project_id,
                     message=detail,
                     recoverable=detail != ERR_REVISION_CAP_EXCEEDED,
+                    cause=failure_cause(exc),
                 ),
             )
-            await record_workflow_outcome(
-                WorkflowOutcomeObservation(
-                    project_id=params.project_id,
-                    phase=prior_phase,
-                    outcome=OUTCOME_FAILED,
-                    error_code=_ERROR_RESUME_VALIDATION,
-                    error_type=type(exc).__name__,
-                )
+            await record_resume_failure(
+                FailedResume(params.project_id, prior_phase, _ERROR_RESUME_VALIDATION),
+                exc,
             )
         except asyncio.CancelledError:
             await db.rollback()
@@ -312,6 +314,7 @@ async def _run_background_resume(
                         project_id=params.project_id,
                         message=ERR_BACKGROUND_RESUME_FAILED,
                         recoverable=True,
+                        cause=_CAUSE_CANCELLED,
                     ),
                 )
             except StaleRunEpochError:
@@ -331,16 +334,14 @@ async def _run_background_resume(
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
+                    cause=failure_cause(exc),
                 ),
             )
-            await record_workflow_outcome(
-                WorkflowOutcomeObservation(
-                    project_id=params.project_id,
-                    phase=prior_phase,
-                    outcome=OUTCOME_FAILED,
-                    error_code=ERR_BACKGROUND_RESUME_FAILED,
-                    error_type=type(exc).__name__,
-                )
+            await record_resume_failure(
+                FailedResume(
+                    params.project_id, prior_phase, ERR_BACKGROUND_RESUME_FAILED
+                ),
+                exc,
             )
 
 

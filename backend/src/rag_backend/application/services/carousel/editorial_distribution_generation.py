@@ -8,12 +8,14 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
+from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.application.services.carousel.copy_budget_limits import (
     LimitScope,
     limits_payload,
     role_at,
 )
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
+    AGENT_EN_TRANSLATION,
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
     JSON_SLIDE_NUMBER_ALIAS_KEY,
@@ -202,15 +204,32 @@ async def _generate_en_translations(
             RUBRIC_AUDIENCE_TRANSLATION,
         ),
     )
-    response = await llm.ainvoke(
-        [HumanMessage(content=prompt)],
-        get_langfuse_runnable_config(),
+    policy = JsonRetryPolicy(
+        parse=_parse_translation_answer,
+        agent=AGENT_EN_TRANSLATION,
+        model_id=AGENT_EN_TRANSLATION,
     )
     try:
-        data = cast(dict[str, object], extract_json(str(response.content)))
+        translations, _raw = await ainvoke_json(llm, prompt, policy)
+    except TypeError as exc:
+        raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
+    return _with_pt_structure(translations, slide_drafts)
+
+
+def _parse_translation_answer(raw: str) -> dict[int, dict[str, object]]:
+    """Parse one translation answer; a malformed one raises for the retry policy.
+
+    Unparsable JSON is a ``ValueError`` and a wrong shape a ``TypeError``, both
+    ``en_translation_parse_failed``, so the shared JSON retry policy re-rolls,
+    repairs and then re-issues the call on the fallback model first.
+    """
+    try:
+        data = extract_json(raw)
     except (json.JSONDecodeError, TypeError) as exc:
         raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
-    return _with_pt_structure(_parse_translation_response(data), slide_drafts)
+    if not isinstance(data, dict):
+        raise TypeError(ERR_EN_TRANSLATION_PARSE_FAILED)
+    return _parse_translation_response(cast(dict[str, object], data))
 
 
 __all__ = [
