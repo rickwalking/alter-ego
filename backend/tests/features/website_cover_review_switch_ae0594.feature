@@ -4,11 +4,12 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
   first approval becomes slide 1. The slides are rendered again and the
   carousel stays in final review, so the owner approves the new render
   before anything goes out. Nothing is published, the approval and the
-  release are never touched. An approved (scheduled ones included) or
-  published carousel is never switched: the picker refuses with
-  cover_switch_requires_review (409) and a generated cover stays a picker
-  option, until the review can be reopened. Telegram approve, publish and
-  schedule act only for the revision of the tapped review or reminder.
+  release are never touched. A published carousel is never switched: the
+  picker refuses with cover_switch_requires_review (409) and a generated
+  cover stays a picker option. An approved one (scheduled ones included) has
+  its review reopened instead, see reopen_review_on_cover_switch_ae0597.feature.
+  Telegram approve, publish and schedule act only for the revision of the
+  tapped review or reminder.
 
   Scenario: A website cover switches a completed carousel in final review
     Given a completed carousel waiting in final review for its first approval
@@ -83,8 +84,8 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     When both commit
     Then both records are in the ledger
 
-  Scenario: A Telegram GrokBot cover tap on an approved carousel is refused clearly
-    Given the cover switch refuses because the carousel is approved or published
+  Scenario: A Telegram GrokBot cover tap on a published carousel is refused clearly
+    Given the cover switch refuses because the carousel is published
     When the worker applies the owner's GrokBot cover choice
     Then the review reopens with the reason cover_requires_review
 
@@ -130,35 +131,19 @@ Feature: A website cover switches a completed carousel in final review (AE-0594)
     When the same success is processed again
     Then the outcome is already_selected and nothing is written or rendered
 
-  Scenario: The picker refuses an approved carousel
-    Given a completed carousel approved for publishing
-    When the owner picks another cover
-    Then the pick is refused with cover_switch_requires_review and nothing is rendered
-
-  Scenario: The picker refuses a scheduled carousel
-    Given an autopilot carousel scheduled for publishing
-    When the owner picks another cover
-    Then the pick is refused with cover_switch_requires_review and nothing is rendered
-
   Scenario: The picker refuses a published carousel
     Given a released carousel
     When the owner picks another cover
     Then the pick is refused with cover_switch_requires_review and nothing is rendered
 
-  Scenario: An approval that lands while the picker switches is refused
+  Scenario: An approval that lands while the picker switches is dropped with the write
     Given the picker read the carousel waiting in final review
     When an approval lands before the locked write
-    Then the switch is refused with cover_switch_requires_review and nothing is written
+    Then the locked write drops that approval with the new slide 1 in one commit
 
-  Scenario: The picker explains that an approved carousel needs a new review
+  Scenario: The picker explains that a published carousel cannot change
     Given the picker's switch was refused with cover_switch_requires_review
-    Then the publish page says the cover can only change after a new review
-
-  Scenario: A website cover on an approved or scheduled carousel stays a picker option
-    Given a completed carousel approved for publishing
-    When the owner's website cover generation succeeds
-    Then slide 1 is unchanged, the skip reason is carousel_approved
-    And the generated cover is a picker option
+    Then the publish page says a published carousel's cover cannot change
 
   Scenario: A website cover on a published carousel stays a picker option
     Given a released carousel

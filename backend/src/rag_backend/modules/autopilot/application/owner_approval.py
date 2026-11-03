@@ -47,7 +47,8 @@ class FinalReviewApproval:
     async def current_revision(self, run: AutopilotRun) -> int | None:
         """The revision an approve must answer now; None when no approve is needed.
 
-        An already approved carousel needs no approve (its slide 1 cannot change).
+        An already approved carousel needs no approve: a slide-1 change drops
+        the approval in the same commit, so its slide 1 is the approved one.
         """
         project_id = run.carousel_project_id or ""
         if await self._already_approved(project_id):

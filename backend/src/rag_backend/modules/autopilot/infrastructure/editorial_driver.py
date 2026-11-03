@@ -71,6 +71,7 @@ from rag_backend.modules.autopilot.domain.parked import (
     reconcile_gate_status,
 )
 from rag_backend.modules.autopilot.domain.ports import Clock
+from rag_backend.modules.autopilot.domain.render_wait import render_facts
 from rag_backend.modules.autopilot.domain.snapshot import assemble_snapshot
 from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
 from rag_backend.modules.autopilot.infrastructure.pov_project import (
@@ -200,6 +201,11 @@ class InProcessEditorialDriver:
             )
         )
         state[FIELD_PHASE_STATUS] = gate.phase_status
+        render = render_facts(
+            await self._acl.render_pending_since(project_id),
+            self._config.clock.now(),
+            beat.heartbeat_at if beat is not None else None,
+        )
         return assemble_snapshot(
             SnapshotParts(
                 state=state,
@@ -213,6 +219,8 @@ class InProcessEditorialDriver:
                 hero_images_total=await self._acl.hero_image_total(project_id),
                 pov=await self._acl.is_pov(project_id),
                 quote_violations=await quote_violations(self._acl, project_id, state),
+                render_pending=render.pending,
+                render_overdue=render.overdue,
             )
         )
 

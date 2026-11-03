@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from langgraph.graph import END, StateGraph
 
+from rag_backend.agents.carousel_review_reopen import reopens_final_review
 from rag_backend.agents.carousel_workflow_nodes import (
     approved_hold_phase,
     brief_phase,
@@ -130,13 +131,17 @@ def route_after_hold(state: CarouselWorkflowState) -> str:
     ``awaiting_human`` plus a valid ``send_back_target_phase`` → return to that
     phase to regenerate it. Any other resume (an explicit approve/finalize) →
     END. The ``awaiting_human`` guard ignores a stale ``send_back_target_phase``
-    from a prior cycle, so a finalize resume cannot re-trigger a send-back.
+    from a prior cycle, so a finalize resume cannot re-trigger a send-back. A
+    ``reopen_review`` resume (slide 1 changed after the approval) returns to the
+    final review itself.
 
     In normal operation nothing resumes a held carousel with ``approve`` —
     publishing is a separate endpoint that never touches the graph — so a held
     carousel stays parked here and re-drivable; the END path is only the explicit
     finalize.
     """
+    if reopens_final_review(state):
+        return PHASE_FINAL_REVIEW
     if state.get("phase_status") == PHASE_STATUS_AWAITING_HUMAN:
         target = state.get(SEND_BACK_TARGET_PHASE_KEY)
         if isinstance(target, str) and target in FINAL_REVIEW_SEND_BACK_PHASES:
@@ -222,6 +227,7 @@ def build_carousel_workflow_graph() -> StateGraph:
         route_after_hold,
         {
             _ROUTE_DONE: END,
+            PHASE_FINAL_REVIEW: PHASE_FINAL_REVIEW,
             PHASE_RESEARCH: PHASE_RESEARCH,
             PHASE_OUTLINE: PHASE_OUTLINE,
             PHASE_CONTENT: PHASE_CONTENT,

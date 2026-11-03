@@ -14,6 +14,8 @@ containers are created only when the run is due. Kept beside
 - Owner-typed times are ``HH:MM`` or ``DD/MM HH:MM``.
 - The ``expired`` notice text is chosen by state reason; other reasons keep the 72 h
   text.
+- A reopened review keeps its run's time: approving it schedules the run again
+  then ("horário mantido"); a time that passed expires it.
 """
 
 from __future__ import annotations
@@ -92,6 +94,8 @@ BUTTON_BACK_TO_DAYS = "← Dias"
 ANSWER_CHOOSE = "Publicar agora ou agendar?"
 ANSWER_SCHEDULED = "Agendado"
 ANSWER_UNSCHEDULED = "Agendamento cancelado"
+ANSWER_SCHEDULE_WITHDRAWN = "Agendamento expirado"
+TEXT_KEPT_SLOT_REASON = "horário mantido"
 TEXT_PUBLISH_CHOICE = "Aprovado. Publicar agora ou agendar?"
 TEXT_SCHEDULED = "\U0001f5d3 Agendado para {when}"
 TEXT_SCHEDULED_REASON = "\U0001f5d3 Agendado para {when} ({reason})"

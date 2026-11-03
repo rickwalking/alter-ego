@@ -89,6 +89,7 @@ from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
 )
 from rag_backend.modules.autopilot.infrastructure.schedule_store import (
+    EditorialCarouselRowLock,
     SqlScheduledRuns,
 )
 from rag_backend.modules.autopilot.webhook_constants import KIND_CALLBACK
@@ -276,6 +277,7 @@ def _sweep(world: _World, clock: _Clock) -> ScheduledPublishSweep:
             notifier=_Notifier(),
             checkpoint=repo,
             clock=clock,
+            lock=EditorialCarouselRowLock(session),
         )
     )
 

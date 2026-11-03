@@ -15,14 +15,13 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
 from rag_backend.agents.carousel_content_park import manual_fixes_park_updates
+from rag_backend.agents.carousel_review_updates import review_updates_from_response
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
-    CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
     CAROUSEL_WORKFLOW_PHASES,
     DESIGN_SEND_BACK_PHASES,
-    EDITED_SLIDES_ALLOWED_PHASES,
     INTERRUPT_TYPE_CONTENT_REVIEW,
     INTERRUPT_TYPE_DESIGN_REVIEW,
     INTERRUPT_TYPE_FINAL_REVIEW,
@@ -39,13 +38,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
-    REVIEW_ACTION_APPROVE,
-    REVIEW_ACTION_REJECT,
-    REVIEW_ACTION_REVISE,
     SEND_BACK_TARGET_PHASE_KEY,
-    STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
-    STRUCTURED_FEEDBACK_KEY,
-    STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
     WORKFLOW_ERROR_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
@@ -69,9 +62,6 @@ from rag_backend.infrastructure.monitoring_langfuse import phase_trace
 from rag_backend.modules.generation_queue.events_public import (
     record_phase_artifacts,
     set_generation_event_project,
-)
-from rag_backend.modules.presentation import (
-    apply_localized_slide_edits_via_port,
 )
 
 if TYPE_CHECKING:
@@ -116,65 +106,6 @@ def artifact_runner_from_config(
     if runner is None:
         return None
     return cast("PhaseArtifactRunner", runner)
-
-
-def _edited_slide_updates(
-    review: dict[str, object],
-    state: CarouselWorkflowState | None,
-    phase: str | None,
-) -> dict[str, object]:
-    """Apply reviewer slide edits to workflow state updates.
-
-    Uniform semantics at every allowed phase (content, design, final_review):
-    apply the edits to ``localized_slides``, re-run presentation validation,
-    and store the fresh report.
-    """
-    if phase not in EDITED_SLIDES_ALLOWED_PHASES or state is None:
-        return {}
-    structured = review.get(STRUCTURED_FEEDBACK_KEY)
-    if not isinstance(structured, dict):
-        return {}
-    edited = structured.get(STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY)
-    if not isinstance(edited, list) or not edited:
-        return {}
-    edited_dicts = [slide for slide in edited if isinstance(slide, dict)]
-    return apply_localized_slide_edits_via_port(state, edited_dicts)
-
-
-def review_updates_from_response(
-    review: dict[str, object],
-    *,
-    state: CarouselWorkflowState | None = None,
-    phase: str | None = None,
-) -> dict[str, object]:
-    """Map a review response onto graph-state updates.
-
-    Any revise or reject drops the publish approval in the graph state; otherwise
-    get_state copies a stale approved_for_publish back to the DB on the resume sync and
-    reopens a stale-publish window for the whole revision. This also covers a revise
-    without a target from a held carousel, since a stale send-back target could still
-    route it to an earlier phase. The later final_review re-approval restores
-    approved_for_publish.
-    """
-    action = review.get("action")
-    edit_updates = _edited_slide_updates(review, state, phase)
-    if action == REVIEW_ACTION_APPROVE:
-        return {**edit_updates, "phase_status": PHASE_STATUS_APPROVED}
-    if action not in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}:
-        return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
-    updates: dict[str, object] = {
-        **edit_updates,
-        "phase_status": PHASE_STATUS_AWAITING_HUMAN,
-        "workflow_status": CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
-        "quality_passed": False,
-    }
-    structured = review.get(STRUCTURED_FEEDBACK_KEY)
-    if isinstance(structured, dict):
-        target = structured.get(STRUCTURED_FEEDBACK_TARGET_PHASE_KEY)
-        if isinstance(target, str) and target in CAROUSEL_WORKFLOW_PHASES:
-            updates[SEND_BACK_TARGET_PHASE_KEY] = target
-            updates["current_phase"] = target
-    return updates
 
 
 def await_human_review(

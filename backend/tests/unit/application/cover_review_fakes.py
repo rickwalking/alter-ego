@@ -89,6 +89,7 @@ class Hold:
     held: list[str] = field(default_factory=list)
     released: list[tuple[UUID, bool]] = field(default_factory=list)
     escalated: list[tuple[UUID, int | None]] = field(default_factory=list)
+    reopened_ids: list[str] = field(default_factory=list)
 
     async def hold(self, project_id: str) -> UUID | None:
         self.held.append(project_id)
@@ -99,6 +100,9 @@ class Hold:
 
     async def escalate(self, run_id: UUID, version: int | None) -> None:
         self.escalated.append((run_id, version))
+
+    async def reopened(self, project_id: str) -> None:
+        self.reopened_ids.append(project_id)
 
 
 class NoReviewHold:
@@ -116,6 +120,10 @@ class NoReviewHold:
     @staticmethod
     async def escalate(run_id: UUID, version: int | None) -> None:
         del run_id, version
+
+    @staticmethod
+    async def reopened(project_id: str) -> None:
+        del project_id
 
 
 async def no_sleep(seconds: float) -> None:

@@ -31,12 +31,15 @@ class CoverPickRequest(BaseModel):
 
 
 class CoverPickResponse(BaseModel):
-    """The switch was stored and the slides + PDFs re-rendered."""
+    """The switch was stored and the slides + PDFs re-rendered;
+    ``review_reopened`` when it dropped the carousel's approval (the owner
+    approves the new render again)."""
 
     project_id: str
     status: str
     current_asset_id: UUID | None
     artifact_version: str | None = None
+    review_reopened: bool = False
 
 
 __all__ = [

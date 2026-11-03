@@ -45,6 +45,7 @@ from rag_backend.modules.editorial.infrastructure import (
 )
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
+    CheckpointReopener,
     CoverReviewTarget,
     CoverRunWiring,
     cover_generation_service,
@@ -288,10 +289,18 @@ async def _start(
     return project, run
 
 
-async def website_task(built: Harness, project_id: str, photo: str) -> Task:
-    """The owner's "Gerar capa com Grok" run, composed as the route does."""
+async def website_task(
+    built: Harness,
+    project_id: str,
+    photo: str,
+    checkpoint: CheckpointReopener | None = None,
+) -> Task:
+    """The owner's "Gerar capa com Grok" run, composed as the route does; with
+    ``checkpoint`` an approved carousel's review is reopened."""
     project, run = await _start(built, project_id, photo)
-    target = CoverReviewTarget(project=project, hold=cover_review_hold())
+    target = CoverReviewTarget(
+        project=project, hold=cover_review_hold(), checkpoint=checkpoint
+    )
     return reviewing_cover_task(_wiring(built), run, target)
 
 

@@ -134,6 +134,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     StoredCoverImage,
     cover_image_file,
     delete_cover_images,
+    slide_cover_switch_service,
     store_cover_image,
     switch_slide_cover,
 )
@@ -202,6 +203,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_slide_fix import (
 )
 from rag_backend.modules.editorial.infrastructure.cover_review_state import (
     EditorialReviewState,
+    current_lock_version,
+    lock_carousel_row,
+    review_reopened,
 )
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
@@ -220,6 +224,11 @@ from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
 from rag_backend.modules.editorial.infrastructure.pov_inputs import (
     PovInputsAcl,
     as_uuid,
+)
+from rag_backend.modules.editorial.infrastructure.review_reopen import (
+    ApprovalReopen,
+    CheckpointEngineReopener,
+    CheckpointReopener,
 )
 from rag_backend.modules.editorial.infrastructure.run_trace_scope import (
     open_run_trace_scope,
@@ -266,6 +275,7 @@ __all__ = [
     "AclPublicReleaseAdapter",
     "AclReviewerAssignmentAdapter",
     "ApprovalPort",
+    "ApprovalReopen",
     "ApprovalState",
     "AutoCoverOutcome",
     "AutomationResume",
@@ -281,6 +291,8 @@ __all__ = [
     "CarouselSlide",
     "CarouselStatus",
     "CarouselTheme",
+    "CheckpointEngineReopener",
+    "CheckpointReopener",
     "CoverImageRequest",
     "CoverReviewTarget",
     "CoverRunWiring",
@@ -340,16 +352,19 @@ __all__ = [
     "cover_image_file",
     "cover_pick_service",
     "cover_run_wiring",
+    "current_lock_version",
     "delete_cover_images",
     "inspect_owner_issues",
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
+    "lock_carousel_row",
     "open_run_trace_scope",
     "project_queue_metadata",
     "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",
+    "review_reopened",
     "reviewing_cover_task",
     "run_automation_phase",
     "run_gate_repair",
@@ -357,6 +372,7 @@ __all__ = [
     "run_slide_fix",
     "schedule_autopilot_cover",
     "selecting_cover_task",
+    "slide_cover_switch_service",
     "slides_in_config",
     "store_cover_image",
     "switch_slide_cover",

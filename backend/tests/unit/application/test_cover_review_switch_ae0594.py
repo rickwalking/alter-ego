@@ -34,7 +34,6 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_MANUAL_CHOICE,
 )
 from rag_backend.domain.constants.cover_review_switch import (
-    REASON_AUTO_SELECT_APPROVED,
     REASON_AUTO_SELECT_NOT_IN_REVIEW,
     REASON_AUTO_SELECT_PUBLISHED,
     REASON_AUTO_SELECT_ROLLBACK_FAILED,
@@ -43,7 +42,6 @@ from rag_backend.domain.constants.cover_review_switch import (
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.models.slide_cover import SlideCover
 from tests.unit.application.cover_review_fakes import (
-    APPROVED,
     ASSET,
     BASELINE,
     GENERATION,
@@ -152,13 +150,11 @@ class TestReviewSwitch:
         assert await selector.select(selection) == OUTCOME_AUTO_SELECT_SELECTED
         assert hold.released == []
 
-    # Scenario: A website cover on an approved or scheduled carousel stays a picker option
     # Scenario: A website cover on a published carousel stays a picker option
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("reads", "reason"),
         [
-            (Reads(in_review(), workflow_status=APPROVED), REASON_AUTO_SELECT_APPROVED),
             (Reads(in_review(is_public=True)), REASON_AUTO_SELECT_PUBLISHED),
             (
                 Reads(in_review(current_phase="images")),

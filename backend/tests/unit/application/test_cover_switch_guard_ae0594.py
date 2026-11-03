@@ -1,6 +1,7 @@
 """The guard on slide 1 of approved and published carousels, over fakes.
 
-Gherkin: tests/features/website_cover_review_switch_ae0594.feature
+Gherkin: tests/features/website_cover_review_switch_ae0594.feature and
+tests/features/reopen_review_on_cover_switch_ae0597.feature
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ from rag_backend.application.services.carousel.cover_pick import (
 from rag_backend.application.services.carousel.cover_switch_guard import (
     ReviewState,
     cover_switch_refusal,
+    reopen_refusal,
+    reopens_review,
     review_state_of,
 )
 from rag_backend.domain.constants.cover_review_switch import (
@@ -63,8 +66,8 @@ def _picker(state: ReviewState | None) -> tuple[CoverPickService, _Switcher, _Ph
 
 @pytest.mark.unit
 class TestGuard:
-    # Scenario: The picker refuses an approved carousel
     # Scenario: The picker refuses a published carousel
+    # Scenario: A cover switch reopens the review of an approved carousel
     def test_refusal_reasons(self) -> None:
         draft = ReviewState(workflow_status="draft", is_public=False)
         assert cover_switch_refusal(draft) is None
@@ -76,12 +79,17 @@ class TestGuard:
         assert cover_switch_refusal(approved) == REASON_AUTO_SELECT_APPROVED
         public = review_state_of(in_review(is_public=True), "draft")
         assert cover_switch_refusal(public) == REASON_AUTO_SELECT_PUBLISHED
+        assert reopen_refusal(approved) is None
+        assert reopen_refusal(draft) is None
+        assert reopen_refusal(public) == REASON_AUTO_SELECT_PUBLISHED
+        assert reopens_review(approved)
+        assert not reopens_review(draft)
+        public_approved = ReviewState(workflow_status=APPROVED, is_public=True)
+        assert not reopens_review(public_approved)
 
-    # Scenario: The picker refuses an approved carousel
+    # Scenario: The picker refuses a published carousel
     @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        ("status", "public"), [(APPROVED, False), ("draft", True), (APPROVED, True)]
-    )
+    @pytest.mark.parametrize(("status", "public"), [("draft", True), (APPROVED, True)])
     async def test_picker_refuses_before_switching(
         self, status: str, public: bool
     ) -> None:
@@ -98,10 +106,24 @@ class TestGuard:
         assert refused.value.code == ERR_COVER_SWITCH_REQUIRES_REVIEW
         assert switcher.commands == []
 
-    # Scenario: The picker refuses an approved carousel
+    # Scenario: The picker refuses a published carousel
     @pytest.mark.asyncio
     async def test_an_unknown_state_lets_the_switch_decide(self) -> None:
         service, switcher, photos = _picker(None)
+        a, b = photos
+        project = in_review(owner_id="owner-1", hook_asset_id=a.id)
+
+        await service.pick(
+            CoverPickCommand(project=project, asset_id=b.id, expected_version=7)
+        )
+
+        assert len(switcher.commands) == 1
+
+    # Scenario: A cover switch reopens the review of an approved carousel
+    @pytest.mark.asyncio
+    async def test_an_approved_carousel_goes_to_the_switch(self) -> None:
+        state = ReviewState(workflow_status=APPROVED, is_public=False)
+        service, switcher, photos = _picker(state)
         a, b = photos
         project = in_review(owner_id="owner-1", hook_asset_id=a.id)
 

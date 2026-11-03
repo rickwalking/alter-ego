@@ -22,7 +22,7 @@ from uuid import UUID
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
     ReviewStateSource,
-    cover_switch_refusal,
+    reopen_refusal,
 )
 from rag_backend.application.services.carousel.slide_cover_switch import (
     HookPhotoChoice,
@@ -214,14 +214,15 @@ class CoverPickService:
     async def pick(self, command: CoverPickCommand) -> SlideCoverSwitchResult:
         """Stage, store and re-render; raises ``CoverPickError`` when refused.
 
-        An approved (or scheduled) or published carousel is refused with
-        ``cover_switch_requires_review``: its slide 1 would change unapproved.
-        The switch checks it again under the project lock.
+        A published carousel is refused with ``cover_switch_requires_review``:
+        its public slide 1 would change. An approved (or scheduled) one is
+        switched and its review reopened by the switch, under the project lock,
+        where the release is checked again.
         """
         project = command.project
         _assert_switchable(project)
         state = await self._deps.review.review_state(str(project.id))
-        if state is not None and cover_switch_refusal(state) is not None:
+        if state is not None and reopen_refusal(state) is not None:
             raise CoverPickError(ERR_COVER_SWITCH_REQUIRES_REVIEW)
         found = await self._candidates(project)
         offer = found.offer
