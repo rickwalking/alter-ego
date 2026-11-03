@@ -1,6 +1,6 @@
 # AE-0596 — A stale user write must never restore an old password hash or token version
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bugfix
@@ -202,4 +202,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Delivered. Prod proof: Pedro tested the admin password reset in production on 2026-11-03 and it works.
