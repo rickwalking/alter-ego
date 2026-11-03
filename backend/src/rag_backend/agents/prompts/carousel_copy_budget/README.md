@@ -12,4 +12,10 @@ files: they are rendered from the contract through the validator's resolvers
 | `slide_limits.yaml` | `instruction_context_loader._slide_block` | "Copy limits of this slide": every field of the slide type with its max characters / lines / words, appended to the per-slide block of the drafting instruction (every content prompt family). |
 | `fit_fields.yaml` | `copy_budget_fit_llm.LlmCopyBudgetFitter` | The shorten step before the presentation validation: only the over-budget fields go to the fast model, each with its limit, current text, problems, slide heading and (EN) PT source. Answers are checked by code (fits or is shorter, adds no violation, no forbidden phrase); at most 2 attempts. |
 
-Change a template by adding a `v2/` folder; never edit v1 in place.
+## v2
+
+`slide_limits.yaml` only (AE-0599): item limits apply only to the items the
+slide's role asks for, and the emphasis markup cost per locale is stated. See
+`v2/README.md`. `fit_fields.yaml` stays at v1.
+
+Change a template by adding a new version folder; never edit one in place.

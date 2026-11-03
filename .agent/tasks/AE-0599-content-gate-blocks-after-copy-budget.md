@@ -1,6 +1,6 @@
 # AE-0599 — Content gate blocks after the copy budget step
 
-Status: In Progress
+Status: In Development
 Tier: T2
 Priority: High
 Type: Bug

@@ -282,6 +282,6 @@ class TestPovPromptsHaveNoOwnNumbers:
         """Scenario: The POV content prompts carry no hardcoded character numbers."""
         prompt = _pov_prompt(domain, role)
 
-        assert POV_PROMPT_CONTENT_VERSION == "v3"
+        assert POV_PROMPT_CONTENT_VERSION == "v4"
         assert _CHAR_COUNT.search(prompt) is None
         assert "Copy limits of this slide" in prompt

@@ -2,7 +2,8 @@
 
 The imperative rework framing is rendered once, in the instruction context; the content
 prompt carries no second revision-notes block. The per-slide block also lists the
-slide's copy limits, rendered from the contract values the validator enforces.
+slide's copy limits, rendered from the contract values the validator enforces;
+``slide_limits_text`` renders the same block for the POV content prompt.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ from rag_backend.application.services.carousel.presentation_policy import (
 )
 from rag_backend.application.services.carousel.presentation_policy_range import (
     expand_policy_for_count,
+)
+from rag_backend.application.services.carousel.presentation_policy_types import (
+    SlideTypePolicy,
 )
 from rag_backend.application.services.carousel_template.prompts import (
     build_slide_limits_block,
@@ -99,6 +103,15 @@ class InstructionContextRequest:
     prompt_version: str = CAROUSEL_PROMPT_VERSION_V3
     sibling_context: str = ""
     previous_draft: str = ""
+    slide_count: int | None = None
+
+
+@dataclass(frozen=True)
+class SlideLimitsRequest:
+    """Which slide of which contract, sized to the deck, to render limits for."""
+
+    policy_version: str
+    slide_number: int | None
     slide_count: int | None = None
 
 
@@ -242,26 +255,55 @@ def _role_text(role: str | None) -> str:
     return f", role {role}" if role else ""
 
 
+def _policy_slide(
+    slide_number: int | None, policy: CarouselPresentationPolicy
+) -> SlideTypePolicy | None:
+    if slide_number is None:
+        return None
+    return next(
+        (slide for slide in policy.slides if slide.slide_number == slide_number),
+        None,
+    )
+
+
 def _slide_block(
     slide_number: int | None,
     policy: CarouselPresentationPolicy,
 ) -> str:
     if slide_number is None:
         return ""
-    for slide in policy.slides:
-        if slide.slide_number == slide_number:
-            ratio = (
-                f"copy_start_ratio={slide.copy_start_ratio}"
-                if slide.copy_start_ratio is not None
-                else "cta layout (no lower-third ratio)"
-            )
-            target = (
-                f"Target slide {slide.slide_number} "
-                f"({slide.slide_type}{_role_text(slide.role)}). "
-                f"Image required: {slide.image_required}. {ratio}."
-            )
-            return f"{target}\n{_limits_block(LimitScope(slide.slide_type, slide.role), policy)}"
-    return f"Target slide {slide_number}."
+    slide = _policy_slide(slide_number, policy)
+    if slide is None:
+        return f"Target slide {slide_number}."
+    ratio = (
+        f"copy_start_ratio={slide.copy_start_ratio}"
+        if slide.copy_start_ratio is not None
+        else "cta layout (no lower-third ratio)"
+    )
+    target = (
+        f"Target slide {slide.slide_number} "
+        f"({slide.slide_type}{_role_text(slide.role)}). "
+        f"Image required: {slide.image_required}. {ratio}."
+    )
+    return (
+        f"{target}\n{_limits_block(LimitScope(slide.slide_type, slide.role), policy)}"
+    )
+
+
+def slide_limits_text(request: SlideLimitsRequest) -> str:
+    """This slide's "Copy limits of this slide" block, as the instruction carries it.
+
+    The contract is sized to the deck like the instruction's; "" when the
+    contract has no slide with that number. The POV content prompt renders it
+    inline, before its answer format.
+    """
+    policy = _sized_policy(
+        load_presentation_policy(request.policy_version), request.slide_count
+    )
+    slide = _policy_slide(request.slide_number, policy)
+    if slide is None:
+        return ""
+    return _limits_block(LimitScope(slide.slide_type, slide.role), policy)
 
 
 def _limits_block(scope: LimitScope, policy: CarouselPresentationPolicy) -> str:
@@ -276,4 +318,6 @@ __all__ = [
     "CarouselInstructionContextLoader",
     "InstructionContextRequest",
     "InstructionContextResult",
+    "SlideLimitsRequest",
+    "slide_limits_text",
 ]
