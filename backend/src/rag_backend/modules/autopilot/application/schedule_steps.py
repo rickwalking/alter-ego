@@ -88,9 +88,14 @@ class ApproveRefusal:
     @property
     def text(self) -> str:
         """The owner's message: the slides still render, or a generic refusal."""
-        if self.status is ResumeStatus.RENDER_PENDING:
-            return TEXT_APPROVE_RENDER_PENDING
-        return TEXT_APPROVE_REFUSED
+        return refusal_text(self.status)
+
+
+def refusal_text(status: ResumeStatus) -> str:
+    """The owner's message for a refused approve."""
+    if status is ResumeStatus.RENDER_PENDING:
+        return TEXT_APPROVE_RENDER_PENDING
+    return TEXT_APPROVE_REFUSED
 
 
 def is_schedule_reply(pending: PendingRework) -> bool:

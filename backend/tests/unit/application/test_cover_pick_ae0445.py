@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import HTTPException
 
-from rag_backend.api.routes.carousels.cover_pick import _raise_unless_switched
+from rag_backend.api.routes.carousels.cover_pick import raise_unless_switched
 from rag_backend.application.services.carousel import slide_cover_switch
 from rag_backend.application.services.carousel.cover_pick import (
     CoverPickCommand,
@@ -245,21 +245,21 @@ class TestPick:
 class TestSwitchResultMapping:
     def test_conflict_is_a_typed_409(self) -> None:
         with pytest.raises(CarouselConflictError) as raised:
-            _raise_unless_switched(SlideCoverSwitchResult(status="conflict"))
+            raise_unless_switched(SlideCoverSwitchResult(status="conflict"))
         assert raised.value.conflict.code == "version_conflict"
 
     def test_a_vanished_cover_is_422(self) -> None:
         with pytest.raises(HTTPException) as raised:
-            _raise_unless_switched(SlideCoverSwitchResult(status="nothing_to_fix"))
+            raise_unless_switched(SlideCoverSwitchResult(status="nothing_to_fix"))
         assert (raised.value.status_code, raised.value.detail) == (
             422,
             "cover_pick_asset_not_allowed",
         )
 
     def test_render_errors_raise_and_a_clean_switch_does_not(self) -> None:
-        _raise_unless_switched(SlideCoverSwitchResult(status="fixed"))
+        raise_unless_switched(SlideCoverSwitchResult(status="fixed"))
         with pytest.raises(HTTPException) as raised:
-            _raise_unless_switched(
+            raise_unless_switched(
                 SlideCoverSwitchResult(status="fixed", render_errors=("boom",))
             )
         assert raised.value.status_code == 422

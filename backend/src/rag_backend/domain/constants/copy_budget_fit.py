@@ -5,6 +5,9 @@ budget goes to the fast model, which rewrites it within the limit. At most
 ``COPY_BUDGET_FIT_MAX_ATTEMPTS`` model calls; what still does not fit goes to
 the normal validation. The limits themselves are never stored here: they come
 from the presentation contract through the validator's resolvers.
+``REJECT_*`` name why a rewrite was dropped (counted in the done log); the
+fit prompt renders from ``COPY_BUDGET_PROMPT_VERSION`` and the drafting
+"Copy limits of this slide" block from ``COPY_BUDGET_LIMITS_PROMPT_VERSION``.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ COPY_BUDGET_FIT_TIMEOUT_SECONDS: Final[float] = 180.0
 
 COPY_BUDGET_PROMPT_DOMAIN: Final[str] = "carousel_copy_budget"
 COPY_BUDGET_PROMPT_VERSION: Final[str] = "v1"
+COPY_BUDGET_LIMITS_PROMPT_VERSION: Final[str] = "v2"
 COPY_BUDGET_PROMPT_FIT: Final[str] = "fit_fields"
 COPY_BUDGET_PROMPT_LIMITS: Final[str] = "slide_limits"
 
@@ -38,11 +42,19 @@ ITEM_FIELD_PATTERN: Final[str] = "{list_field}[].{item_field}"
 LOG_COPY_BUDGET_FIT_ATTEMPT: Final[str] = "copy_budget_fit_attempt"
 LOG_COPY_BUDGET_FIT_DONE: Final[str] = "copy_budget_fit_done"
 LOG_COPY_BUDGET_FIT_MODEL_FAILED: Final[str] = "copy_budget_fit_model_failed"
+LOG_COPY_BUDGET_FIT_VOICE_REVERTED: Final[str] = "copy_budget_fit_voice_reverted"
+
+REJECT_UNCHANGED: Final[str] = "unchanged"
+REJECT_WRONG_LANGUAGE: Final[str] = "wrong_language"
+REJECT_NOT_SHORTER: Final[str] = "not_shorter"
+REJECT_FORBIDDEN_PHRASE: Final[str] = "forbidden_phrase"
+REJECT_NEW_VIOLATION: Final[str] = "new_violation"
 
 __all__ = [
     "BINDABLE_MODEL_KEYS",
     "COPY_BUDGET_FIT_MAX_ATTEMPTS",
     "COPY_BUDGET_FIT_TIMEOUT_SECONDS",
+    "COPY_BUDGET_LIMITS_PROMPT_VERSION",
     "COPY_BUDGET_PROMPT_DOMAIN",
     "COPY_BUDGET_PROMPT_FIT",
     "COPY_BUDGET_PROMPT_LIMITS",
@@ -61,5 +73,11 @@ __all__ = [
     "LOG_COPY_BUDGET_FIT_ATTEMPT",
     "LOG_COPY_BUDGET_FIT_DONE",
     "LOG_COPY_BUDGET_FIT_MODEL_FAILED",
+    "LOG_COPY_BUDGET_FIT_VOICE_REVERTED",
+    "REJECT_FORBIDDEN_PHRASE",
+    "REJECT_NEW_VIOLATION",
+    "REJECT_NOT_SHORTER",
+    "REJECT_UNCHANGED",
+    "REJECT_WRONG_LANGUAGE",
     "TRANSLATION_LIMITS_KEY",
 ]

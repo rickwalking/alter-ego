@@ -20,3 +20,4 @@ export const UPLOAD_FAILURE = {
 
 /** The picker's refusal for an approved (or scheduled) or published carousel. */
 export const COVER_SWITCH_REQUIRES_REVIEW = "cover_switch_requires_review";
+export const COVER_REVIEW_NOT_REOPENED = "review_not_reopened";

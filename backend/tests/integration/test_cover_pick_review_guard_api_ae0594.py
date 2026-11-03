@@ -1,7 +1,9 @@
 """The picker guard and the website cover switch, over HTTP.
 
-Feature: tests/features/website_cover_review_switch_ae0594.feature. The real
-app over SQLite; the republish render and the GrokBot offer are stubbed.
+Feature: tests/features/website_cover_review_switch_ae0594.feature and
+tests/features/reopen_review_on_cover_switch_ae0597.feature. The real app over
+SQLite (no checkpointer, so only the row's review is reopened); the republish
+render and the GrokBot offer are stubbed.
 """
 
 from __future__ import annotations
@@ -17,7 +19,10 @@ from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
-from rag_backend.modules.editorial.infrastructure import cover_review_rollback
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_owner_autofix,
+    cover_review_rollback,
+)
 from tests.integration.cover_generation_support import (
     BLUE,
     RED,
@@ -60,20 +65,19 @@ async def _pick(
 @pytest.mark.parametrize(
     "values",
     [
-        {"workflow_status": "approved_for_publish"},
         {"workflow_status": "approved_for_publish", "is_public": True},
         {"is_public": True},
     ],
 )
-async def test_pick_on_an_approved_or_published_carousel_is_refused(
+async def test_pick_on_a_published_carousel_is_refused(
     client: AsyncClient,
     asset_dirs: Path,
     monkeypatch: pytest.MonkeyPatch,
     values: dict[str, object],
 ) -> None:
     """409 ``cover_switch_requires_review`` and nothing is rendered."""
-    # Scenario: The picker refuses an approved carousel
     # Scenario: The picker refuses a published carousel
+    # Scenario: A published carousel never changes
     status, detail, calls = await _pick(client, values, monkeypatch)
 
     assert status == 409
@@ -86,7 +90,7 @@ async def test_pick_on_a_carousel_in_review_still_switches(
     client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A draft carousel in final review is switched as before."""
-    # Scenario: The picker refuses an approved carousel
+    # Scenario: A carousel waiting for its first approval switches and stays in review
     status, _detail, calls = await _pick(
         client, {"workflow_status": "draft"}, monkeypatch
     )
@@ -138,15 +142,12 @@ async def _bind(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    "values", [{"workflow_status": "approved_for_publish"}, {"is_public": True}]
-)
-async def test_hook_photo_on_an_approved_or_published_carousel_is_refused(
-    client: AsyncClient, asset_dirs: Path, values: dict[str, object]
+async def test_hook_photo_on_a_published_carousel_is_refused(
+    client: AsyncClient, asset_dirs: Path
 ) -> None:
     """``PUT /hook-photo`` follows the picker's rule: 409 and nothing written."""
-    # Scenario: The picker refuses an approved carousel
-    project_id, detail, status = await _bind(client, values)
+    # Scenario: The picker refuses a published carousel
+    project_id, detail, status = await _bind(client, {"is_public": True})
 
     assert status == 409
     assert detail == ERR_COVER_SWITCH_REQUIRES_REVIEW
@@ -155,14 +156,25 @@ async def test_hook_photo_on_an_approved_or_published_carousel_is_refused(
 
 @pytest.mark.integration
 async def test_hook_photo_on_a_completed_carousel_waits_for_a_render(
-    client: AsyncClient, asset_dirs: Path
+    client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A completed carousel in review is marked, so approval waits for a render."""
+    """A completed carousel in review goes through the cover switch: the marker
+    is set while it renders, so approval waits for the render, then cleared."""
     # Scenario: No approval lands while a cover switch is between write and render
+    marked: list[bool] = []
+
+    async def _render(_self: object, project_id: str) -> tuple[str, ...]:
+        marked.append((await _model(project_id)).needs_republish_since is not None)
+        return ()
+
+    monkeypatch.setattr(carousel_owner_autofix.RepublishRenderer, "render", _render)
     project_id, _detail, status = await _bind(client, {"workflow_status": "draft"})
 
     assert status == 200
-    assert (await _model(project_id)).needs_republish_since is not None
+    assert marked == [True]
+    model = await _model(project_id)
+    assert model.needs_republish_since is None
+    assert model.lock_version == 5
 
 
 async def _model(project_id: str) -> CarouselProjectModel:

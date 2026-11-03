@@ -44,7 +44,9 @@ from rag_backend.modules.publishing import (
 )
 
 
-def _result(rowcount: int, row: tuple[int, int] | None = (4, 1)) -> MagicMock:
+def _result(
+    rowcount: int, row: tuple[int, int, str] | None = (4, 1, "approved_for_publish")
+) -> MagicMock:
     """One mock result for both the version read and the release UPDATE."""
     result = MagicMock(rowcount=rowcount)
     result.one_or_none.return_value = row
@@ -162,10 +164,28 @@ class TestLegacyPublishingAcl:
             "id_1",
             "lock_version_1",
             "run_epoch_1",
+            "workflow_status_1",
             "is_public",
             "current_phase",
         }
         session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_release_public_refuses_a_carousel_that_is_not_approved(
+        self,
+    ) -> None:
+        """Scenario: A release never publishes a carousel whose approval was dropped"""
+        project = CarouselProject(topic="AI", audience="devs", niche="tech")
+        session = AsyncMock()
+        session.execute.return_value = _result(rowcount=1, row=(4, 1, "draft"))
+        acl = LegacyPublishingAcl(session, AsyncMock(spec=CarouselRepository))
+
+        with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
+            await acl.release_public(project, str(project.id))
+
+        assert project.is_public is False
+        assert session.execute.await_count == 1
+        session.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_release_public_absent_model_skips_commit(self) -> None:

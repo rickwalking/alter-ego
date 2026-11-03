@@ -66,8 +66,11 @@ from rag_backend.domain.constants.creator_asset import (
     LOG_STALE_PHOTO_UNLINK_FAILED,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
-from rag_backend.domain.models import User
+from rag_backend.domain.models import CarouselProject, CarouselStatus, User
+from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
+from rag_backend.modules.autopilot import cover_review_hold
 
+from .cover_pick import raise_unless_switched
 from .creator_assets import (
     CreatorAssetContext,
     default_output_root,
@@ -79,7 +82,13 @@ from .creator_assets import (
     normalize_upload_mime,
     to_creator_asset_response,
 )
-from .hook_photo_guard import prepare_slide_one_change
+from .editorial_workflow_routes_support import checkpoint_reopener
+from .hook_photo_guard import (
+    HookPhotoChange,
+    refuse_published,
+    refuse_reviewed,
+    switch_hook_photo,
+)
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -263,24 +272,54 @@ async def select_hook_photo(
 ) -> HookPhotoResponse:
     """Use one of the owner's photos on slide 1 of a POV carousel.
 
-    Refused (409) on an approved or released carousel; a completed one is
-    marked for a re-render first (``hook_photo_guard``).
+    Refused (409) on a released carousel. A completed one goes through the
+    cover switch (CAS, one commit, render; ``hook_photo_guard``); when that
+    reopened an approved carousel's review, its autopilot run is sent back for
+    a new Telegram review, whatever the render did. The photo is validated
+    before anything is written.
     """
     project_id = UUID(request.path_params["project_id"])
     project = await load_owned_project(library.context, project_id)
-    await prepare_slide_one_change(library.session, project)
-    try:
-        updated = await library.service.select_hook_photo(
-            HookPhotoCommand(
-                project=project,
-                user=library.context.user,
-                creator_asset_id=body.creator_asset_id,
-                output_root=default_output_root(project),
-            )
+    command = HookPhotoCommand(
+        project=project,
+        user=library.context.user,
+        creator_asset_id=body.creator_asset_id,
+        output_root=default_output_root(project),
+    )
+    if project.status != CarouselStatus.COMPLETED:
+        await refuse_reviewed(library.session, str(project_id))
+        updated = await _bind_photo(library, command)
+        return HookPhotoResponse(
+            project_id=updated.id, hook_asset_id=body.creator_asset_id
         )
+    await refuse_published(library.session, str(project_id))
+    change = HookPhotoChange(
+        session=library.session,
+        service=library.service,
+        command=command,
+        asset=await _checked_photo(library, command),
+    )
+    result = await switch_hook_photo(change, checkpoint_reopener(request))
+    if result.reopened:
+        await cover_review_hold().reopened(str(project_id))
+    raise_unless_switched(result)
+    return HookPhotoResponse(project_id=project.id, hook_asset_id=body.creator_asset_id)
+
+
+async def _bind_photo(library: _Library, command: HookPhotoCommand) -> CarouselProject:
+    try:
+        return await library.service.select_hook_photo(command)
     except CreatorAssetValidationError as error:
         raise map_validation_error(error) from error
-    return HookPhotoResponse(project_id=updated.id, hook_asset_id=body.creator_asset_id)
+
+
+async def _checked_photo(
+    library: _Library, command: HookPhotoCommand
+) -> CarouselCreatorAsset:
+    try:
+        return await library.service.hook_photo_asset(command)
+    except CreatorAssetValidationError as error:
+        raise map_validation_error(error) from error
 
 
 __all__ = ["router"]

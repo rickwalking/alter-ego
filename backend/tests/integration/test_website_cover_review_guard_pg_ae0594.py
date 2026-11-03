@@ -94,8 +94,9 @@ async def test_website_cover_on_an_approved_carousel_is_an_option(
     values: dict[str, object],
     state: AutopilotRunState | None,
 ) -> None:
-    """Approved or scheduled: slide 1 unchanged, the cover offered, the run kept."""
-    # Scenario: A website cover on an approved or scheduled carousel stays a picker option
+    """Approved or scheduled, no checkpoint reopen wired: slide 1 unchanged, the
+    cover offered, the run kept."""
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
     async with isolated_schema(tables()) as engine:
         built = harness(engine, monkeypatch)
         project_id, photos = await seed(built, dirs, **values)

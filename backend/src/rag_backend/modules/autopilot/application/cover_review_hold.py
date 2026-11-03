@@ -20,6 +20,12 @@ run id, so the run must not stay in ``awaiting_owner`` meanwhile:
   goes ``reworking -> escalated`` with the lock version marked, so the owner is
   told and no review of a render slide 1 may not match goes out.
 
+- ``reopened``: the switch dropped an approved carousel's approval (Pedro's
+  decision, 2026-11-02): a ``scheduled`` run (its ``scheduled_at`` kept) or an
+  ``awaiting_owner`` one goes to ``reworking`` with its window anchor kept, and
+  the worker's final-review stop sends the review again at the new lock
+  version; a held run is already on that way.
+
 A run in any other state (a scheduled one included) is never held. Each step
 commits on its own.
 """
@@ -34,6 +40,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     COVER_REVIEW_HOLD_PHASE,
     REASON_COVER_REVIEW_HOLD,
     REASON_COVER_REVIEW_KEPT,
+    REASON_COVER_REVIEW_REOPENED,
     REASON_COVER_REVIEW_UNSAFE,
 )
 from rag_backend.modules.autopilot.domain.models import (
@@ -54,6 +61,7 @@ from rag_backend.modules.autopilot.domain.recovery import (
 )
 
 _S = AutopilotRunState
+_REOPENABLE = frozenset({_S.SCHEDULED, _S.AWAITING_OWNER})
 
 
 class Committer(Protocol):
@@ -150,6 +158,22 @@ class CoverReviewHold:
                     updated_at=run.updated_at,
                 )
             )
+        await self._deps.checkpoint.commit()
+
+    async def reopened(self, project_id: str) -> None:
+        """Send a reopened carousel's run back for a new review (time kept)."""
+        run = await self._deps.runs.find_by_carousel(project_id)
+        if run is None or run.state not in _REOPENABLE:
+            return
+        await self._deps.runs.transition(
+            TransitionCommand(
+                run_id=run.run_id,
+                expected=run.state,
+                new=_S.REWORKING,
+                reason=REASON_COVER_REVIEW_REOPENED,
+                updated_at=run.updated_at,
+            )
+        )
         await self._deps.checkpoint.commit()
 
 

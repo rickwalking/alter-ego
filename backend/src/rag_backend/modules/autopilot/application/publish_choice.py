@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from rag_backend.modules.autopilot.application.kept_slot import KeptSlotApproval
 from rag_backend.modules.autopilot.application.owner_approval import (
     FinalReviewApproval,
 )
@@ -47,9 +48,7 @@ from rag_backend.modules.autopilot.application.schedule_steps import (
     reschedule_command,
     schedule_command,
 )
-from rag_backend.modules.autopilot.cover_constants import (
-    ANSWER_REVIEW_REPLACED,
-)
+from rag_backend.modules.autopilot.cover_constants import ANSWER_REVIEW_REPLACED
 from rag_backend.modules.autopilot.domain.callback_parse import ParsedCallback
 from rag_backend.modules.autopilot.domain.gate import ResumeStatus
 from rag_backend.modules.autopilot.domain.messages import (
@@ -120,10 +119,8 @@ _Handler = Callable[
 
 @dataclass(frozen=True, kw_only=True)
 class PublishChoiceDeps:
-    """Collaborators shared with the owner-action service for one request.
-
-    ``signals`` gives the recommendations audience and post engagement.
-    """
+    """Collaborators shared with the owner-action service for one request;
+    ``signals`` gives the recommendations audience and post engagement."""
 
     runs: AutopilotRunRepository
     pending: PendingReworkStore
@@ -149,6 +146,7 @@ class PublishChoiceActions:
             PickerDeps(clock=deps.clock, signals=deps.signals), replies
         )
         self._revision: int | None = None
+        self._kept = KeptSlotApproval(deps, replies)
 
     async def _refusal(self, run: AutopilotRun | None) -> str | None:
         """The answer when the tap's revision is outdated, else None."""
@@ -190,11 +188,16 @@ class PublishChoiceActions:
         """Approve the review: confirm a slot or offer publish-now / schedule.
 
         In ``next_slot`` mode, and for every POV run even in ``now`` mode, the best
-        recommended slot of the next seven days is scheduled.
+        recommended slot of the next seven days is scheduled; a reopened run
+        that kept its time keeps it (``KeptSlotApproval``).
         """
         run = await self._in_state(parsed.run_id, _S.AWAITING_OWNER)
         if run is None:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
+            return
+        if run.scheduled_at is not None:
+            tapped = TappedReview(run=run, revision=self._revision)
+            await self._kept.approve(update, tapped)
             return
         if self._deps.default_publish == PUBLISH_MODE_NEXT_SLOT or is_pov_run(run):
             best = await self._picker.best(run)
@@ -383,18 +386,14 @@ class PublishChoiceActions:
         )
 
 
-def _handlers() -> dict[str, _Handler]:
-    return {
-        KIND_APPROVE: PublishChoiceActions._approve,
-        KIND_PUBLISH_NOW: PublishChoiceActions._publish_now,
-        KIND_SCHEDULE: PublishChoiceActions._schedule_menu,
-        KIND_DAYS: PublishChoiceActions._schedule_menu,
-        KIND_DAY: PublishChoiceActions._day,
-        KIND_SLOT: PublishChoiceActions._slot,
-        KIND_OTHER_TIME: PublishChoiceActions._other_time,
-        KIND_UNSCHEDULE: PublishChoiceActions._unschedule,
-    }
-
-
-_HANDLERS = _handlers()
+_HANDLERS: dict[str, _Handler] = {
+    KIND_APPROVE: PublishChoiceActions._approve,
+    KIND_PUBLISH_NOW: PublishChoiceActions._publish_now,
+    KIND_SCHEDULE: PublishChoiceActions._schedule_menu,
+    KIND_DAYS: PublishChoiceActions._schedule_menu,
+    KIND_DAY: PublishChoiceActions._day,
+    KIND_SLOT: PublishChoiceActions._slot,
+    KIND_OTHER_TIME: PublishChoiceActions._other_time,
+    KIND_UNSCHEDULE: PublishChoiceActions._unschedule,
+}
 CHOICE_KINDS: frozenset[str] = frozenset(_HANDLERS)

@@ -61,5 +61,10 @@ class SessionCoverReviewHold:
         async with self._sessions() as session:
             await _service(session).release(run_id, changed=changed)
 
+    async def reopened(self, project_id: str) -> None:
+        """The carousel's approval was dropped: its run gets a new review."""
+        async with self._sessions() as session:
+            await _service(session).reopened(project_id)
+
 
 __all__ = ["SessionCoverReviewHold"]

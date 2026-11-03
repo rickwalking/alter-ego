@@ -256,6 +256,7 @@ GATE_DESIGN = "design"
 GATE_IMAGES = "images"
 GATE_FINAL_REVIEW = "final_review"
 PHASE_STATUS_AWAITING = "awaiting_human"
+PHASE_STATUS_APPROVED = "approved"
 PHASE_STATUS_FAILED = "failed"
 PHASE_STATUS_IN_PROGRESS = "in_progress"
 
@@ -294,6 +295,8 @@ REASON_PROJECT_MISSING = "project_missing"
 REASON_UNEXPECTED_PHASE = "unexpected_phase"
 REASON_PASSED = "passed"
 REASON_WAITING = "waiting"
+REASON_RENDER_PENDING = "render_pending"
+RENDER_PENDING_MAX_SECONDS = 15 * 60
 
 PROMPT_DOMAIN_AUTOPILOT = "autopilot"
 PROMPT_REVISE_FEEDBACK = "revise_feedback"

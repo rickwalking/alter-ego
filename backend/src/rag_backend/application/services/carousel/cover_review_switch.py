@@ -1,14 +1,16 @@
-"""Switch slide 1 of a completed carousel that waits in final review.
+"""Switch slide 1 of a completed carousel in final review, approved or not.
 
 Pedro's decision (2026-11-02): a cover the owner generates from the website on
-a completed carousel still waiting for its first approval becomes slide 1.
-The slides are rendered again and the carousel stays in final review, so the
-owner approves the new render before anything goes out. Nothing is published
-and the approval is never touched.
+a completed carousel becomes slide 1. The slides are rendered again and the
+carousel is (or goes back) in final review, so the owner approves the new
+render before anything goes out. Nothing is published.
 
-- Only ``final_review`` / ``awaiting_human`` qualifies; an approved (scheduled
-  included) or published carousel is refused by ``cover_switch_refusal`` and
-  the cover stays a picker option.
+- A carousel waiting in ``final_review`` / ``awaiting_human`` keeps waiting;
+  an approved one (scheduled included, still at ``final_review``) has its
+  approval dropped with the write (``reopened``), and its Telegram review is
+  sent again (``ReviewHold.reopened``; a scheduled run keeps its time). A
+  published carousel is refused (``reopen_refusal``) and the cover stays a
+  picker option.
 - The owner's choice while the job ran wins (any change to the cover fields
   since the baseline). A cover chosen before the job does not block the
   switch: the owner asked for a new cover on a finished carousel.
@@ -39,6 +41,8 @@ from rag_backend.application.services.carousel.cover_autoselect import (
 )
 from rag_backend.application.services.carousel.cover_switch_guard import (
     cover_switch_refusal,
+    reopen_refusal,
+    reopens_review,
     review_state_of,
 )
 from rag_backend.domain.constants.carousel_autofix import AUTOFIX_STATUS_FIXED
@@ -63,12 +67,14 @@ _MOVED = frozenset({AUTOFIX_STATUS_FIXED, REASON_AUTO_SELECT_ROLLED_BACK})
 
 @dataclass(frozen=True, kw_only=True)
 class ReviewSwitchOutcome:
-    """``AUTOFIX_STATUS_*`` or a ``REASON_*`` refusal, the render errors, and the
-    lock version after a failed rollback (the escalation's mark)."""
+    """``AUTOFIX_STATUS_*`` or a ``REASON_*`` refusal, the render errors, the
+    lock version after a failed rollback (the escalation's mark), and whether
+    the write dropped the carousel's approval."""
 
     status: str
     render_errors: tuple[str, ...] = ()
     lock_version: int | None = None
+    reopened: bool = False
 
 
 class ReviewCoverStore(Protocol):
@@ -94,6 +100,11 @@ class ReviewHold(Protocol):
         """Never hand the review back: slide 1 may show an unreviewed cover."""
         ...
 
+    async def reopened(self, project_id: str) -> None:
+        """The approval was dropped: the review goes out again (a scheduled run
+        keeps its time); a held run is already on its way back."""
+        ...
+
 
 @dataclass(frozen=True, kw_only=True)
 class ReviewSwitch:
@@ -104,7 +115,25 @@ class ReviewSwitch:
 
 
 def review_refusal(found: ProjectAtVersion) -> str | None:
-    """Approved, published, or not waiting in final review."""
+    """Published, or neither waiting in final review nor approved there."""
+    state = review_state_of(found.project, found.workflow_status)
+    guard = reopen_refusal(state)
+    if guard is not None:
+        return guard
+    project = found.project
+    if project.current_phase != PHASE_FINAL_REVIEW:
+        return REASON_AUTO_SELECT_NOT_IN_REVIEW
+    if reopens_review(state):
+        return None
+    if project.phase_status != PHASE_STATUS_AWAITING_HUMAN:
+        return REASON_AUTO_SELECT_NOT_IN_REVIEW
+    return None
+
+
+def render_refusal(found: ProjectAtVersion) -> str | None:
+    """Approved, published, or not waiting in final review: the switch's render
+    must not land (its own write left the carousel a draft waiting there, so an
+    approval since then overtook it)."""
     guard = cover_switch_refusal(review_state_of(found.project, found.workflow_status))
     if guard is not None:
         return guard
@@ -158,6 +187,10 @@ async def _held_switch(
 
     A failed rollback, or a store that raised (the state is unknown), escalates
     the held run: no review of a render slide 1 may not match goes out. A
+    write that dropped the approval asks for the review again whatever the
+    render did (landed, rolled back, or a failed rollback), which reaches a
+    scheduled run the hold left alone; the worker sends it only once a render
+    settled. A
     cancelled task (a deploy) is not caught: the hold stays for the worker to
     escalate and the needs-republish marker keeps approval refused until the
     republish sweep renders the carousel.
@@ -169,13 +202,21 @@ async def _held_switch(
         if run_id is not None:
             await review.hold.escalate(run_id, None)
         raise
-    if run_id is None:
-        return outcome
-    if outcome.status == REASON_AUTO_SELECT_ROLLBACK_FAILED:
-        await review.hold.escalate(run_id, outcome.lock_version)
-    else:
-        await review.hold.release(run_id, changed=outcome.status in _MOVED)
+    if run_id is not None:
+        await _hand_back(review.hold, run_id, outcome)
+    if outcome.reopened:
+        await review.hold.reopened(write.project_id)
     return outcome
+
+
+async def _hand_back(
+    hold: ReviewHold, run_id: UUID, outcome: ReviewSwitchOutcome
+) -> None:
+    """Release the held run, or escalate it after a failed rollback."""
+    if outcome.status == REASON_AUTO_SELECT_ROLLBACK_FAILED:
+        await hold.escalate(run_id, outcome.lock_version)
+        return
+    await hold.release(run_id, changed=outcome.status in _MOVED)
 
 
 __all__ = [
@@ -183,6 +224,7 @@ __all__ = [
     "ReviewHold",
     "ReviewSwitch",
     "ReviewSwitchOutcome",
+    "render_refusal",
     "review_choice_refusal",
     "review_refusal",
     "switch_in_review",

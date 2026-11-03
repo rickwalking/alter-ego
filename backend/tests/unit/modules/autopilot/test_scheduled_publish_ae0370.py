@@ -85,6 +85,16 @@ class _Scheduled:
 
 
 @dataclass
+class _Lock:
+    """Records the carousel rows the sweep locked."""
+
+    ids: list[str] = field(default_factory=list)
+
+    async def lock(self, project_id: str) -> None:
+        self.ids.append(project_id)
+
+
+@dataclass
 class _Release:
     ok: bool = True
     ids: list[str] = field(default_factory=list)
@@ -151,6 +161,7 @@ def _tick(run: AutopilotRun | None = None) -> _Tick:
             notifier=notifier,
             checkpoint=repo,
             clock=clock,
+            lock=_Lock(),
         )
     )
     job = InstagramPublishJob(

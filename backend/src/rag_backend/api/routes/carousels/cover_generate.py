@@ -7,9 +7,11 @@ generation and runs the Grok Bot job in a tracked background task (202). A
 succeeded result becomes slide 1's cover while the carousel is still before
 the owner's review and no cover was chosen. On a completed carousel waiting
 for its first approval it switches slide 1, re-renders, and the carousel stays
-in final review; this layer composes the autopilot's hold of the Telegram
-review, so that review is sent again. On an approved, scheduled or published
-carousel it is only a picker option (``PUT /{id}/cover``).
+in final review; on an approved or scheduled one it also drops the approval
+with the write and reopens the final review (Pedro's decision, 2026-11-02).
+This layer composes the autopilot's hold of the Telegram review and the
+checkpoint reopen, so that review is sent again (a scheduled run keeps its
+time). On a published carousel it is only a picker option (``PUT /{id}/cover``).
 """
 
 from __future__ import annotations
@@ -26,6 +28,9 @@ from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter, user_or_address_key
+from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
+    checkpoint_reopener,
+)
 from rag_backend.api.schemas.carousel_cover_generation import (
     CoverGenerationRequest,
     CoverGenerationResponse,
@@ -191,7 +196,11 @@ async def start_cover_generation(
         run = await ctx.service.start(command)
     except CoverGenerationError as error:
         raise _http_error(error) from error
-    target = CoverReviewTarget(project=ctx.project, hold=cover_review_hold())
+    target = CoverReviewTarget(
+        project=ctx.project,
+        hold=cover_review_hold(),
+        checkpoint=checkpoint_reopener(request),
+    )
     schedule_cover_generation(
         reviewing_cover_task(wiring, run, target), str(run.generation.id)
     )
