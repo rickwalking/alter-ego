@@ -80,3 +80,9 @@ Feature: A cover switch reopens the final review of an approved carousel (AE-059
     Given a scheduled run whose carousel's review was reopened but the run was never told
     When the due tick runs before the run's time
     Then the run is sent back for review with its time kept
+
+  Scenario: A run whose carousel was approved on the website goes back to the owner
+    Given a reopened run in reworking whose carousel was approved again on the website
+    When the worker steps it, or its kept time comes first
+    Then the review is sent to the owner, or the due tick publishes it at its time
+    And a kept time that passed while the carousel is not approved expires the run

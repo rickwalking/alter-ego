@@ -17,7 +17,7 @@ import pytest
 from httpx import AsyncClient
 
 from rag_backend.domain.constants.cover_review_switch import (
-    ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_REVIEW_NOT_REOPENED,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.autopilot.infrastructure.cover_review_hold import (
@@ -168,7 +168,7 @@ async def test_a_checkpoint_that_cannot_reopen_writes_nothing(
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == ERR_COVER_SWITCH_REQUIRES_REVIEW
+    assert response.json()["detail"] == REASON_REVIEW_NOT_REOPENED
     await _assert_untouched(seeded)
     assert wiring.renders == []
     assert wiring.reviews == []
@@ -232,4 +232,25 @@ async def test_an_unknown_hook_photo_writes_nothing(
     assert response.status_code == 400
     await _assert_untouched(seeded)
     assert wiring.reopens == []
+    assert wiring.reviews == []
+
+
+@pytest.mark.integration
+async def test_a_hook_photo_on_an_unfinished_approved_carousel_is_refused(
+    client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not completed yet approved (an inconsistent row): no render to reopen a
+    review with, so 409 and nothing written."""
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
+    wiring = _wire(monkeypatch)
+    seeded = await _approved(client)
+    await set_project(seeded.project_id, status="drafting")
+
+    response = await client.put(
+        f"/api/carousels/{seeded.project_id}/hook-photo",
+        json={"creator_asset_id": seeded.second},
+    )
+
+    assert response.status_code == 409
+    assert (await _model(seeded.project_id)).hook_asset_id == seeded.first
     assert wiring.reviews == []

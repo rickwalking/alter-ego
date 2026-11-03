@@ -242,10 +242,14 @@ class TestRefusedReopen:
     # Scenario: A switch that cannot reopen the review refuses an approved carousel
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "reason", [REASON_AUTO_SELECT_PUBLISHED, REASON_REVIEW_NOT_REOPENED]
+        ("reason", "status"),
+        [
+            (REASON_AUTO_SELECT_PUBLISHED, ERR_COVER_SWITCH_REQUIRES_REVIEW),
+            (REASON_REVIEW_NOT_REOPENED, REASON_REVIEW_NOT_REOPENED),
+        ],
     )
     async def test_a_refused_reopen_rolls_everything_back(
-        self, monkeypatch: pytest.MonkeyPatch, reason: str
+        self, monkeypatch: pytest.MonkeyPatch, reason: str, status: str
     ) -> None:
         """Released under the lock, or a checkpoint that cannot reopen."""
         monkeypatch.setattr(slide_cover_switch, "write_locked", _locked)
@@ -265,7 +269,7 @@ class TestRefusedReopen:
 
         result = await service.switch(_command())
 
-        assert result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW
+        assert result.status == status
         assert result.reopened is False
         assert log.steps == ["mark", "reopen", "rollback"]
         assert repo.updates == []

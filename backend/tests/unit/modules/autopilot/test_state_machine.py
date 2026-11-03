@@ -7,7 +7,8 @@ fails this test instead of passing a loop over the implementation.
 _SPEC mirrors docs/architecture/grokbot-autopilot.md §4 plus later edges: a refused
 editorial approve keeps the owner review open, a POV run waits for the owner's thesis,
 the owner sets a publish time, the owner moves a scheduled run to another day or
-time, a slide-1 change sends a scheduled run back for a new review, and the owner
+time, a slide-1 change sends a scheduled run back for a new review (published or
+expired at its kept time even while reworking), and the owner
 retries a run the generation queue parked.
 """
 
@@ -57,6 +58,8 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.SCHEDULED, _S.EXPIRED),
     (_S.SCHEDULED, _S.SCHEDULED),
     (_S.SCHEDULED, _S.REWORKING),
+    (_S.REWORKING, _S.PUBLISHING),
+    (_S.REWORKING, _S.EXPIRED),
 })
 
 _ILLEGAL = (
