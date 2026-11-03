@@ -84,6 +84,9 @@ that drives a rejected carousel.
 - [x] AC5: the settle guard (`lock_version == escalated_version` read under `FOR UPDATE`) still settles once and a
   second sweep does nothing; AE-0601 tests green (the one assertion that pinned the old, unbumped version updated).
 - [x] AC6: no gate, allowlist, baseline or threshold loosened.
+- [x] AC7: a Telegram approve, publish-now or schedule tap on a review sent before the carousel was rejected closes
+  the run (`awaiting_owner -> rejected`, reason `carousel_rejected`) instead of moving it to `reworking`; nothing is
+  approved or released.
 
 ## Gherkin Scenarios
 
@@ -97,6 +100,7 @@ Feature: A carousel reject bumps lock_version so a stale owner review is refused
   Scenario: An approve at the post-reject version is handled as before
   Scenario: An owner action at the current version on a waiting carousel still works
   Scenario: The reject bumps the lock version once
+  Scenario: A Telegram review tap after a reject closes the run
 ```
 
 ## Delta
@@ -148,11 +152,10 @@ Feature: A carousel reject bumps lock_version so a stale owner review is refused
 - Autopilot CAS callers that read the snapshot and then CAS on its `lock_version` (`runner.py:287/313`,
   `gate_repair.py:131`, `rework_step.py`, `slide_autofix.py:232`, `owner_approval.py:74`): a snapshot read before the
   reject now fails its CAS instead of driving the rejected carousel. Intended.
-- Telegram review revision guard (`modules/autopilot/application/review_revision_guard.py:79-100`): an owner tap on a
-  review sent at N, after the carousel was rejected at N+1, is now treated as outdated (run moves to `reworking`,
-  reason `review_outdated`) instead of approving the rejected carousel. The autopilot policy then WAITs on a
-  rejected carousel (`domain/policy.py:79`), so that run sits in `reworking`. Before this ticket the tap approved the
-  rejected carousel. Follow-up, see below.
+- Telegram review revision guard (`modules/autopilot/application/review_revision_guard.py`): with the bump, an owner
+  tap on a review sent at N, after the carousel was rejected at N+1, became outdated and moved the run to
+  `reworking` (`review_outdated`), where the policy WAITs on a rejected carousel (`domain/policy.py:79`) and nothing
+  closes it. Regression introduced by the bump; fixed here (AC7, see the Decision Log).
 - `queue_board` / `snapshot` / notices carry `lock_version` for display or as a revision key only.
 
 ## QA Checklist
@@ -178,6 +181,10 @@ now expects `_VERSION + 1`; unit tests for the bump.
 
 ## Files Touched
 
+- `backend/src/rag_backend/modules/autopilot/application/review_revision_guard.py` — close the run on a rejected
+  carousel; the outdated branches moved to `_outdated` (return-count lint).
+- `backend/src/rag_backend/modules/autopilot/application/owner_approval.py` — `carousel_rejected`.
+- `backend/tests/unit/modules/autopilot/test_review_tap_after_reject_ae0604.py` (new).
 - `backend/src/rag_backend/infrastructure/database/workflow_timeout_repository.py` — `reject` bumps `lock_version`.
 - `backend/src/rag_backend/infrastructure/database/models/carousel.py` — `lock_version: Mapped[int]` (same column).
 - `backend/tests/features/reject_bumps_lock_version_ae0604.feature` (new).
@@ -189,11 +196,15 @@ now expects `_VERSION + 1`; unit tests for the bump.
 
 - New Postgres route test: 4 passed (3 failed before the fix).
 - New unit tests: 3 passed.
+- Telegram tap after reject (`test_review_tap_after_reject_ae0604.py`, 3 cases): failed first (run left in
+  `reworking`), passes after the guard change. `tests/unit/modules/autopilot` + `test_autopilot_owner_actions.py`:
+  1050 passed. Autopilot/review integration files plus the earlier related set: 522 passed.
 - AE-0601 unit (9) and Postgres (10) tests: passed.
 - 31 related test files (stuck auto-reject, run guard, workflow workers, archive, resume routes, manual recovery,
   run recovery, escalation settle) plus the new ones, in collection order: 250 passed.
 - Single gates: format, lint, lint-diff, strict-diff, type, comments, docstrings, gherkin-refs, blanket-ignore,
-  integrity, schema-drift PASS; `check_carousel_raw_updates.py` OK. Full gate: lead's heavy slot.
+  integrity, schema-drift, imports PASS (rerun after the guard change: format, lint, lint-diff, type, comments, docstrings,
+  gherkin-refs, integrity, imports PASS); `check_carousel_raw_updates.py` OK. Full gate: lead's heavy slot.
 
 ## QA Report
 
@@ -206,6 +217,15 @@ Pending.
   allowlist. The bump is flushed in the same `UPDATE` as `phase_status=rejected`.
 - `lock_version` on `CarouselProjectModel` declared `Mapped[int] = mapped_column(...)` instead of a bare `Column`:
   mypy strict rejects an `int` assignment to `Column[int]`. Same type, default and nullability; schema-drift PASS.
+- Telegram regression: closed in `RevisionGuard.check`, the place that moved the run to `reworking`. Once a tap is
+  known to be outdated, the guard asks `FinalReviewApproval.carousel_rejected` (a gate read, `phase_status ==
+  rejected`); if so the run moves `awaiting_owner -> rejected` with the existing `REASON_CAROUSEL_REJECTED` (the
+  reason `RunRecovery._check_one` closes escalated runs with, which also sends the existing "closed" notice) and the
+  tap is answered with the existing `TEXT_REJECTED`. No new constant. Chosen over a `reworking` policy close
+  because it stops the run from entering `reworking` at all, touches only the revision-guarded taps (the path the
+  bump changed), and leaves the runner's WAIT policy for every other state untouched. The close uses
+  `TransitionCommand.moving` (terminal; no 72-hour anchor to keep). `awaiting_owner -> rejected` is already in
+  `ALLOWED_TRANSITIONS`.
 - No new rejected-state guard on the resume route: the brief asked to keep what the route does today for a rejected
   carousel, and today it accepts a resume at the current version.
 
@@ -220,11 +240,13 @@ None.
   from the website.
 - The stuck sweep reads its rows without `FOR UPDATE`; an owner CAS committing between that read and the reject
   flush is overwritten (pre-existing, very narrow).
-- Telegram: a review tap at N on a carousel rejected at N+1 now moves the run to `reworking` (`review_outdated`),
-  where the policy WAITs on the rejected carousel; nothing closes a `reworking` run on a rejected carousel.
+- Pre-existing, not caused by the bump: a run that is already `reworking` or `generating` when its carousel is
+  rejected (for example a "revise" tap, which is not revision-guarded, on a carousel that is rejected) still WAITs
+  under the policy. A policy-level close would cover those too; it is a wider change to the runner.
 - `tests/unit/infrastructure/test_carousel_run_guard.py::test_timeout_auto_reject_clears_leftover_run_columns`
-  fails when run after `test_workflow_timeout_repository.py` (shared session engine, leftover rows); passes in
-  collection order. Pre-existing, unrelated to this change.
+  is order-dependent (pre-existing): `uv run pytest tests/unit/infrastructure/test_workflow_timeout_repository.py
+  tests/unit/infrastructure/test_carousel_run_guard.py` fails it (the session-scoped SQLite engine keeps the earlier
+  file's stale rows, so its 1-hour sweep rejects 3 instead of 1); collection order (run guard first) passes.
 
 ## Final Summary
 
