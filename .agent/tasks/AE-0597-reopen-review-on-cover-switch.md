@@ -122,10 +122,8 @@ unreviewed cover.
 - **Owner text:** `PUT /cover` answers `review_reopened`; the picker then says
   the carousel is back in final review (pt/en). The refusal text now says
   "published" only.
-- **Hook photo, two commits:** the reopen commits with the marker, before the
-  photo write commits (the route's existing order). The approval is therefore
-  dropped first; the marker refuses any approve until a render, and the re-read
-  after the commit refuses an approval that landed in between.
+- **Hook photo:** a completed carousel's photo goes through the cover switch
+  (one commit, render before the review request); see review round 1.
 - **Telegram for the picker and the hook photo:** the routes call the
   autopilot `reopened` hook after their write: a `scheduled` or
   `awaiting_owner` run goes to `reworking` (anchor kept), and the worker sends
@@ -199,6 +197,37 @@ the autopilot hook, the kept time, the sweep's row lock and the release check.
 AE-0594 scenarios that described the refusal of approved or scheduled
 carousels were replaced by the AE-0597 ones (the picker and website tests now
 assert the reopen, or the fallback when no checkpoint reopen is wired).
+
+### 2026-11-02 (review round 1)
+
+- Hook photo: a completed carousel's photo now goes through the cover switch
+  (`SlideCoverSwitchService` with a `HookPhotoChoice`): the photo is validated
+  first, then the CAS bump, one commit (photo, marker, dropped approval), the
+  render, and only then the autopilot `reopened` hook. The old two-commit
+  order (marker first, photo later) is gone.
+- `ApprovalReopen` re-reads `workflow_status` / `is_public` `FOR UPDATE` and
+  refuses a released or no longer approved row before touching the
+  checkpoint; a checkpoint reopen that answers False (no checkpointer, a
+  finished thread) refuses too (409, nothing written). A thread already
+  waiting at the final review counts as reopened (a crash between the two
+  stores is not redone).
+- The review request is never lost: the picker and the hook photo call the
+  hook before mapping a render failure; the website switch calls it after any
+  committed reopen (a failed rollback included); and the due tick recovers a
+  scheduled run of a reopened carousel (a crash between the commit and the
+  hook) after a 5-minute grace (an owner's schedule tap claims `scheduled`
+  before its approve lands).
+- The worker's final-review stop waits while the needs-republish marker is
+  set (`render_pending`), so a review is only sent once slide 1 is rendered,
+  whatever the switch's render did.
+- The reopen uses the app's checkpointer directly (`CheckpointEngineReopener`;
+  the worker passes its checkpointer through `autopilot_tick_config`); the
+  editorial workflow service is untouched and the review-response mapping
+  moved out of the nodes module, so neither oversized file grew.
+- End-to-end test: reopen through the website switch with a real in-memory
+  checkpointer, the approve route refuses the old version, and the run-owned
+  approve restores `approved_for_publish` (the route itself only queues the
+  resume for the generation worker).
 
 ## Test Evidence
 
