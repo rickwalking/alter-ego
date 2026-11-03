@@ -159,6 +159,9 @@ Pending.
   strict-diff, type, comments, gherkin-refs, integrity, duplication, bandit, test (via the `scripts/ci/**` path
   filter); the new scheduled workflow itself; (d) reviewer/QA sign-off on the no-`.feature` classification is
   requested on the PR.
+- 2026-11-03 — Lead review sign-off on the no-`.feature` classification: agreed. The change adds a read-only,
+  scheduled drift check and its tests; nothing user-visible, no API, nginx or deploy path changes. The seeded
+  drift tests prove the check fires (exit 1) and the fetch/parse tests prove it fails loudly (exit 2).
 - 2026-11-02 — Local proof is the per-gate runs covering the touched files (worker brief; the Pi is shared and a full
   backend suite was already running from another session). CI runs the full backend gate set on the PR.
 
