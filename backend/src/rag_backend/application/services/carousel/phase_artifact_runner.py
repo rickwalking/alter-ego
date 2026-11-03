@@ -119,6 +119,7 @@ from .editorial_workflow_support import (
     EditorialWorkflowStartInput,
     publish_workflow_artifacts_from_updates,
 )
+from .json_answers import JsonAnswers
 from .localized_rows_sync import sync_rows_to_localized
 from .outline_by_mode import ModeOutlineRequest
 from .outline_normalize import normalize_editorial_outline
@@ -136,6 +137,8 @@ class PhaseArtifactRunnerConfig:
     carousel's quality rubric (no judge: no scores). ``budget_fitter`` shortens the
     fields over their copy budget right before the content review is built; when
     unset, ``budget_fit_tracing`` turns on the fast-model fitter built from ``llm``.
+    ``translation_answers`` asks the EN slide translation with JSON retries and the
+    fallback model; unset, it is one plain call on ``llm``.
     """
 
     outline_agent: OutlineAgent
@@ -152,6 +155,7 @@ class PhaseArtifactRunnerConfig:
     rubric_judge: RubricJudge | None = None
     budget_fitter: CopyBudgetFitter | None = None
     budget_fit_tracing: Callable[[], RunnableConfig] | None = None
+    translation_answers: JsonAnswers | None = None
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
@@ -244,6 +248,7 @@ class PhaseArtifactRunner:
         self._rubric_judge = config.rubric_judge
         self._rubric = CarouselRubricStep(db=config.db, judge=config.rubric_judge)
         self._budget_fit_tracing = config.budget_fit_tracing
+        self._translation_answers = config.translation_answers
         self._budget_fitter = config.budget_fitter or llm_budget_fitter(
             config.llm, config.budget_fit_tracing
         )
@@ -268,6 +273,7 @@ class PhaseArtifactRunner:
                 slide_draft_retry=self._slide_draft_retry,
                 draft_concurrency=self._draft_concurrency,
                 gate_repairer=self._gate_repairer,
+                translation_answers=self._translation_answers,
                 gate_repair_tracing=self._gate_repair_tracing,
                 rubric_judge=self._rubric_judge,
                 budget_fitter=self._budget_fitter,
@@ -441,6 +447,7 @@ class PhaseArtifactRunner:
                 research_summary=research_summary_from_findings(
                     state.get(STATE_FIELD_RESEARCH_FINDINGS)
                 ),
+                translation_answers=self._translation_answers,
             ),
             linkedin_generator=container.linkedin_post_generator(),
         )

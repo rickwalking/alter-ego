@@ -197,4 +197,25 @@ async def _arequest_repair(
     return cast(str, response.content)
 
 
-__all__ = ["JsonRetryPolicy", "ainvoke_json"]
+@dataclass(frozen=True)
+class JsonRetryAnswers:
+    """``ainvoke_json`` on one model, as the application's injected JSON caller.
+
+    Structurally the application's ``JsonAnswers`` port: the orchestrator injects it
+    so application code gets the retries and the fallback without importing agents.
+    """
+
+    runnable: Runnable[LanguageModelInput, BaseMessage]
+    agent: str
+
+    async def __call__(self, prompt: str, parse: Callable[[str], T]) -> T:
+        """The answer parsed by ``parse`` after the re-roll, repair and fallback."""
+        parsed, _raw = await ainvoke_json(
+            self.runnable,
+            prompt,
+            JsonRetryPolicy(parse=parse, agent=self.agent, model_id=self.agent),
+        )
+        return parsed
+
+
+__all__ = ["JsonRetryAnswers", "JsonRetryPolicy", "ainvoke_json"]

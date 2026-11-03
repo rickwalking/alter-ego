@@ -32,6 +32,7 @@ from rag_backend.application.services.carousel.editorial_distribution_persist im
 from rag_backend.application.services.carousel.editorial_distribution_slide import (
     _slide_heading,
 )
+from rag_backend.application.services.carousel.json_answers import JsonAnswers
 from rag_backend.application.services.carousel.localized_slide_builder import (
     resolve_slide_index,
 )
@@ -67,6 +68,7 @@ class DistributionBuildContext:
     outline: list[dict[str, object]]
     slide_drafts: list[dict[str, object]]
     research_summary: str = ""
+    translation_answers: JsonAnswers | None = None
 
 
 def _ensure_blog_titles(
@@ -129,7 +131,9 @@ async def build_editorial_distribution_updates(
 
     translations_en = _with_news_cards(
         project,
-        await _generate_en_translations(context.llm, context.slide_drafts),
+        await _generate_en_translations(
+            context.llm, context.slide_drafts, context.translation_answers
+        ),
         context.slide_drafts,
     )
     await apply_slide_drafts_to_database(

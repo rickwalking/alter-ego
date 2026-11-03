@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import json
-from typing import cast
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TypeVar, cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
-from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.application.services.carousel.copy_budget_limits import (
     LimitScope,
     limits_payload,
     role_at,
 )
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
-    AGENT_EN_TRANSLATION,
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
     JSON_SLIDE_NUMBER_ALIAS_KEY,
@@ -34,6 +34,7 @@ from rag_backend.application.services.carousel.editorial_translation_structure i
     structured_source,
     structured_translation,
 )
+from rag_backend.application.services.carousel.json_answers import JsonAnswers
 from rag_backend.application.services.carousel.localized_slide_builder import (
     resolve_policy_version,
     resolve_slide_type,
@@ -64,6 +65,8 @@ from rag_backend.domain.copy_sanitize import sanitize_model_copy
 from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+
+T = TypeVar("T")
 
 
 def _slide_headings_for_caption(
@@ -186,13 +189,30 @@ def _with_pt_structure(
     return translations
 
 
+@dataclass(frozen=True)
+class _SingleCall:
+    """One traced call, no retry: only when no retrying caller is injected."""
+
+    llm: BaseChatModel
+
+    async def __call__(self, prompt: str, parse: Callable[[str], T]) -> T:
+        response = await self.llm.ainvoke(
+            [HumanMessage(content=prompt)],
+            get_langfuse_runnable_config(),
+        )
+        return parse(str(response.content))
+
+
 async def _generate_en_translations(
     llm: BaseChatModel,
     slide_drafts: list[dict[str, object]],
+    answers: JsonAnswers | None = None,
 ) -> dict[int, dict[str, object]]:
     """Translate the PT slides to EN with the versioned prompt.
 
     The prompt is the versioned YAML one carrying the contract's quality rubric.
+    ``answers`` is the orchestrator's retrying caller (re-roll, repair, then the
+    fallback model); without it the translation is one plain call on ``llm``.
     """
     payload = _build_translation_payload(slide_drafts)
     if not payload:
@@ -204,13 +224,9 @@ async def _generate_en_translations(
             RUBRIC_AUDIENCE_TRANSLATION,
         ),
     )
-    policy = JsonRetryPolicy(
-        parse=_parse_translation_answer,
-        agent=AGENT_EN_TRANSLATION,
-        model_id=AGENT_EN_TRANSLATION,
-    )
+    ask = answers or _SingleCall(llm)
     try:
-        translations, _raw = await ainvoke_json(llm, prompt, policy)
+        translations = await ask(prompt, _parse_translation_answer)
     except TypeError as exc:
         raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
     return _with_pt_structure(translations, slide_drafts)
