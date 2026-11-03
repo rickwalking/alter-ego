@@ -1,6 +1,6 @@
 # AE-0601 — An abandoned escalation that closes also settles its carousel
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Low
 Type: Bugfix
@@ -56,19 +56,19 @@ so the reaper's 72-hour window ended later. Cosmetic, low risk, but the run and 
 
 ## Acceptance Criteria
 
-- [ ] AC1: closing an abandoned escalation whose carousel waits for a human (`awaiting_human`, not archived, not
+- [x] AC1: closing an abandoned escalation whose carousel waits for a human (`awaiting_human`, not archived, not
   published, not approved for publish, not public) at the lock version the run escalated at moves the carousel to
   `phase_status=rejected`, `status=failed`, with the escalation reason as `error_message`.
-- [ ] AC2: that settle emits one `project.phase_changed` event with the stuck auto-reject's payload keys
+- [x] AC2: that settle emits one `project.phase_changed` event with the stuck auto-reject's payload keys
   (`previous_phase`, `previous_phase_status`, `phase_status`, `reason`, `timeout_hours`) and a distinct `source`
   (`autopilot_escalation_expired`).
-- [ ] AC3: the transition is the stuck-workflow auto-reject's own (`WorkflowTimeoutRepository.reject`); no raw UPDATE
+- [x] AC3: the transition is the stuck-workflow auto-reject's own (`WorkflowTimeoutRepository.reject`); no raw UPDATE
   on carousel tables, `check_carousel_raw_updates.py` allowlist unchanged.
-- [ ] AC4: a carousel not waiting for a human, or whose lock version moved since the escalation, is left unchanged and
+- [x] AC4: a carousel not waiting for a human, or whose lock version moved since the escalation, is left unchanged and
   no event is emitted; a run with no carousel or no `escalated_version` settles nothing; a second sweep does nothing.
-- [ ] AC5: the run closes first; a lost close (CAS refused) settles nothing; a settle error is logged
+- [x] AC5: the run closes first; a lost close (CAS refused) settles nothing; a settle error is logged
   (`autopilot_escalation_settle_failed`) and the run stays rejected (the settle runs in a savepoint).
-- [ ] AC6: autopilot reaches the carousel only through a port and the editorial public facade (import-linter
+- [x] AC6: autopilot reaches the carousel only through a port and the editorial public facade (import-linter
   contracts unchanged and green).
 
 ## Gherkin Scenarios
@@ -148,13 +148,35 @@ Feature: An abandoned escalation that closes also settles its carousel (AE-0601)
 
 Ticket created from the read-only prod triage. Feature file and failing tests first.
 
+### 2026-11-03 11:30
+
+Commit 1: ticket, feature, failing unit + Postgres tests (collection fails on the missing settle port and
+constants). Commit 2: the fix. Unit (9) and Postgres integration (10) tests green. Full backend gate run via
+`gate-capture.sh backend`.
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/application/run_recovery.py` — close first, then `_settle_carousel`.
+- `backend/src/rag_backend/modules/autopilot/domain/recovery.py` — `CarouselSettle`, `CarouselSettler`.
+- `backend/src/rag_backend/modules/autopilot/infrastructure/carousel_settler.py` — adapter + factory (new).
+- `backend/src/rag_backend/modules/autopilot/application/runner_deps.py`, `runner.py`, `bootstrap.py` — wiring.
+- `backend/src/rag_backend/modules/autopilot/recovery_constants.py` — settle log events.
+- `backend/src/rag_backend/modules/editorial/infrastructure/abandoned_carousel.py` — settle operation (new).
+- `backend/src/rag_backend/modules/editorial/public.py` — facade export.
+- `backend/src/rag_backend/infrastructure/database/workflow_timeout_repository.py` — public `reject` + `RejectCause`.
+- `backend/src/rag_backend/domain/constants/workflow_timeout.py` — escalation reject message and source.
+- `backend/src/rag_backend/infrastructure/database/carousel_run_guard.py`,
+  `backend/tests/unit/infrastructure/test_carousel_run_guard.py` — docstring reference to the renamed method.
+- `backend/tests/features/escalation_close_settles_carousel_ae0601.feature` (new).
+- `backend/tests/unit/modules/autopilot/test_escalation_close_settles_carousel_ae0601.py` (new).
+- `backend/tests/integration/test_escalation_close_settles_carousel_pg_ae0601.py` (new).
 
 ## Test Evidence
 
-Pending.
+- Unit: `tests/unit/modules/autopilot/test_escalation_close_settles_carousel_ae0601.py` 9 passed.
+- Postgres: `tests/integration/test_escalation_close_settles_carousel_pg_ae0601.py` 10 passed.
+- Full gate run (`gate-capture.sh backend`): pass 26, fail 0, skip 1 (mutation, CI only). See
+  `.agent/reports/AE-0601.dev-summary.md`.
 
 ## QA Report
 
@@ -180,4 +202,5 @@ None.
 
 ## Final Summary
 
-Pending.
+An abandoned escalation's close now settles its waiting carousel through the stuck auto-reject's own transition and
+event. Awaiting QA.
