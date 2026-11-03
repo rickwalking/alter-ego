@@ -14,12 +14,11 @@ from structlog.testing import capture_logs
 
 from rag_backend.bootstrap.autopilot_worker_factory import autopilot_tick_config
 from rag_backend.infrastructure.config.settings import Settings
-from rag_backend.modules.autopilot.bootstrap import runner_dependencies
-
 from rag_backend.modules.autopilot.application.run_recovery import (
     RecoveryDependencies,
     RunRecovery,
 )
+from rag_backend.modules.autopilot.bootstrap import runner_dependencies
 from rag_backend.modules.autopilot.constants import GATE_CONTENT
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
