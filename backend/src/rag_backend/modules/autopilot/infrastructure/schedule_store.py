@@ -14,7 +14,7 @@ from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotR
 from rag_backend.modules.autopilot.domain.schedule_ports import DueScheduleQuery
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.run_mapping import run_from_row
-from rag_backend.modules.editorial.public import lock_carousel_row
+from rag_backend.modules.editorial.public import lock_carousel_row, review_reopened
 
 _DUE_STATES = (
     AutopilotRunState.SCHEDULED.value,
@@ -53,3 +53,28 @@ class SqlScheduledRuns:
             .execution_options(populate_existing=True)
         )
         return [run_from_row(row) for row in result.scalars().all()]
+
+    async def waiting(self, query: DueScheduleQuery) -> list[AutopilotRun]:
+        """``scheduled`` runs not due yet, earliest first."""
+        result = await self._session.execute(
+            select(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.state == AutopilotRunState.SCHEDULED.value,
+                AutopilotRunModel.scheduled_at > query.now,
+            )
+            .order_by(AutopilotRunModel.scheduled_at.asc())
+            .limit(query.limit)
+            .execution_options(populate_existing=True)
+        )
+        return [run_from_row(row) for row in result.scalars().all()]
+
+
+class EditorialReopenedReviews:
+    """``ReopenedReviewSource`` through the editorial facade."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def reopened(self, project_id: str) -> bool:
+        """A completed draft waiting in final review, not released."""
+        return await review_reopened(self._session, project_id)

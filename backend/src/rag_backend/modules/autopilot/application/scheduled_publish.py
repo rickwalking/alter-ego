@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 import structlog
 
+from rag_backend.modules.autopilot.application.reopen_recovery import ReopenRecovery
 from rag_backend.modules.autopilot.constants import NOTICE_PUBLISH_FAILED
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
@@ -68,7 +69,8 @@ _S = AutopilotRunState
 @dataclass(frozen=True, kw_only=True)
 class ScheduledPublishDependencies:
     """Collaborators for one worker tick. The session is already bound;
-    ``lock`` holds the carousel row until the tick's commit."""
+    ``lock`` holds the carousel row until the tick's commit; ``recovery``
+    sends a reopened carousel's scheduled run back for review."""
 
     runs: AutopilotRunRepository
     scheduled: ScheduledRunSource
@@ -78,6 +80,7 @@ class ScheduledPublishDependencies:
     checkpoint: PublishCheckpoint
     clock: Clock
     lock: CarouselRowLock
+    recovery: ReopenRecovery | None = None
 
 
 class ScheduledPublishSweep:
@@ -94,6 +97,8 @@ class ScheduledPublishSweep:
         for run in await self._deps.scheduled.due(query):
             moved += await self._fire(run)
             await self._deps.checkpoint.commit()
+        if self._deps.recovery is not None:
+            moved += await self._deps.recovery.tick()
         return moved
 
     async def _fire(self, run: AutopilotRun) -> int:

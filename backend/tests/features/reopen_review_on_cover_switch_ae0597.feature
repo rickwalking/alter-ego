@@ -70,3 +70,13 @@ Feature: A cover switch reopens the final review of an approved carousel (AE-059
     Given a cover switch wired without the checkpoint reopen
     When it meets an approved carousel
     Then it is refused as approved and nothing is written or rendered
+
+  Scenario: The new Telegram review waits for the render
+    Given a carousel whose approval was dropped, whatever the switch's render did
+    When the worker reaches the final review while the slides still owe a render
+    Then it waits, and sends the review only once the slides are rendered
+
+  Scenario: A lost review request is recovered
+    Given a scheduled run whose carousel's review was reopened but the run was never told
+    When the due tick runs before the run's time
+    Then the run is sent back for review with its time kept

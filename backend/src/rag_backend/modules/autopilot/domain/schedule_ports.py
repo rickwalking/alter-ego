@@ -26,6 +26,10 @@ class ScheduledRunSource(Protocol):
         """Due runs, earliest ``scheduled_at`` first, capped by ``query.limit``."""
         ...
 
+    async def waiting(self, query: DueScheduleQuery) -> list[AutopilotRun]:
+        """``scheduled`` runs whose time is still ahead of ``query.now``."""
+        ...
+
 
 class CarouselRowLock(Protocol):
     """Locks a carousel row until the caller's transaction ends."""

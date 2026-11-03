@@ -35,6 +35,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_PERSONA_SCORE,
     REASON_PHASE_FAILED,
     REASON_READY,
+    REASON_RENDER_PENDING,
     REASON_RESEARCH,
     REASON_RUN_STALE,
     REASON_UNEXPECTED_PHASE,
@@ -87,12 +88,15 @@ def decide(snapshot: GateSnapshot) -> PolicyDecision:
 
 
 def _before_gate(snapshot: GateSnapshot) -> PolicyDecision | None:
-    """A stale or failed run, then a parked workflow, come first."""
+    """A stale or failed run, then a parked workflow, come first; a final
+    review whose slides still owe a render waits for it."""
     terminal = _terminal(snapshot)
     if terminal is not None:
         return terminal
     if snapshot.parked:
         return _parked(snapshot)
+    if snapshot.render_pending and snapshot.phase == GATE_FINAL_REVIEW:
+        return PolicyDecision(action=GateAction.WAIT, reason=REASON_RENDER_PENDING)
     return None
 
 

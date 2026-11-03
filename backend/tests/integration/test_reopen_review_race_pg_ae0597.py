@@ -21,9 +21,13 @@ from pathlib import Path
 
 import pytest
 
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReopenRefusedError,
+)
 from rag_backend.domain.constants.carousel_autofix import AUTOFIX_STATUS_FIXED
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
+    REASON_AUTO_SELECT_PUBLISHED,
 )
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
@@ -36,6 +40,7 @@ from rag_backend.modules.autopilot.schedule_constants import (
     REASON_SCHEDULE_DUE,
     REASON_SCHEDULE_WITHDRAWN,
 )
+from rag_backend.modules.editorial.public import ApprovalReopen
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
 from tests.integration.reopen_review_pg_support import (
     APPROVED,
@@ -224,3 +229,46 @@ async def test_a_release_waiting_on_the_switch_releases_nothing(
         assert released is False
         after = await committed(built, project_id)
         assert (after.is_public, after.workflow_status) == (False, "draft")
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_a_reopen_waiting_on_a_release_rewrites_nothing(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reopen re-reads the row under its lock: a release that landed first
+    is never rewritten to a draft and the checkpoint is never reopened."""
+    # Scenario: The scheduled publish and a cover switch never both win
+    async with isolated_schema(sweep_tables()) as engine:
+        built = harness(engine, monkeypatch)
+        race = await _due_and_approved(built, dirs)
+        locked, proceed = asyncio.Event(), asyncio.Event()
+        _pausing_lock(monkeypatch, locked, proceed)
+        checkpoint = Checkpoint(built)
+
+        async def _reopen() -> str:
+            async with built.sessions()() as session:
+                try:
+                    await ApprovalReopen(session, checkpoint).reopen(race.project_id)
+                except ReopenRefusedError as refused:
+                    await session.rollback()
+                    return refused.reason
+                await session.commit()
+                return ""
+
+        sweeping = asyncio.create_task(sweep(built))
+        await asyncio.wait_for(locked.wait(), _WAIT_SECONDS)
+        reopening = asyncio.create_task(_reopen())
+        await asyncio.sleep(_BLOCKED_SECONDS)
+        assert not reopening.done()
+        proceed.set()
+        moved, reason = await asyncio.gather(sweeping, reopening)
+
+        assert moved == 1
+        assert reason == REASON_AUTO_SELECT_PUBLISHED
+        assert checkpoint.reopened == []
+        after = await committed(built, race.project_id)
+        assert (after.is_public, after.workflow_status) == (
+            True,
+            "approved_for_publish",
+        )

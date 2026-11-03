@@ -15,7 +15,14 @@ from pathlib import Path
 
 import pytest
 
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReopenRefusedError,
+)
 from rag_backend.domain.constants.carousel_autofix import AUTOFIX_STATUS_FIXED
+from rag_backend.domain.constants.cover_review_switch import (
+    REASON_AUTO_SELECT_PUBLISHED,
+    REASON_REVIEW_NOT_REOPENED,
+)
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.modules.autopilot import cover_review_hold
 from rag_backend.modules.autopilot.cover_constants import (
@@ -30,11 +37,13 @@ from rag_backend.modules.autopilot.schedule_constants import (
     REASON_SCHEDULE_DUE,
     REASON_SCHEDULE_WITHDRAWN,
 )
+from rag_backend.modules.editorial.public import ApprovalReopen
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
 from tests.integration.reopen_review_pg_support import (
     APPROVED,
     Checkpoint,
     CommittedRow,
+    age_run,
     committed,
     pick,
     run_row,
@@ -266,3 +275,64 @@ async def test_an_approved_carousel_is_still_released(
 
         assert released is True
         assert (await row(built, project_id)).is_public is True
+
+
+@requires_postgres
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("values", "checkpoint_ok", "reason"),
+    [
+        ({**APPROVED, "is_public": True}, True, REASON_AUTO_SELECT_PUBLISHED),
+        ({}, True, REASON_REVIEW_NOT_REOPENED),
+        (APPROVED, False, REASON_REVIEW_NOT_REOPENED),
+    ],
+)
+async def test_a_reopen_that_cannot_land_writes_nothing(
+    dirs: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    values: dict[str, object],
+    checkpoint_ok: bool,
+    reason: str,
+) -> None:
+    """Released or no longer approved under the lock, or a checkpoint that
+    cannot reopen: refused, the row unchanged."""
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
+    async with isolated_schema(sweep_tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id, photos = await seed(built, dirs, **values)
+        before = await committed(built, project_id)
+        checkpoint = Checkpoint(built, ok=checkpoint_ok)
+
+        async with built.sessions()() as session:
+            with pytest.raises(ReopenRefusedError) as refused:
+                await ApprovalReopen(session, checkpoint).reopen(project_id)
+            await session.rollback()
+
+        assert refused.value.reason == reason
+        assert await committed(built, project_id) == before
+        assert photos
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_a_lost_review_request_is_recovered_by_the_due_tick(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The process died after the switch's commit: the scheduled run of the
+    reopened carousel is still sent back for review, its time kept."""
+    # Scenario: A lost review request is recovered
+    async with isolated_schema(sweep_tables()) as engine:
+        built = harness(engine, monkeypatch)
+        project_id, _photos = await seed(built, dirs)
+        kept = datetime.now(UTC) + timedelta(hours=4)
+        await seed_kept_run(built, project_id, _S.SCHEDULED, kept)
+        await age_run(built, project_id, timedelta(minutes=10))
+
+        assert await sweep(built) == 1
+
+        run = await run_row(built, project_id)
+        assert (run.state, run.reason) == (
+            _S.REWORKING.value,
+            REASON_COVER_REVIEW_REOPENED,
+        )
+        assert run.scheduled_at == kept

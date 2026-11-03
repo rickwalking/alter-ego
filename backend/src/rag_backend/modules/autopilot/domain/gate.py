@@ -115,6 +115,7 @@ class SnapshotParts:
     ``hero_images_total`` counts the hero images the image phase builds (the CTA
     slide has none). A ``pov`` carousel must be voice-scored at the content gate.
     ``quote_violations`` are ``pov_news`` quote cards that are not verbatim.
+    ``render_pending``: slide changes still owe a render (no review goes out).
     """
 
     state: Mapping[str, object]
@@ -128,6 +129,7 @@ class SnapshotParts:
     hero_images_total: int = 0
     pov: bool = False
     quote_violations: tuple[QualityViolation, ...] = ()
+    render_pending: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -139,7 +141,8 @@ class GateSnapshot:
     design gates, kept apart from ``forbidden_hits`` so each is reported under its
     own reason. ``pending_rescores`` lists slides whose stored voice score is stale
     (``rescore_pending``): the gate must not approve on a stale passing score, so
-    the step re-scores these before approving.
+    the step re-scores these before approving. ``render_pending``: the final
+    review waits until slide changes are rendered, so its review shows them.
     """
 
     phase: str
@@ -161,6 +164,7 @@ class GateSnapshot:
     quality_violations: tuple[QualityViolation, ...] = ()
     pending_rescores: tuple[int, ...] = ()
     pov: bool = False
+    render_pending: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -68,6 +68,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         quality_violations=_quality(state, phase) + _quotes(parts, phase),
         pending_rescores=tuple(pending_rescores(state.get(FIELD_PERSONA_SCORES))),
         pov=parts.pov,
+        render_pending=parts.render_pending,
     )
 
 

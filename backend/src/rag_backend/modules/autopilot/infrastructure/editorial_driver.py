@@ -213,6 +213,7 @@ class InProcessEditorialDriver:
                 hero_images_total=await self._acl.hero_image_total(project_id),
                 pov=await self._acl.is_pov(project_id),
                 quote_violations=await quote_violations(self._acl, project_id, state),
+                render_pending=await self._acl.render_pending(project_id),
             )
         )
 

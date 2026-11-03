@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -84,6 +84,7 @@ class Checkpoint:
     seen: list[CommittedRow] = field(default_factory=list)
     entered: asyncio.Event = field(default_factory=asyncio.Event)
     proceed: asyncio.Event | None = None
+    ok: bool = True
 
     async def reopen(self, project_id: str) -> bool:
         self.reopened.append(project_id)
@@ -91,7 +92,7 @@ class Checkpoint:
         self.entered.set()
         if self.proceed is not None:
             await self.proceed.wait()
-        return True
+        return self.ok
 
 
 class NoOffer:
@@ -125,6 +126,17 @@ async def seed_kept_run(
             update(AutopilotRunModel)
             .where(AutopilotRunModel.carousel_project_id == project_id)
             .values(scheduled_at=at)
+        )
+        await session.commit()
+
+
+async def age_run(built: Harness, project_id: str, age: timedelta) -> None:
+    """Move the run's ``updated_at`` into the past by ``age``."""
+    async with built.sessions()() as session:
+        await session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.carousel_project_id == project_id)
+            .values(updated_at=datetime.now(UTC) - age)
         )
         await session.commit()
 
@@ -166,6 +178,7 @@ __all__ = [
     "CommittedRow",
     "NoOffer",
     "RunRow",
+    "age_run",
     "committed",
     "pick",
     "run_row",
