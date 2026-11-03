@@ -3,8 +3,12 @@
 The validator (unchanged) finds the fields over their copy budget
 (``heading_too_long``, ``body_too_long``, ``copy_too_many_lines``) in PT and EN,
 headings, bodies and item titles/bodies. Only those fields go to the fast model,
-one call per attempt, at most ``max_attempts``. Every answer is checked by code
-before it replaces the field:
+one call per attempt, at most ``max_attempts``. First every balanced emphasis
+pair is put in its locale's convention (``copy_budget_emphasis``): EN copy a
+drafting blob wrote with PT ``**`` markers is measured with the longer
+``<strong>`` tags it will render with, and stops being an emphasis mismatch.
+Every answer gets the same conversion and is checked by code before it
+replaces the field (a rejection is counted by reason in the done log):
 
 - non-empty, different, and in the field's language (EN not Portuguese, PT not
   English);
@@ -25,6 +29,8 @@ from __future__ import annotations
 
 import asyncio
 import copy
+from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import structlog
@@ -34,6 +40,11 @@ from rag_backend.application.services.carousel.content_gate_repair_targets impor
     TargetPlan,
     apply_fixes,
     plan_targets,
+)
+from rag_backend.application.services.carousel.copy_budget_emphasis import (
+    EmphasisScope,
+    answer_in_locale_emphasis,
+    slides_in_locale_emphasis,
 )
 from rag_backend.application.services.carousel.copy_budget_fit_llm import (
     CopyBudgetFitter,
@@ -77,6 +88,11 @@ from rag_backend.domain.constants.copy_budget_fit import (
     LOG_COPY_BUDGET_FIT_ATTEMPT,
     LOG_COPY_BUDGET_FIT_DONE,
     LOG_COPY_BUDGET_FIT_MODEL_FAILED,
+    REJECT_FORBIDDEN_PHRASE,
+    REJECT_NEW_VIOLATION,
+    REJECT_NOT_SHORTER,
+    REJECT_UNCHANGED,
+    REJECT_WRONG_LANGUAGE,
 )
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
@@ -134,6 +150,7 @@ class BudgetFitOutcome:
     rejected: int = 0
     still_over: int = 0
     requested: list[tuple[str, ...]] = field(default_factory=list)
+    rejected_reasons: Counter[str] = field(default_factory=Counter)
 
 
 def _violation_keys(
@@ -204,22 +221,37 @@ def _adds_forbidden_phrase(before: str, after: str, phrases: tuple[str, ...]) ->
     )
 
 
-def _plausible(item: FitTarget, text: str, command: BudgetFitCommand) -> bool:
-    """Cheap checks before re-validation: new, shorter, right language, on-voice."""
-    current = item.target.text
-    if not text or text == current:
-        return False
-    if item.target.locale == LANGUAGE_EN and looks_portuguese(text):
-        return False
-    if item.target.locale == LANGUAGE_PT and wrong_language_detail(
-        text, portuguese=True
-    ):
-        return False
-    shorter = len(text) < len(current)
+def _wrong_language(item: FitTarget, text: str) -> bool:
+    if item.target.locale == LANGUAGE_EN:
+        return looks_portuguese(text)
+    return item.target.locale == LANGUAGE_PT and bool(
+        wrong_language_detail(text, portuguese=True)
+    )
+
+
+def _not_shorter(current: str, text: str) -> bool:
     fewer_lines = count_rendered_lines(text) < count_rendered_lines(current)
-    if not (shorter or fewer_lines):
-        return False
-    return not _adds_forbidden_phrase(current, text, command.forbidden_phrases)
+    return not (len(text) < len(current) or fewer_lines)
+
+
+def _implausible(item: FitTarget, text: str, command: BudgetFitCommand) -> str:
+    """Why an answer fails the cheap checks ("" when it passes them).
+
+    Checked in order before re-validation: new, in the field's language,
+    shorter (or on fewer lines), without a forbidden phrase the current text
+    lacked.
+    """
+    current = item.target.text
+    checks: tuple[tuple[str, Callable[[], bool]], ...] = (
+        (REJECT_UNCHANGED, lambda: not text or text == current),
+        (REJECT_WRONG_LANGUAGE, lambda: _wrong_language(item, text)),
+        (REJECT_NOT_SHORTER, lambda: _not_shorter(current, text)),
+        (
+            REJECT_FORBIDDEN_PHRASE,
+            lambda: _adds_forbidden_phrase(current, text, command.forbidden_phrases),
+        ),
+    )
+    return next((reason for reason, failed in checks if failed()), "")
 
 
 def _own_length_keys(target: FieldRepairTarget) -> set[ViolationKey]:
@@ -233,18 +265,19 @@ def _try_answer(
     slides: list[dict[str, object]],
     item: FitTarget,
     answer: tuple[str, BudgetFitCommand],
-) -> list[dict[str, object]] | None:
-    """The slides with the answer patched in, or None when it is rejected."""
+) -> tuple[list[dict[str, object]] | None, str]:
+    """The slides with the answer patched in, or None and why it was rejected."""
     text, command = answer
-    if not _plausible(item, text, command):
-        return None
+    reason = _implausible(item, text, command)
+    if reason:
+        return None, reason
     patched = apply_fixes(slides, (item.target,), {item.target.target_id: text})
     own = _own_length_keys(item.target)
     before = _violation_keys(slides, command) - own
     after = _violation_keys(patched, command) - own
     if after - before:
-        return None
-    return patched
+        return None, REJECT_NEW_VIOLATION
+    return patched, ""
 
 
 async def _ask(
@@ -270,12 +303,15 @@ def _apply_answers(
     answer: tuple[tuple[FitTarget, ...], dict[str, str], BudgetFitCommand],
     outcome: BudgetFitOutcome,
 ) -> list[dict[str, object]]:
+    """Patch in every accepted answer, its emphasis in the field's convention."""
     targets, texts, command = answer
     for item in targets:
-        text = texts.get(item.target.target_id, "").strip()
-        patched = _try_answer(slides, item, (text, command))
+        raw = texts.get(item.target.target_id, "").strip()
+        text = answer_in_locale_emphasis(item.target.locale, raw)
+        patched, reason = _try_answer(slides, item, (text, command))
         if patched is None:
             outcome.rejected += 1
+            outcome.rejected_reasons[reason] += 1
             continue
         outcome.accepted += 1
         slides = patched
@@ -307,6 +343,7 @@ def _log_done(command: BudgetFitCommand, outcome: BudgetFitOutcome) -> None:
         accepted=outcome.accepted,
         rejected=outcome.rejected,
         still_over=outcome.still_over,
+        rejected_reasons=dict(outcome.rejected_reasons),
         changed_slides=sorted(outcome.changed_indices),
     )
 
@@ -314,7 +351,10 @@ def _log_done(command: BudgetFitCommand, outcome: BudgetFitOutcome) -> None:
 async def fit_slides_to_budgets(command: BudgetFitCommand) -> BudgetFitOutcome:
     """Shorten the over-budget fields, at most ``max_attempts`` model calls."""
     original = copy.deepcopy(command.slides)
-    slides = copy.deepcopy(command.slides)
+    slides = slides_in_locale_emphasis(
+        copy.deepcopy(command.slides),
+        EmphasisScope(command.only_slides, command.excluded_fields),
+    )
     outcome = BudgetFitOutcome(slides=slides)
     for _ in range(command.max_attempts):
         targets = _over_budget_targets(slides, command)

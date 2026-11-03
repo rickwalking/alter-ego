@@ -24,6 +24,8 @@ from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
     CarouselInstructionContextLoader,
     InstructionContextRequest,
+    SlideLimitsRequest,
+    slide_limits_text,
 )
 from rag_backend.application.services.carousel.presentation_policy import (
     RUBRIC_AUDIENCE_CONTENT,
@@ -38,6 +40,7 @@ from rag_backend.domain.constants.news_quotes import CARD_KEY_QUOTE_ID
 from rag_backend.domain.constants.pov_prompts import (
     POV_PROMPT_CONTENT,
     POV_PROMPT_CONTENT_VERSION,
+    POV_VAR_SLIDE_LIMITS,
     RADAR_PROMPT_CONTENT,
     RADAR_PROMPT_DOMAIN,
     RADAR_PROMPT_VERSION,
@@ -165,7 +168,8 @@ class ContentDraftAgent:
         deck size; with ``policy.pov`` the slide is drafted from the owner's
         thesis with the POV content prompt of its family (``carousel_pov`` or
         ``carousel_pov_news``) at ``POV_PROMPT_CONTENT_VERSION``; the slide's copy
-        limits arrive in the instruction context.
+        limits arrive in the instruction context and, rendered the same way, in the
+        ``slide_limits`` variable the POV prompt places before its answer format.
 
         Titles and key points use case-preserving sanitization: lowercased input made
         the model echo lowercase copy into the slides. Revision notes are rendered once,
@@ -217,6 +221,13 @@ class ContentDraftAgent:
             "persona_context": persona_context or "Default professional voice.",
             "quality_rubric": render_quality_rubric(
                 load_presentation_policy(rubric_version), RUBRIC_AUDIENCE_CONTENT
+            ),
+            POV_VAR_SLIDE_LIMITS: slide_limits_text(
+                SlideLimitsRequest(
+                    policy_version=instruction.policy_version,
+                    slide_number=slide_index,
+                    slide_count=slide_policy.slide_count if slide_policy else None,
+                )
             ),
         }
         prompt_text, model_cfg = _render_content_prompt(variables, slide_policy)

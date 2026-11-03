@@ -11,7 +11,9 @@ Voice guard: a shortened slide whose new voice score falls below
 ``VOICE_MATCH_MIN_SCORE`` while its old score met it goes back to its
 pre-shortening draft, translation and score entry. The old entry still carries
 the fingerprint of the old text, so the restore needs no model call; the slide
-then reaches the validation with its original (over-budget) copy.
+then reaches the validation with its original (over-budget) copy. Every
+revert is logged (``copy_budget_fit_voice_reverted``) with its slides, so a gate
+that blocks on restored copy says why.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field, replace
 
+import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 
@@ -35,6 +38,9 @@ from rag_backend.application.services.carousel.copy_budget_fit_llm import (
 from rag_backend.application.services.carousel.localized_slide_builder import (
     resolve_slide_index,
 )
+from rag_backend.domain.constants.copy_budget_fit import (
+    LOG_COPY_BUDGET_FIT_VOICE_REVERTED,
+)
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.slide_fix import PERSONA_SCORE_SLIDE_KEY
 from rag_backend.domain.constants.workflow_state_fields import (
@@ -48,6 +54,8 @@ _TRANSLATIONS_EN_KEY = "translations_en"
 _OUTLINE_TITLE_KEY = "title"
 _POLICY_VERSION_KEY = "presentation_policy_version"
 _PROJECT_ID_KEY = "project_id"
+
+logger = structlog.get_logger(__name__)
 
 VoiceScorer = Callable[[list[object], object], Awaitable[dict[str, object]]]
 
@@ -136,6 +144,14 @@ def _restored_translations(
     return restored
 
 
+def _log_revert(project_id: str, indices: set[int]) -> None:
+    logger.info(
+        LOG_COPY_BUDGET_FIT_VOICE_REVERTED,
+        project_id=project_id,
+        reverted_slides=sorted(indices),
+    )
+
+
 def _apply_guard(
     guard: _Guard, step: BudgetStepInput
 ) -> tuple[DraftFitResult, dict[str, object]]:
@@ -152,6 +168,7 @@ def _apply_guard(
         indices.add(resolve_slide_index(drafts[position], position + 1))
         key = PERSONA_SCORE_SLIDE_KEY.format(index=position + 1)
         scores[key] = old[key]
+    _log_revert(step.project_id, indices)
     translations = _restored_translations(
         guard.fit.translations_en, step.translations_en, indices
     )

@@ -6,7 +6,13 @@ but starts no HTTP server. It registers one PgQueuer entrypoint for every kind o
 generation work, so ``concurrency_limit`` (``GENERATION_WORKER_CONCURRENCY``,
 Pedro: 1) is global and FIFO holds across kinds, and runs the dispatcher and the
 heavy periodic steps next to it. On SIGTERM PgQueuer stops dequeuing; a drive
-stops at its next phase boundary and comes back at once on the next worker.
+stops at its next phase boundary and comes back at once on the next worker. A
+deploy drain (``worker.drain``) does the same without stopping the process: a
+drained worker puts every job it picks back untouched, and the deploy waits
+until the busy marker is gone before it stops the container. A drive the deploy
+kills anyway stays ``running`` with its job picked; PgQueuer re-picks the job
+once its heartbeat is older than ``--heartbeat-timeout`` and the drive reaps the
+orphaned phase and re-runs it from the last checkpoint.
 
 The worker refuses to start unless the checkpointer is ``postgres``: the web
 reads the state the worker writes, so an in-memory or SQLite checkpointer would
@@ -18,6 +24,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import timedelta
+from pathlib import Path
 from typing import Final
 
 from pgqueuer import PgQueuer
@@ -79,6 +87,18 @@ from rag_backend.modules.generation_queue.infrastructure.progress_relay import (
 from rag_backend.modules.generation_queue.infrastructure.raw_connection import (
     asyncpg_connection,
 )
+from rag_backend.worker.constants import (
+    DRAIN_REASON,
+    DRAIN_RETRY_DELAY_SECONDS,
+    LOG_DRAIN_CLEARED,
+    LOG_DRAIN_REFUSED,
+)
+from rag_backend.worker.drain import (
+    DrainFiles,
+    DrainSwitch,
+    JobGate,
+    drive_stopping,
+)
 from rag_backend.worker.maintenance import WorkerMaintenance, register_maintenance
 from rag_backend.worker.periodic import PeriodicSteps, run_dispatcher, run_periodic
 
@@ -87,6 +107,7 @@ logger = get_logger()
 CHECKPOINT_BACKEND_POSTGRES = "postgres"
 ON_FAILURE_HOLD: Final = "hold"
 SET_APPLICATION_NAME = f"SET application_name = '{WORKER_APPLICATION_NAME}'"
+DRAIN_RETRY_DELAY = timedelta(seconds=DRAIN_RETRY_DELAY_SECONDS)
 ERR_CHECKPOINTER = (
     "generation worker needs CAROUSEL_CHECKPOINT_BACKEND=postgres, got {backend!r}"
 )
@@ -103,19 +124,42 @@ def require_postgres_checkpointer(settings: Settings) -> None:
         raise WorkerConfigError(ERR_CHECKPOINTER.format(backend=backend))
 
 
+def start_drain_switch(settings: Settings) -> DrainSwitch:
+    """The worker's drain switch, with any flag or marker of an older process gone."""
+    switch = DrainSwitch(
+        DrainFiles(
+            drain=Path(settings.generation_worker_drain_file),
+            busy=Path(settings.generation_worker_busy_file),
+        )
+    )
+    switch.reset()
+    logger.info(LOG_DRAIN_CLEARED)
+    return switch
+
+
 def is_provider_error(exc: BaseException) -> bool:
     """Provider outages and rate limits are transient for the queue."""
     return classify_provider_error(exc) is not None
 
 
-def job_entrypoint(handler: GenerationJobHandler) -> Callable[[Job], Awaitable[None]]:
-    """The PgQueuer entrypoint: turn the handler's verdict into PgQueuer signals."""
+def job_entrypoint(
+    handler: GenerationJobHandler, gate: JobGate
+) -> Callable[[Job], Awaitable[None]]:
+    """The PgQueuer entrypoint: turn the handler's verdict into PgQueuer signals.
+
+    While the worker is drained the job is put back after ``DRAIN_RETRY_DELAY``
+    before the handler sees it, so the run is neither claimed nor counted.
+    """
 
     async def run(job: Job) -> None:
         run_id = run_id_of(job.payload)
         if run_id is None:
             return
-        verdict = await handler.handle(run_id)
+        async with gate.admit() as admitted:
+            if not admitted:
+                logger.info(LOG_DRAIN_REFUSED, generation_run_id=str(run_id))
+                raise RetryRequested(delay=DRAIN_RETRY_DELAY, reason=DRAIN_REASON)
+            verdict = await handler.handle(run_id)
         if verdict.kind is VerdictKind.RETRY:
             raise RetryRequested(delay=verdict.delay, reason=str(run_id))
         if verdict.kind is VerdictKind.HOLD:
@@ -136,6 +180,7 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
         settings.generation_worker_db_max_overflow,
     )
     install_workflow_sse_hub(RelayingWorkflowSseHub(engine_notifier(engine)))
+    drain = start_drain_switch(settings)
     async with AsyncExitStack() as stack:
         stack.push_async_callback(close_db)
         connection = await stack.enter_async_context(asyncpg_connection(engine))
@@ -158,7 +203,7 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
                 reaper=reaper,
                 engine_factory=engine_factory,
                 is_provider_error=is_provider_error,
-                stopping=lambda: pgq.shutdown.is_set(),
+                stopping=drive_stopping(pgq.shutdown, drain),
                 drive_autopilot=settings.autopilot_enabled,
             ),
             Queries(pgq.connection),
@@ -167,11 +212,7 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
             ENTRYPOINT,
             concurrency_limit=settings.generation_worker_concurrency,
             on_failure=ON_FAILURE_HOLD,
-        )(job_entrypoint(composition.handler))
-        alerts = TelegramLlmAlerts(
-            token=settings.telegram_alerts_bot_token.get_secret_value(),
-            chat_id=settings.telegram_alerts_chat_id,
-        )
+        )(job_entrypoint(composition.handler, JobGate(drain)))
         register_maintenance(
             WorkerMaintenance(
                 pgq=pgq,
@@ -180,7 +221,10 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
                 dispatcher=composition.dispatcher,
                 scan=composition.scan,
                 bridge=bridge,
-                alert=alerts.send,
+                alert=TelegramLlmAlerts(
+                    token=settings.telegram_alerts_bot_token.get_secret_value(),
+                    chat_id=settings.telegram_alerts_chat_id,
+                ).send,
                 autopilot_enabled=settings.autopilot_enabled,
             )
         )
@@ -223,4 +267,5 @@ __all__ = [
     "is_provider_error",
     "job_entrypoint",
     "require_postgres_checkpointer",
+    "start_drain_switch",
 ]
