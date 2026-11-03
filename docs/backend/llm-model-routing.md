@@ -22,13 +22,15 @@ pt-BR caption as strict JSON, 2 runs): `qwen3.8-flash` 9-11 s, `qwen3.8-max` 14-
 `mimo-v2.6-flash` 7-19 s, `kimi-k2.6` 44-47 s, all valid JSON. `claude-haiku-5-5`,
 `gpt-5.6-luna`, `minimax-m2.7` and `grok-4.6` answer `ModelProtocolUnsupported` on this endpoint.
 
-**Step deadlines shorter than the role's (AE-0607).** A step that wraps its call in its own
-deadline shorter than the role's path to the fallback (300 s per call, several tries) cancels the
-primary before the fallback can run. The copy-budget shorten step bounds an attempt at 180 s, so it
-splits it: the primary gets 120 s (`COPY_BUDGET_FIT_PRIMARY_SECONDS`), then the role's fallback
-(`fallback_runnable_for(fast)`, the rest of the queue) gets what is left (`copy_budget_fit_fallback_used`
-log, traced under `copy budget fit`). The content-gate field repair has the same 180 s shape and
-no split yet.
+**Token caps on reasoning models (AE-0607).** The fast and fallback models spend their output
+budget on reasoning before they write the answer. A `max_tokens` bound on a call (a prompt YAML's
+`model.max_tokens`, or a `.bind(max_tokens=...)`) goes to the endpoint as `max_completion_tokens` and
+replaces the model's 32000 default. On 2026-11-03 the copy-budget fit (v1, 4096) spent exactly 4096
+reasoning tokens and answered nothing on every call: 3 × `deepseek-v4.1-flash` (35-38 s each, ~117
+tok/s), then `qwen3.8-flash` (63 s, ~65 tok/s), until the step's 180 s deadline. The fit prompt v3 uses
+32000. Still bound under 4096 on the fast role: cover prompt ideas (`IDEAS_MAX_TOKENS` 1500) and
+palette generation (`GENERATION_MAX_TOKENS` 2000). The content-gate repair YAML says 4096 but the
+repairer does not bind it, so it runs at 32000.
 
 ## Model queue and circuit breaker (AE-0399)
 

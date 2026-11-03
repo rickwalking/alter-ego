@@ -3,16 +3,13 @@
 The shorten step runs before the presentation validation: every field over its
 budget goes to the fast model, which rewrites it within the limit. At most
 ``COPY_BUDGET_FIT_MAX_ATTEMPTS`` model calls; what still does not fit goes to
-the normal validation. ``COPY_BUDGET_FIT_TIMEOUT_SECONDS`` bounds one attempt;
-inside it the primary fast model gets ``COPY_BUDGET_FIT_PRIMARY_SECONDS`` and
-the role's fallback model the rest. The fast role's own deadline (300 s per
-call, several tries) is longer than the attempt, so without this window the
-attempt timed out before the role ever reached its fallback. The limits
-themselves are never stored here: they come from the presentation contract
-through the validator's resolvers. ``REJECT_*`` name why a rewrite was dropped
-(counted in the done log); the fit prompt renders from
-``COPY_BUDGET_PROMPT_VERSION`` and the drafting "Copy limits of this slide"
-block from ``COPY_BUDGET_LIMITS_PROMPT_VERSION``.
+the normal validation. The limits themselves are never stored here: they come
+from the presentation contract through the validator's resolvers.
+``REJECT_*`` name why a rewrite was dropped (counted in the done log); the
+fit prompt renders from ``COPY_BUDGET_PROMPT_VERSION`` (v3: room for the fast
+model's reasoning before the answer; v1's 4096-token cap was spent on reasoning
+alone and every answer came back empty) and the drafting
+"Copy limits of this slide" block from ``COPY_BUDGET_LIMITS_PROMPT_VERSION``.
 """
 
 from __future__ import annotations
@@ -21,7 +18,6 @@ from typing import Final
 
 COPY_BUDGET_FIT_MAX_ATTEMPTS: Final[int] = 2
 COPY_BUDGET_FIT_TIMEOUT_SECONDS: Final[float] = 180.0
-COPY_BUDGET_FIT_PRIMARY_SECONDS: Final[float] = 120.0
 
 COPY_BUDGET_PROMPT_DOMAIN: Final[str] = "carousel_copy_budget"
 COPY_BUDGET_PROMPT_VERSION: Final[str] = "v3"
@@ -48,7 +44,6 @@ ITEM_FIELD_PATTERN: Final[str] = "{list_field}[].{item_field}"
 LOG_COPY_BUDGET_FIT_ATTEMPT: Final[str] = "copy_budget_fit_attempt"
 LOG_COPY_BUDGET_FIT_DONE: Final[str] = "copy_budget_fit_done"
 LOG_COPY_BUDGET_FIT_MODEL_FAILED: Final[str] = "copy_budget_fit_model_failed"
-LOG_COPY_BUDGET_FIT_FALLBACK_USED: Final[str] = "copy_budget_fit_fallback_used"
 LOG_COPY_BUDGET_FIT_VOICE_REVERTED: Final[str] = "copy_budget_fit_voice_reverted"
 
 REJECT_UNCHANGED: Final[str] = "unchanged"
@@ -60,7 +55,6 @@ REJECT_NEW_VIOLATION: Final[str] = "new_violation"
 __all__ = [
     "BINDABLE_MODEL_KEYS",
     "COPY_BUDGET_FIT_MAX_ATTEMPTS",
-    "COPY_BUDGET_FIT_PRIMARY_SECONDS",
     "COPY_BUDGET_FIT_TIMEOUT_SECONDS",
     "COPY_BUDGET_LIMITS_PROMPT_VERSION",
     "COPY_BUDGET_PROMPT_DOMAIN",
@@ -80,7 +74,6 @@ __all__ = [
     "LIMIT_KEY_MIN_WORDS",
     "LOG_COPY_BUDGET_FIT_ATTEMPT",
     "LOG_COPY_BUDGET_FIT_DONE",
-    "LOG_COPY_BUDGET_FIT_FALLBACK_USED",
     "LOG_COPY_BUDGET_FIT_MODEL_FAILED",
     "LOG_COPY_BUDGET_FIT_VOICE_REVERTED",
     "REJECT_FORBIDDEN_PHRASE",
