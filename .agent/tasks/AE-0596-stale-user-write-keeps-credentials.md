@@ -10,7 +10,7 @@ Agent Lane: developer → qa → release
 Branch: fix/ae-0596-stale-user-write
 Kanban Card: TBD
 Created: 2026-11-02
-Updated: 2026-11-02
+Updated: 2026-11-03
 
 ## Goal
 
@@ -47,18 +47,18 @@ revoked password works again and the logged-out sessions come back.
 
 ## Acceptance Criteria
 
-- [ ] AC1 `User.changed_fields()` is empty for a freshly built or loaded entity and holds exactly the persisted
+- [x] AC1 `User.changed_fields()` is empty for a freshly built or loaded entity and holds exactly the persisted
       fields assigned since (mutator or direct assignment); `id` and `created_at` are never tracked.
-- [ ] AC2 `PostgresUserRepository.update` writes only the changed fields: an entity read before a password change
+- [x] AC2 `PostgresUserRepository.update` writes only the changed fields: an entity read before a password change
       and renamed after it commits keeps the new hash and the bumped token version.
-- [ ] AC3 `AdminUserHandler.update`, `UserService.update`, `UserService.assign_role` and
+- [x] AC3 `AdminUserHandler.update`, `UserService.update`, `UserService.assign_role` and
       `AuthCommandHandler.change_password` read the user locked inside the Unit of Work (a refused change rolls
       back, commits nothing).
-- [ ] AC4 On Postgres, an admin profile edit racing a password change (two sessions, real row lock) waits for the
+- [x] AC4 On Postgres, an admin profile edit racing a password change (two sessions, real row lock) waits for the
       lock, and afterwards the new hash, the bumped token version and the new name are all stored.
-- [ ] AC5 The AE-0585 mutual deactivation on Postgres still leaves one active admin, and two admin edits queued
+- [x] AC5 The AE-0585 mutual deactivation on Postgres still leaves one active admin, and two admin edits queued
       behind a password change on one admin's row never deadlock.
-- [ ] AC6 Existing contracts unchanged: 404 before 422 on an admin edit of a missing user with a bad role, the
+- [x] AC6 Existing contracts unchanged: 404 before 422 on an admin edit of a missing user with a bad role, the
       last-active-admin guard, the reset and the change flows.
 
 ## Gherkin Scenarios
@@ -159,7 +159,21 @@ See Delta.
 
 ## Test Evidence
 
-Pending.
+Fast gates run one by one first (all PASS after the gherkin-refs fix). Then the full
+`bash scripts/ci/gate-capture.sh backend` (under `pi-heavy`), DATABASE_URL on a dedicated Postgres 16:
+8302 passed, 2 failed, 2 skipped in 2h49m. Every new test PASSED, the Postgres ones too (none skipped).
+Python 3.11 (prod runtime): the changed files byte-compile and the entity tracking runs.
+Mutation runs in CI only (AE-0448).
+
+GATES_JSON: {"pass":25,"fail":1,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"FAIL"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
+
+The 2 `backend:test` failures are outside this change and come from how long the run took on the Pi:
+`tests/integration/test_daily_recovery_scan_ae0524.py::test_a_stale_run_is_resumed_once_and_not_too_early` and
+`tests/unit/application/test_carousel_archive_ae0527.py::TestArchivedCarouselsRaiseNoAlerts::test_the_same_carousels_alert_when_not_archived`.
+Both files set `_NOW = datetime.now(UTC)` once, when the file loads at the start of the run, and test time
+windows against the real clock hours later (the run crossed midnight). Neither touches the users table or the
+identity module; both pass when rerun alone on the same tree (18 passed). The CI `Test & Coverage` job on the PR is
+the verdict for `backend:test`. A full rerun was not attempted: it would hit the same timing.
 
 ## QA Report
 
