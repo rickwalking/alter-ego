@@ -169,7 +169,27 @@ integrity gates rejected the new edge, so the caller is injected instead.
 
 ## Test Evidence
 
-Pending.
+Full local capture on head `d2cd78a3` (merged github/main), Postgres env:
+
+GATES_JSON: {"pass":25,"fail":1,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"FAIL"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
+
+  Result: 25 PASS, 1 FAIL (`backend:test`), 1 SKIP (mutation, CI only). `backend:test`: 8496 passed,
+  2 skipped, **3 failed**, none in code this change touches, all wall-clock timing on this slow machine
+  (the run took 2h31m):
+  - `test_daily_recovery_scan_ae0524::test_a_stale_run_is_resumed_once_and_not_too_early`: the test fixes
+    `_NOW` at import, `revive_stale` uses the real clock; >1h after collection the "20-minute-old" run is
+    over the 1-hour threshold. Passes alone; green in CI.
+  - `test_carousel_archive_ae0527::...::test_the_same_carousels_alert_when_not_archived`: same import-time
+    `_NOW` pattern. File passes alone (9/9); green in CI.
+  - `test_drain_generation_worker_ae0598::test_an_idle_worker_is_stopped_at_once` (from main's AE-0598,
+    merged in): the drain script printed "idle after 1s" vs the expected "0s" on this machine; fails alone
+    here too, green in CI.
+  Not declared Dev Complete on a red local gate: CI on the same head is fully green (Test & Coverage,
+  Mutation ≥75%, CI Gate). diff-cover 95% overall; changed files 98-100%.
+
+CI on PR #342 (same head): all checks green incl. `backend / Test & Coverage`,
+`backend / Mutation (blocking ≥75%)`, `backend / Integrity (anti-gaming)`, CI Gate.
+Python 3.11 import of the 18 changed modules: OK (3.11.17).
 
 ## QA Report
 
@@ -212,7 +232,9 @@ Pending.
 
 ## Blockers
 
-None.
+- Local `backend:test` is red on 3 timing-sensitive tests unrelated to this change (see Test
+  Evidence); QA to confirm before Dev Complete. Follow-up candidate: those tests should take their
+  clock from the code under test instead of an import-time `datetime.now()`.
 
 ## Final Summary
 
