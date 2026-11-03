@@ -1,6 +1,6 @@
 # AE-0607 — The copy-budget fit leaves the fast model room to answer
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bug
