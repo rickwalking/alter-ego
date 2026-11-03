@@ -8,7 +8,9 @@ switched, by the picker or by a generation, because its slide 1 would change
 without a new approval. A switch whose render failed, or that an approval
 overtook, is rolled back (``rolled_back``); a rollback that cannot run is
 ``rollback_failed`` and the owner's Telegram review is escalated, not handed
-back.
+back. A reopen that finds the row no longer approved, or released, or whose
+checkpoint cannot wait at the final review again, writes nothing
+(``review_not_reopened`` / ``carousel_published``).
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ ERR_COVER_CHANGE_REQUIRES_REVIEW = "cover_change_requires_review"
 REASON_AUTO_SELECT_APPROVED = "carousel_approved"
 REASON_AUTO_SELECT_PUBLISHED = "carousel_published"
 REASON_AUTO_SELECT_NOT_IN_REVIEW = "not_in_final_review"
+REASON_REVIEW_NOT_REOPENED = "review_not_reopened"
 
 REASON_AUTO_SELECT_ROLLED_BACK = "rolled_back"
 REASON_AUTO_SELECT_ROLLBACK_FAILED = "rollback_failed"
@@ -39,6 +42,7 @@ __all__ = [
     "REASON_AUTO_SELECT_PUBLISHED",
     "REASON_AUTO_SELECT_ROLLBACK_FAILED",
     "REASON_AUTO_SELECT_ROLLED_BACK",
+    "REASON_REVIEW_NOT_REOPENED",
     "ROLLBACK_LOCK_ATTEMPTS",
     "ROLLBACK_LOCK_RETRY_SECONDS",
 ]

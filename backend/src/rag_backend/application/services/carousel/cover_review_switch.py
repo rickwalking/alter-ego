@@ -187,8 +187,10 @@ async def _held_switch(
 
     A failed rollback, or a store that raised (the state is unknown), escalates
     the held run: no review of a render slide 1 may not match goes out. A
-    write that dropped the approval (landed or rolled back) asks for the review
-    again, which reaches a scheduled run the hold left alone. A
+    write that dropped the approval asks for the review again whatever the
+    render did (landed, rolled back, or a failed rollback), which reaches a
+    scheduled run the hold left alone; the worker sends it only once a render
+    settled. A
     cancelled task (a deploy) is not caught: the hold stays for the worker to
     escalate and the needs-republish marker keeps approval refused until the
     republish sweep renders the carousel.
@@ -202,7 +204,7 @@ async def _held_switch(
         raise
     if run_id is not None:
         await _hand_back(review.hold, run_id, outcome)
-    if outcome.reopened and outcome.status in _MOVED:
+    if outcome.reopened:
         await review.hold.reopened(write.project_id)
     return outcome
 

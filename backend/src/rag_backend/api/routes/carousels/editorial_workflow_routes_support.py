@@ -28,7 +28,7 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.events.factory import get_event_publisher
-from rag_backend.modules.editorial.public import WorkflowCheckpointReopener
+from rag_backend.modules.editorial.public import CheckpointEngineReopener
 
 
 def build_editorial_workflow_service(request: Request) -> EditorialWorkflowService:
@@ -54,9 +54,11 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
     )
 
 
-def checkpoint_reopener(request: Request) -> WorkflowCheckpointReopener:
+def checkpoint_reopener(request: Request) -> CheckpointEngineReopener:
     """Reopens an approved carousel's final review on this app's checkpointer."""
-    return WorkflowCheckpointReopener(lambda: build_editorial_workflow_service(request))
+    return CheckpointEngineReopener(
+        getattr(request.app.state, "carousel_checkpointer", None)
+    )
 
 
 __all__ = [

@@ -41,6 +41,42 @@ class EditorialReviewState:
         )
 
 
+async def current_lock_version(session: AsyncSession, project_id: str) -> int | None:
+    """The committed ``lock_version``; None for an unknown carousel."""
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel as Row,
+    )
+
+    found = await session.scalar(select(Row.lock_version).where(Row.id == project_id))
+    return None if found is None else int(found)
+
+
+async def review_reopened(session: AsyncSession, project_id: str) -> bool:
+    """A completed draft waiting in final review and not released: the state a
+    dropped approval leaves (read fresh)."""
+    from rag_backend.domain.constants.carousel_workflow import (
+        PHASE_FINAL_REVIEW,
+        PHASE_STATUS_AWAITING_HUMAN,
+        WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+    )
+    from rag_backend.domain.models import CarouselStatus
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel as Row,
+    )
+
+    found = await session.scalar(
+        select(Row.id).where(
+            Row.id == project_id,
+            Row.status == CarouselStatus.COMPLETED.value,
+            Row.current_phase == PHASE_FINAL_REVIEW,
+            Row.phase_status == PHASE_STATUS_AWAITING_HUMAN,
+            Row.workflow_status != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+            Row.is_public.is_(False),
+        )
+    )
+    return found is not None
+
+
 async def lock_carousel_row(session: AsyncSession, project_id: str) -> bool:
     """``SELECT ... FOR UPDATE`` (refreshed) until the caller commits; False
     when the carousel is gone."""
@@ -51,4 +87,9 @@ async def lock_carousel_row(session: AsyncSession, project_id: str) -> bool:
     return await row_for_update(session, project_id) is not None
 
 
-__all__ = ["EditorialReviewState", "lock_carousel_row"]
+__all__ = [
+    "EditorialReviewState",
+    "current_lock_version",
+    "lock_carousel_row",
+    "review_reopened",
+]

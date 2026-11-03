@@ -119,7 +119,7 @@ def _refused(error: CoverPickError) -> HTTPException:
     )
 
 
-def _raise_unless_switched(result: SlideCoverSwitchResult) -> None:
+def raise_unless_switched(result: SlideCoverSwitchResult) -> None:
     """Conflict or approved meanwhile → 409; a vanished cover → 422; a failed
     re-render → 422/409."""
     if result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW:
@@ -179,7 +179,8 @@ async def pick_cover(
     The switch stamps the needs-republish marker with the new slide 1 and clears
     it (compare-and-clear) once its render settled, as a republish does. When
     it reopened an approved carousel's review, the autopilot run (scheduled or
-    waiting for the owner) is sent back for a new Telegram review.
+    waiting for the owner) is sent back for a new Telegram review, whatever
+    the render did (the worker waits for a settled render before sending it).
     """
     command = CoverPickCommand(
         project=ctx.project,
@@ -193,11 +194,11 @@ async def pick_cover(
         result = await service.pick(command)
     except CoverPickError as error:
         raise _refused(error) from error
-    _raise_unless_switched(result)
     project_id = str(ctx.project.id)
-    await ctx.db.commit()
     if result.reopened:
         await cover_review_hold().reopened(project_id)
+    raise_unless_switched(result)
+    await ctx.db.commit()
     updated = await CarouselAutomationAcl(ctx.db).load_project(project_id)
     return CoverPickResponse(
         project_id=project_id,
@@ -208,4 +209,4 @@ async def pick_cover(
     )
 
 
-__all__ = ["get_cover_pick_context", "router"]
+__all__ = ["get_cover_pick_context", "raise_unless_switched", "router"]

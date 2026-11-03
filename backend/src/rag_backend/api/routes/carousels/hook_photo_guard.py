@@ -1,82 +1,97 @@
 """``PUT /carousels/{id}/hook-photo`` follows the cover picker's rule for slide 1.
 
-Binding another slide-1 photo changes slide 1 like the cover picker does, so
-it follows the same rule: a released carousel is refused with
-``cover_switch_requires_review`` (409). On an approved one (scheduled ones
-included) the approval is dropped (Pedro's decision, 2026-11-02): in the
-commit that stamps the needs-republish marker, before the photo is written,
-the carousel goes back to final review, awaiting human, and the entity the
-route writes shows it, so the later full-row write keeps it. On a completed
-carousel the marker is stamped before the photo is written, so approval is
-refused until a render shows the new photo; the approval is read again after
-the stamp, so one that landed in between is refused too.
+Binding another slide-1 photo changes slide 1 like the cover picker does, so a
+completed carousel goes through the very same switch (``switch_hook_photo``:
+``SlideCoverSwitchService`` with a ``HookPhotoChoice``): the project lock and
+the lock-version CAS at the version read now, one commit for the photo, the
+needs-republish marker and, on an approved carousel (Pedro's decision,
+2026-11-02), the dropped approval; then the render, before the caller asks for
+a new Telegram review. A released carousel is refused with
+``cover_switch_requires_review`` (409), checked again under the lock. A
+carousel that is not completed has no render or approval to protect; it is only
+refused when released (``refuse_published``).
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
-    cover_switch_refusal,
     reopen_refusal,
-    reopens_review,
-    show_reopened,
+)
+from rag_backend.application.services.carousel.creator_asset_service import (
+    CreatorAssetService,
+    HookPhotoCommand,
+)
+from rag_backend.application.services.carousel.slide_cover_switch import (
+    HookPhotoChoice,
+    SlideCoverSwitchCommand,
+    SlideCoverSwitchResult,
+)
+from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_VERSION_CONFLICT,
 )
 from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
-from rag_backend.domain.models import CarouselProject, CarouselStatus
+from rag_backend.domain.models.carousel_conflict import (
+    CarouselConflict,
+    CarouselConflictError,
+)
+from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.modules.editorial.public import (
-    ApprovalReopen,
-    CarouselProjectWriteOwner,
     CheckpointReopener,
     EditorialReviewState,
+    current_lock_version,
+    slide_cover_switch_service,
 )
 
 
-def _requires_review() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=ERR_COVER_SWITCH_REQUIRES_REVIEW,
+async def refuse_published(session: AsyncSession, project_id: str) -> None:
+    """409 ``cover_switch_requires_review`` for a released carousel."""
+    state = await EditorialReviewState(session).review_state(project_id)
+    if state is not None and reopen_refusal(state) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ERR_COVER_SWITCH_REQUIRES_REVIEW,
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class HookPhotoChange:
+    """A validated photo for slide 1 of a completed carousel, and how to bind it."""
+
+    session: AsyncSession
+    service: CreatorAssetService
+    command: HookPhotoCommand
+    asset: CarouselCreatorAsset
+
+
+async def switch_hook_photo(
+    change: HookPhotoChange, checkpoint: CheckpointReopener
+) -> SlideCoverSwitchResult:
+    """Stage, then store and re-render through the cover switch."""
+    project_id = str(change.command.project.id)
+    version = await current_lock_version(change.session, project_id)
+    if version is None:
+        raise CarouselConflictError(
+            CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)
+        )
+    change.service.stage_hook_photo(change.command, change.asset)
+    switch = slide_cover_switch_service(change.session, checkpoint)
+    return await switch.switch(
+        SlideCoverSwitchCommand(
+            project_id=project_id,
+            expected_version=version,
+            cover=None,
+            hook_photo=HookPhotoChoice(
+                asset_id=change.asset.id, staged_path=change.asset.relative_path
+            ),
+        )
     )
 
 
-async def _reopens(session: AsyncSession, project_id: str) -> bool:
-    """409 for a released carousel; True when an approved one is reopened."""
-    state = await EditorialReviewState(session).review_state(project_id)
-    if state is None:
-        return False
-    if reopen_refusal(state) is not None:
-        raise _requires_review()
-    return reopens_review(state)
-
-
-async def _refuse_if_reviewed(session: AsyncSession, project_id: str) -> None:
-    state = await EditorialReviewState(session).review_state(project_id)
-    if state is not None and cover_switch_refusal(state) is not None:
-        raise _requires_review()
-
-
-async def prepare_slide_one_change(
-    session: AsyncSession, project: CarouselProject, checkpoint: CheckpointReopener
-) -> bool:
-    """Refuse a released carousel; mark a completed one; reopen an approved one.
-
-    True when the approval was dropped (its Telegram review must be sent again).
-    """
-    project_id = str(project.id)
-    reopen = await _reopens(session, project_id)
-    if project.status != CarouselStatus.COMPLETED and not reopen:
-        return False
-    if project.status == CarouselStatus.COMPLETED:
-        await CarouselProjectWriteOwner(session).mark_needs_republish(project_id)
-    if reopen:
-        await ApprovalReopen(session, checkpoint).reopen(project_id)
-        show_reopened(project)
-    await session.commit()
-    await _refuse_if_reviewed(session, project_id)
-    return reopen
-
-
-__all__ = ["prepare_slide_one_change"]
+__all__ = ["HookPhotoChange", "refuse_published", "switch_hook_photo"]

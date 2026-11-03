@@ -131,13 +131,24 @@ class TestEngineReopen:
 
     # Scenario: A cover switch reopens the review of an approved carousel
     @pytest.mark.asyncio
-    async def test_a_thread_already_in_review_is_left_alone(self) -> None:
+    async def test_a_thread_already_in_review_counts_as_reopened(self) -> None:
+        """An earlier reopen whose row write never committed is not redone."""
         project_id = "reopen-twice"
         async with _held(project_id) as engine:
             assert await engine.reopen_final_review(project_id) is True
 
-            assert await engine.reopen_final_review(project_id) is False
+            assert await engine.reopen_final_review(project_id) is True
             assert await _next(engine, project_id) == (PHASE_FINAL_REVIEW,)
+
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
+    @pytest.mark.asyncio
+    async def test_a_finished_thread_cannot_be_reopened(self) -> None:
+        project_id = "reopen-finished"
+        async with _held(project_id) as engine:
+            await engine.resume(project_id, _APPROVE)
+            assert await _next(engine, project_id) == ()
+
+            assert await engine.reopen_final_review(project_id) is False
 
     # Scenario: A cover switch reopens the review of an approved carousel
     @pytest.mark.asyncio

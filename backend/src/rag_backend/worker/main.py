@@ -145,7 +145,7 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
         engine_factory = autopilot_engine_factory(checkpointer)
         sessions = get_session_maker()
         bridge = AutopilotQueueBridge(
-            config=autopilot_tick_config(settings, engine_factory),
+            config=autopilot_tick_config(settings, engine_factory, checkpointer),
             sessions=sessions,
             retryable=is_provider_error,
         )

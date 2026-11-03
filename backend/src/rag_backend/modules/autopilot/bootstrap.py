@@ -261,6 +261,8 @@ class AutopilotTickConfig:
     ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` and
     ``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``; ``start_spacing_minutes`` from
     ``AUTOPILOT_START_SPACING_MINUTES``; ``daily_cap`` from ``AUTOPILOT_DAILY_CAP``.
+    ``checkpointer`` is the LangGraph checkpointer a GrokBot cover on an approved
+    carousel reopens the final review on (None: such a cover is refused).
     """
 
     owner_user_id: str
@@ -274,6 +276,7 @@ class AutopilotTickConfig:
     persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
     start_spacing_minutes: int = DEFAULT_START_SPACING_MINUTES
     daily_cap: int = DEFAULT_DAILY_CAP
+    checkpointer: object | None = None
 
 
 class AutopilotRunnerTickAdapter:
@@ -318,7 +321,7 @@ def runner_dependencies(
     from rag_backend.modules.autopilot.infrastructure.project_inputs import (
         SqlProjectInputs,
     )
-    from rag_backend.modules.editorial.public import WorkflowCheckpointReopener
+    from rag_backend.modules.editorial.public import CheckpointEngineReopener
 
     repo = SqlAlchemyAutopilotRepository(session)
     driver = InProcessEditorialDriver(
@@ -352,7 +355,7 @@ def runner_dependencies(
         slide_fix=autofixer,
         covers=cover_offers(session),
         cover_switch=EditorialCoverSwitcher(
-            session, WorkflowCheckpointReopener(config.engine_factory)
+            session, CheckpointEngineReopener(config.checkpointer)
         ),
         auto_cover=EditorialAutoCoverScheduler(
             lambda: get_session_maker()(), consent=config.cover_consent

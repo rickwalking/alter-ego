@@ -44,6 +44,7 @@ from rag_backend.application.services.carousel.cover_review_switch import (
     review_refusal,
 )
 from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReopenRefusedError,
     reopens_review,
     review_state_of,
 )
@@ -282,7 +283,11 @@ async def _store(session: AsyncSession, write: _ReviewWrite) -> _Stored:
     if refusal is not None:
         await session.rollback()
         return _Stored(status=refusal)
-    reopened = await _reopen(session, write.command, found)
+    try:
+        reopened = await _reopen(session, write.command, found)
+    except ReopenRefusedError as refused:
+        await session.rollback()
+        return _Stored(status=refused.reason)
     previous = found.project.slide_cover
     row.slide_cover = slide_cover_row(write.cover)
     row.needs_republish_since = datetime.now(UTC)

@@ -80,13 +80,24 @@ def reopens_review(state: ReviewState) -> bool:
     )
 
 
+class ReopenRefusedError(Exception):
+    """The reopen found the row released, no longer approved, or a checkpoint
+    that cannot wait at the final review: nothing may be written."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class ReviewReopener(Protocol):
     """Drops the approval of a carousel whose slide 1 is changing."""
 
     async def reopen(self, project_id: str) -> None:
-        """The checkpoint waits at the final review again, then the row is a
-        draft at ``final_review / awaiting_human`` (flush; the caller commits
-        with the slide-1 write)."""
+        """Under the row lock, re-check that the carousel is still approved and
+        not released; the checkpoint waits at the final review again; then the
+        row is a draft at ``final_review / awaiting_human`` (flush; the caller
+        commits with the slide-1 write). Raises ``ReopenRefusedError`` before
+        anything is written otherwise."""
         ...
 
 
@@ -97,6 +108,7 @@ def show_reopened(project: CarouselProject) -> None:
 
 
 __all__ = [
+    "ReopenRefusedError",
     "ReviewReopener",
     "ReviewState",
     "ReviewStateSource",

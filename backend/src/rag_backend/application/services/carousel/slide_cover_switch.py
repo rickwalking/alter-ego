@@ -34,6 +34,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReopenRefusedError,
     ReviewReopener,
     ReviewStateSource,
     reopen_refusal,
@@ -151,7 +152,7 @@ class SlideCoverSwitchService:
             )
         except AutofixConflictError:
             return SlideCoverSwitchResult(status=AUTOFIX_STATUS_CONFLICT)
-        except _SwitchRefusedError:
+        except (_SwitchRefusedError, ReopenRefusedError):
             await self._deps.db.rollback()
             return SlideCoverSwitchResult(status=ERR_COVER_SWITCH_REQUIRES_REVIEW)
         rendered_from = datetime.now(UTC)

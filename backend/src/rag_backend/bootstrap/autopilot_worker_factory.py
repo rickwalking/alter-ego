@@ -93,9 +93,12 @@ def build_autopilot_worker_steps(
 
 
 def autopilot_tick_config(
-    settings: Settings, engine_factory: EngineFactory
+    settings: Settings,
+    engine_factory: EngineFactory,
+    checkpointer: object | None = None,
 ) -> AutopilotTickConfig:
-    """The runner wiring, shared by the web tick and the generation worker."""
+    """The runner wiring, shared by the web tick and the generation worker;
+    ``checkpointer`` lets a GrokBot cover reopen an approved carousel's review."""
     token = settings.telegram_bot_token.get_secret_value()
     return AutopilotTickConfig(
         owner_user_id=settings.autopilot_owner_user_id,
@@ -105,6 +108,7 @@ def autopilot_tick_config(
         autofix_escalation_attempts=settings.autopilot_autofix_escalation_attempts,
         persona_unscored_max_ticks=settings.autopilot_persona_unscored_max_ticks,
         engine_factory=engine_factory,
+        checkpointer=checkpointer,
         stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
         start_spacing_minutes=settings.autopilot_start_spacing_minutes,
         daily_cap=settings.autopilot_daily_cap,

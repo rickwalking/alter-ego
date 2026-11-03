@@ -19,7 +19,10 @@ from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
-from rag_backend.modules.editorial.infrastructure import cover_review_rollback
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_owner_autofix,
+    cover_review_rollback,
+)
 from tests.integration.cover_generation_support import (
     BLUE,
     RED,
@@ -58,13 +61,6 @@ async def _pick(
     return response.status_code, response.json().get("detail"), calls
 
 
-_APPROVED: dict[str, object] = {
-    "workflow_status": "approved_for_publish",
-    "current_phase": "final_review",
-    "phase_status": "approved",
-}
-
-
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "values",
@@ -87,35 +83,6 @@ async def test_pick_on_a_published_carousel_is_refused(
     assert status == 409
     assert detail == ERR_COVER_SWITCH_REQUIRES_REVIEW
     assert calls == []
-
-
-@pytest.mark.integration
-async def test_pick_on_an_approved_carousel_reopens_its_review(
-    client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """200: the pick lands, re-renders, and the carousel is a draft in review."""
-    # Scenario: A cover switch reopens the review of an approved carousel
-    calls = install_renders(monkeypatch)
-    first = await upload_photo(client, RED)
-    second = await upload_photo(client, BLUE)
-    project_id = await project(client, first["id"])
-    await set_project(project_id, **_APPROVED)
-
-    response = await client.put(
-        f"/api/carousels/{project_id}/cover",
-        json={"asset_id": second["id"], "expected_version": 4},
-    )
-
-    assert response.status_code == 200, response.text
-    assert len(calls) == 1
-    model = await _model(project_id)
-    assert model.hook_asset_id == second["id"]
-    assert model.workflow_status == "draft"
-    assert (model.current_phase, model.phase_status) == (
-        "final_review",
-        "awaiting_human",
-    )
-    assert model.is_public is False
 
 
 @pytest.mark.integration
@@ -188,34 +155,26 @@ async def test_hook_photo_on_a_published_carousel_is_refused(
 
 
 @pytest.mark.integration
-async def test_hook_photo_on_an_approved_carousel_reopens_its_review(
-    client: AsyncClient, asset_dirs: Path
-) -> None:
-    """The photo is bound, the marker set and the approval dropped, kept by the
-    later full-row write."""
-    # Scenario: A cover switch reopens the review of an approved carousel
-    project_id, _detail, status = await _bind(client, _APPROVED)
-
-    assert status == 200
-    model = await _model(project_id)
-    assert model.needs_republish_since is not None
-    assert model.workflow_status == "draft"
-    assert (model.current_phase, model.phase_status) == (
-        "final_review",
-        "awaiting_human",
-    )
-
-
-@pytest.mark.integration
 async def test_hook_photo_on_a_completed_carousel_waits_for_a_render(
-    client: AsyncClient, asset_dirs: Path
+    client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A completed carousel in review is marked, so approval waits for a render."""
+    """A completed carousel in review goes through the cover switch: the marker
+    is set while it renders, so approval waits for the render, then cleared."""
     # Scenario: No approval lands while a cover switch is between write and render
+    marked: list[bool] = []
+
+    async def _render(_self: object, project_id: str) -> tuple[str, ...]:
+        marked.append((await _model(project_id)).needs_republish_since is not None)
+        return ()
+
+    monkeypatch.setattr(carousel_owner_autofix.RepublishRenderer, "render", _render)
     project_id, _detail, status = await _bind(client, {"workflow_status": "draft"})
 
     assert status == 200
-    assert (await _model(project_id)).needs_republish_since is not None
+    assert marked == [True]
+    model = await _model(project_id)
+    assert model.needs_republish_since is None
+    assert model.lock_version == 5
 
 
 async def _model(project_id: str) -> CarouselProjectModel:

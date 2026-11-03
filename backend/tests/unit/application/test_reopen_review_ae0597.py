@@ -21,7 +21,10 @@ from rag_backend.application.services.carousel.cover_review_switch import (
     review_refusal,
     switch_in_review,
 )
-from rag_backend.application.services.carousel.cover_switch_guard import ReviewState
+from rag_backend.application.services.carousel.cover_switch_guard import (
+    ReopenRefusedError,
+    ReviewState,
+)
 from rag_backend.application.services.carousel.owner_autofix_lock import LockedWrite
 from rag_backend.application.services.carousel.slide_cover_switch import (
     SlideCoverSwitchCommand,
@@ -37,8 +40,10 @@ from rag_backend.domain.constants.cover_review_switch import (
     ERR_COVER_SWITCH_REQUIRES_REVIEW,
     REASON_AUTO_SELECT_APPROVED,
     REASON_AUTO_SELECT_NOT_IN_REVIEW,
+    REASON_AUTO_SELECT_PUBLISHED,
     REASON_AUTO_SELECT_ROLLBACK_FAILED,
     REASON_AUTO_SELECT_ROLLED_BACK,
+    REASON_REVIEW_NOT_REOPENED,
 )
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.slide_cover import SlideCover
@@ -106,10 +111,13 @@ class _Marker:
 @dataclass
 class _Reopener:
     log: _Log
+    refusal: str = ""
 
     async def reopen(self, project_id: str) -> None:
         del project_id
         self.log.steps.append("reopen")
+        if self.refusal:
+            raise ReopenRefusedError(self.refusal)
 
 
 @dataclass
@@ -228,6 +236,41 @@ class TestSwitchService:
         assert repo.updates == []
 
 
+@pytest.mark.unit
+class TestRefusedReopen:
+    # Scenario: A published carousel never changes
+    # Scenario: A switch that cannot reopen the review refuses an approved carousel
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "reason", [REASON_AUTO_SELECT_PUBLISHED, REASON_REVIEW_NOT_REOPENED]
+    )
+    async def test_a_refused_reopen_rolls_everything_back(
+        self, monkeypatch: pytest.MonkeyPatch, reason: str
+    ) -> None:
+        """Released under the lock, or a checkpoint that cannot reopen."""
+        monkeypatch.setattr(slide_cover_switch, "write_locked", _locked)
+        log = _Log()
+        repo = _Repo(log=log)
+        service = SlideCoverSwitchService(
+            SlideCoverSwitchDeps(
+                db=_Db(log),
+                repo=repo,
+                stager=_Stager(),
+                renderer=_Renderer(log),
+                review=_Review(_APPROVED_STATE),
+                marker=_Marker(log),
+                reopener=_Reopener(log, refusal=reason),
+            )
+        )
+
+        result = await service.switch(_command())
+
+        assert result.status == ERR_COVER_SWITCH_REQUIRES_REVIEW
+        assert result.reopened is False
+        assert log.steps == ["mark", "reopen", "rollback"]
+        assert repo.updates == []
+
+
 def _approved_at_final_review() -> Reads:
     project = in_review(phase_status="approved")
     return Reads(project, workflow_status=APPROVED)
@@ -269,10 +312,8 @@ class TestReviewSwitch:
         "outcome",
         [
             ReviewSwitchOutcome(status=AUTOFIX_STATUS_FIXED),
-            ReviewSwitchOutcome(status=AUTOFIX_STATUS_CONFLICT, reopened=True),
-            ReviewSwitchOutcome(
-                status=REASON_AUTO_SELECT_ROLLBACK_FAILED, reopened=True
-            ),
+            ReviewSwitchOutcome(status=AUTOFIX_STATUS_CONFLICT),
+            ReviewSwitchOutcome(status=REASON_AUTO_SELECT_ROLLED_BACK),
         ],
     )
     async def test_no_new_review_without_a_landed_reopen(
@@ -285,6 +326,23 @@ class TestReviewSwitch:
         await selector.select(selection)
 
         assert hold.reopened_ids == []
+
+    # Scenario: A reopened scheduled run keeps its time and gets a new review
+    @pytest.mark.asyncio
+    async def test_a_failed_rollback_still_asks_for_a_review(self) -> None:
+        """The approval was dropped: the held run is escalated, and the review
+        is asked for anyway, so a scheduled run never expires silently."""
+        failed = ReviewSwitchOutcome(
+            status=REASON_AUTO_SELECT_ROLLBACK_FAILED, lock_version=9, reopened=True
+        )
+        hold = Hold()
+        review = ReviewSwitch(store=ReviewStore(outcome=failed), hold=hold)
+        selector, selection = selecting(_approved_at_final_review(), review)
+
+        await selector.select(selection)
+
+        assert hold.escalated == [(RUN, 9)]
+        assert hold.reopened_ids == ["p-1"]
 
     # Scenario: A cover switch reopens the review of an approved carousel
     def test_review_and_render_refusals(self) -> None:
