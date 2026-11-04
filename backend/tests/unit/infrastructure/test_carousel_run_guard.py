@@ -74,6 +74,7 @@ async def sweep_engine() -> AsyncIterator[AsyncEngine]:
     yield engine
     await engine.dispose()
 
+
 _NON_IN_PROGRESS_STATUSES = [
     PHASE_STATUS_PENDING,
     PHASE_STATUS_AWAITING_HUMAN,
