@@ -134,9 +134,17 @@ class TestArchivedCarouselsRaiseNoAlerts:
     async def test_the_same_carousels_alert_when_not_archived(
         self, session: AsyncSession
     ) -> None:
-        """Scenario: An archived carousel raises no alerts"""
+        """Scenario: An archived carousel raises no alerts
+
+        The alert service reads the real clock, so its failed row is dated when the
+        test runs: a time fixed at import falls out of the failure window on a long run.
+        """
         session.add(_project(_IDLE))
-        session.add(_project(_NOW, phase_status=None, status=CAROUSEL_STATUS_FAILED))
+        session.add(
+            _project(
+                datetime.now(UTC), phase_status=None, status=CAROUSEL_STATUS_FAILED
+            )
+        )
         await session.commit()
 
         count = await WorkflowFailureAlertService().check_and_alert(session)

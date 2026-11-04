@@ -12,11 +12,18 @@ outbox relay on a foreign engine.
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from rag_backend.application.services.phase5_migration_service import (
     Phase5MigrationReport,
@@ -37,6 +44,7 @@ from rag_backend.domain.models.carousel_run import (
     StaleRunEpochError,
     carousel_run_epoch_var,
 )
+from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import (
     CarouselProjectModel,
     CarouselSlideModel,
@@ -49,6 +57,22 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
 )
 
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
+
+_EMPTY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest_asyncio.fixture
+async def sweep_engine() -> AsyncIterator[AsyncEngine]:
+    """An empty database of its own for a test that counts a table-wide sweep.
+
+    ``auto_reject_stuck`` rejects every stale row, so on the session-wide engine its
+    count also holds whatever rows earlier test files left there.
+    """
+    engine = create_async_engine(_EMPTY_DATABASE_URL)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
 
 _NON_IN_PROGRESS_STATUSES = [
     PHASE_STATUS_PENDING,
@@ -167,12 +191,12 @@ class TestRunColumnInvariant:
             assert project.run_heartbeat_at is None
 
     async def test_timeout_auto_reject_clears_leftover_run_columns(
-        self, test_engine
+        self, sweep_engine: AsyncEngine
     ) -> None:
         """Owner-bypass site #1: workflow_timeout_repository.reject flips phase_status
         directly; leftover run columns must clear with it.
         """
-        async with _factory(test_engine)() as db:
+        async with _factory(sweep_engine)() as db:
             project = _project(PHASE_STATUS_AWAITING_HUMAN)
             project.run_started_at = datetime.now(UTC)
             project.updated_at = datetime(2020, 1, 1, tzinfo=UTC)
@@ -186,6 +210,22 @@ class TestRunColumnInvariant:
             assert rejected == 1
             assert project.phase_status == PHASE_STATUS_REJECTED
             assert project.run_started_at is None
+
+    async def test_the_sweep_count_never_sees_another_test_file_rows(
+        self, test_engine, sweep_engine: AsyncEngine
+    ) -> None:
+        """A stale row on the session-wide engine cannot reach the sweep's database."""
+        async with _factory(test_engine)() as shared:
+            leftover = _project(PHASE_STATUS_AWAITING_HUMAN)
+            leftover.updated_at = datetime(2020, 1, 1, tzinfo=UTC)
+            shared.add(leftover)
+            await shared.flush()
+            async with _factory(sweep_engine)() as db:
+                repo = WorkflowTimeoutRepository(
+                    WorkflowEventService(MemoryEventPublisher())
+                )
+                assert await repo.auto_reject_stuck(db, 1) == 0
+            await shared.rollback()
 
     async def test_phase5_backfill_clears_run_columns(self, test_engine) -> None:
         """Owner-bypass site #2: the phase-5 migration backfill writes phase_status without
