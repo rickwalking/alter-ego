@@ -18,6 +18,7 @@ from rag_backend.infrastructure.database.carousel_run_reaper import (
     CarouselRunReaperRepository,
 )
 from rag_backend.modules.autopilot.queue_bridge import AutopilotQueueBridge
+from rag_backend.modules.autopilot.renotice_bridge import AutopilotRenoticeBridge
 from rag_backend.modules.generation_queue.application.dispatcher import (
     Dispatcher,
     DispatcherDependencies,
@@ -42,11 +43,15 @@ from rag_backend.modules.generation_queue.domain.errors import ProviderClassifie
 from rag_backend.modules.generation_queue.domain.models import GenerationKind
 from rag_backend.modules.generation_queue.domain.ports import KindExecutor
 from rag_backend.modules.generation_queue.domain.recovery import (
+    EscalationRenotifier,
     ParkedDrive,
     RecoveryStore,
 )
 from rag_backend.modules.generation_queue.infrastructure.completion import (
     SseGenerationRunCompletion,
+)
+from rag_backend.modules.generation_queue.infrastructure.escalation_renotifier import (
+    SqlEscalationRenotifier,
 )
 from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
     AutopilotStepperAdapter,
@@ -126,6 +131,21 @@ class _NoParkedAutopilot:
         return 0
 
 
+class _NoEscalationRenotifier:
+    """Autopilot driving is off: no stuck run is notified."""
+
+    @staticmethod
+    async def stuck_runs() -> list[str]:
+        """Nothing to re-notify."""
+        return []
+
+    @staticmethod
+    async def renotify(run_id: str) -> bool:
+        """Never staged."""
+        del run_id
+        return False
+
+
 def compose_handler(parts: HandlerParts) -> GenerationJobHandler:
     """Wire the job handler and both executors."""
     store = SqlGenerationRunStore(parts.sessions)
@@ -190,11 +210,22 @@ def compose_worker(parts: HandlerParts, queries: Queries) -> WorkerComposition:
     )
     scan = DailyRecoveryScan(
         DailyScanDependencies(
-            store=recovery_store, autopilot=parked_autopilot, clock=UTC_CLOCK
+            store=recovery_store,
+            autopilot=parked_autopilot,
+            renotifier=_renotifier(parts),
+            clock=UTC_CLOCK,
         )
     )
     return WorkerComposition(
         handler=compose_handler(parts), dispatcher=dispatcher, scan=scan
+    )
+
+
+def _renotifier(parts: HandlerParts) -> EscalationRenotifier:
+    if not parts.drive_autopilot:
+        return _NoEscalationRenotifier()
+    return SqlEscalationRenotifier(
+        AutopilotRenoticeBridge(sessions=parts.sessions), parts.sessions
     )
 
 

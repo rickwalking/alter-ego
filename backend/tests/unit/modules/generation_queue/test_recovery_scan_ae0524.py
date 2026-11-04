@@ -25,6 +25,7 @@ from rag_backend.modules.generation_queue.domain.maintenance import (
     MaintenanceEnqueue,
     MaintenanceMode,
 )
+from rag_backend.modules.generation_queue.bootstrap import _NoEscalationRenotifier
 from rag_backend.modules.generation_queue.domain.recovery import (
     ParkedDrive,
     ScanReport,
@@ -98,7 +99,12 @@ class _Autopilot:
 def _scan(store: _Store, autopilot: _Autopilot) -> DailyRecoveryScan:
     autopilot.store = store
     return DailyRecoveryScan(
-        DailyScanDependencies(store=store, autopilot=autopilot, clock=_Clock())
+        DailyScanDependencies(
+            store=store,
+            autopilot=autopilot,
+            renotifier=_NoEscalationRenotifier(),
+            clock=_Clock(),
+        )
     )
 
 

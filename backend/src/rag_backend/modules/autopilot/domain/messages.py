@@ -34,6 +34,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     CALLBACK_REWORK_PREFIX,
     CAPTION_PREVIEW_CHARS,
     CAPTION_TEMPLATE,
+    EVENT_TYPE_ESCALATION_RENOTICE,
     EVENT_TYPE_IG_EXPIRING,
     KIND_ESCALATED,
     KIND_ESCALATION_CLOSED,
@@ -221,6 +222,8 @@ def notice_kind(event_type: str, payload: Mapping[str, object]) -> str | None:
         return KIND_REVIEW
     if event_type == EVENT_TYPE_IG_EXPIRING:
         return KIND_IG_EXPIRING
+    if event_type == EVENT_TYPE_ESCALATION_RENOTICE:
+        return KIND_ESCALATED
     if event_type == EVENT_TYPE_PUBLISH_NOTICE:
         return _publish_kind(payload)
     if event_type == EVENT_TYPE_STATE_CHANGED:
