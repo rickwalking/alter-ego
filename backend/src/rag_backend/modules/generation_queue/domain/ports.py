@@ -52,6 +52,12 @@ class GenerationRunStore(Protocol):
         """Active runs that carry a job id, oldest first."""
         ...
 
+    async def raise_priority(
+        self, dedupe_key: str, priority: int
+    ) -> GenerationRun | None:
+        """Raise the run still waiting under ``dedupe_key``; a running one stays."""
+        ...
+
     async def mark_running(self, run_id: UUID) -> UUID | None:
         """Active → running with a fresh attempt UUID, or None when not active."""
         ...
@@ -94,6 +100,10 @@ class ActiveAutopilotSource(Protocol):
         """(run id, project id) of runs in queued, generating or reworking."""
         ...
 
+    async def review_refresh_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
+        """(run id, project id) of runs that only owe the final-review refresh."""
+        ...
+
 
 class JobQueue(Protocol):
     """The PgQueuer side: transport only, never the source of truth."""
@@ -108,6 +118,10 @@ class JobQueue(Protocol):
 
     async def kick(self, run: GenerationRun) -> int | None:
         """Reconcile priority, eligibility and any fenced picked replacement."""
+        ...
+
+    async def raise_priority(self, run: GenerationRun) -> None:
+        """Raise a queued job to the run's priority; its due time stays."""
         ...
 
     async def existing(self, job_ids: Sequence[int]) -> set[int]:

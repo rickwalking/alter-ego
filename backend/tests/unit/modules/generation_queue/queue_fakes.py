@@ -8,7 +8,11 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from rag_backend.modules.generation_queue.constants import ACTIVE_STATUSES
+from rag_backend.modules.generation_queue.constants import (
+    ACTIVE_STATUSES,
+    PAYLOAD_MANUAL_PRIORITY,
+    WAITING_STATUSES,
+)
 from rag_backend.modules.generation_queue.domain import budget
 from rag_backend.modules.generation_queue.domain.drive_ports import AutopilotView
 from rag_backend.modules.generation_queue.domain.errors import DriveLockBusyError
@@ -110,6 +114,17 @@ class FakeStore:
             )
         )
         return True
+
+    async def raise_priority(
+        self, dedupe_key: str, priority: int
+    ) -> GenerationRun | None:
+        """Raise the waiting run with the key; a running one is left alone."""
+        for run in self.runs.values():
+            if run.dedupe_key == dedupe_key and run.status.value in WAITING_STATUSES:
+                payload = {**run.payload, PAYLOAD_MANUAL_PRIORITY: priority}
+                self.runs[run.id] = replace(run, payload=payload)
+                return self.runs[run.id]
+        return None
 
     async def undispatched(self, limit: int) -> list[GenerationRun]:
         """Queued runs without a job."""
@@ -350,6 +365,7 @@ class FakeQueue:
     next_id: int = 100
     kicked: list[UUID] = field(default_factory=list)
     enqueued: list[UUID] = field(default_factory=list)
+    raised: list[UUID] = field(default_factory=list)
 
     async def find_job(self, dedupe_key: str) -> int | None:
         """The job with the key."""
@@ -374,6 +390,10 @@ class FakeQueue:
             return existing
         return await self.enqueue(run)
 
+    async def raise_priority(self, run: GenerationRun) -> None:
+        """Record the raised job."""
+        self.raised.append(run.id)
+
     async def existing(self, job_ids: Sequence[int]) -> set[int]:
         """The live ones."""
         return {job for job in job_ids if job in self.alive}
@@ -393,6 +413,11 @@ class FakeActiveAutopilot:
     """Active autopilot runs."""
 
     runs: list[tuple[str, str | None]] = field(default_factory=list)
+    refreshes: list[tuple[str, str | None]] = field(default_factory=list)
+
+    async def review_refresh_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
+        """The configured final-review refreshes."""
+        return self.refreshes[:limit]
 
     async def active_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
         """The configured runs."""

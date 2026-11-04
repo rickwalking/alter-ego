@@ -47,6 +47,9 @@ from rag_backend.modules.autopilot.infrastructure.queue_control import SqlQueueC
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
+from rag_backend.modules.autopilot.infrastructure.schedule_store import (
+    EditorialReopenedReviews,
+)
 from rag_backend.modules.autopilot.queue_constants import (
     DAILY_RECOVERY_NOTICE_KEY,
     REASON_DAILY_RECOVERY,
@@ -190,6 +193,31 @@ class AutopilotQueueBridge:
                 .limit(limit)
             )
             return [(str(row[0]), row[1]) for row in result.all()]
+
+    async def review_refresh_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
+        """Reworking runs that only owe the final-review stop, oldest first.
+
+        A queued rework still has work to do; a revise under way has left the
+        final review, so ``reopened`` tells it from a refresh. A wrong answer only
+        moves one drive in the queue: the drive decides what to do on its own.
+        """
+        async with self.sessions() as session:
+            result = await session.execute(
+                select(AutopilotRunModel.id, AutopilotRunModel.carousel_project_id)
+                .where(
+                    AutopilotRunModel.state == AutopilotRunState.REWORKING.value,
+                    AutopilotRunModel.rework_phase.is_(None),
+                    AutopilotRunModel.carousel_project_id.is_not(None),
+                )
+                .order_by(AutopilotRunModel.created_at)
+                .limit(limit)
+            )
+            reviews = EditorialReopenedReviews(session)
+            return [
+                (str(run_id), project_id)
+                for run_id, project_id in result.all()
+                if project_id is not None and await reviews.reopened(project_id)
+            ]
 
     def _runner(self, session: AsyncSession) -> AutopilotRunner:
         deps = runner_dependencies(session, self.config)
