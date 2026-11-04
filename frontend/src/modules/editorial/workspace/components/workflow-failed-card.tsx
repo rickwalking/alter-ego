@@ -75,7 +75,7 @@ export function WorkflowFailedCard({
         {recoveryAction}
         <NeonButton
           size="sm"
-          variant={restartLabel ? "secondary" : "primary"}
+          variant={recoveryAction ? "secondary" : "primary"}
           disabled={isRetrying || restartDisabled}
           onClick={onRetry}
         >
