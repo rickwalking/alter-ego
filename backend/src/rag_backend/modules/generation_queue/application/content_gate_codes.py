@@ -3,7 +3,8 @@
 The value comes only from the known violation constants, so a message, slide text
 or field value cannot reach a stored event even through the ``code`` field. One
 detail string must pass the sanitizer's safe-code pattern (64 characters, no comma
-or space), so "." joins the codes and blockers are kept ahead of warnings.
+or space), so "." joins the codes. Blockers are kept ahead of warnings, and a warning
+is stored only when no blocker was dropped.
 """
 
 from __future__ import annotations
@@ -32,15 +33,15 @@ def violation_code_details(validation: Mapping[object, object]) -> dict[str, obj
     The key is left out when empty because the sanitizer treats an empty string as
     an omission. Any code that is not stored marks the details ``truncated``.
     """
-    rules = [_rule(entry) for entry in _entries(validation)]
-    fired = [rule for rule in rules if rule is not None]
-    blockers = {code for code, blocks in fired if blocks}
-    warnings = {code for code, _ in fired} - blockers
-    kept = _fit([*sorted(blockers), *sorted(warnings)])
+    rules = [(_known_code(entry), _blocks(entry)) for entry in _entries(validation)]
+    blockers = {code for code, blocks in rules if code and blocks}
+    warnings = {code for code, _ in rules if code} - blockers
+    lost_blocker = any(blocks for code, blocks in rules if code is None)
+    kept = _stored(sorted(blockers), [] if lost_blocker else sorted(warnings))
     details: dict[str, object] = {}
     if kept:
         details[DETAIL_VIOLATION_CODES] = VIOLATION_CODES_SEPARATOR.join(sorted(kept))
-    if len(fired) < len(rules) or len(kept) < len(blockers | warnings):
+    if any(code is None for code, _ in rules) or len(kept) < len(blockers | warnings):
         details[DETAIL_TRUNCATED] = True
     return details
 
@@ -54,14 +55,26 @@ def _entries(validation: Mapping[object, object]) -> list[object]:
     return entries
 
 
-def _rule(entry: object) -> tuple[str, bool] | None:
-    """Return a known code and whether it blocks, as the violation model defaults."""
+def _known_code(entry: object) -> str | None:
     if not isinstance(entry, Mapping):
         return None
     code = entry.get(STATE_FIELD_VIOLATION_CODE)
-    if not isinstance(code, str) or code not in KNOWN_VIOLATION_CODES:
-        return None
-    return code, entry.get(STATE_FIELD_VIOLATION_SEVERITY) != SEVERITY_WARNING
+    return code if isinstance(code, str) and code in KNOWN_VIOLATION_CODES else None
+
+
+def _blocks(entry: object) -> bool:
+    """Return whether an entry blocks, as the violation model defaults."""
+    if not isinstance(entry, Mapping):
+        return True
+    return entry.get(STATE_FIELD_VIOLATION_SEVERITY) != SEVERITY_WARNING
+
+
+def _stored(blockers: list[str], warnings: list[str]) -> list[str]:
+    """Add warnings only when every blocker fits, so none reads as a lost blocker."""
+    kept = _fit(blockers)
+    if len(kept) < len(blockers):
+        return kept
+    return _fit([*kept, *warnings])
 
 
 def _fit(ranked: list[str]) -> list[str]:

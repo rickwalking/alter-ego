@@ -43,6 +43,7 @@ because the event stores only `violation_count` and `blocking_count`.
 - [x] AC4 Given an unknown or free-text code, When recorded, Then it is dropped and the event is marked truncated.
 - [x] AC5 Given many codes, When sanitized, Then the value survives within the bounds, blockers first, and the event is marked truncated.
 - [x] AC6 Given a non-allowlisted key or an oversized or unsafe `violation_codes` value, When sanitized, Then it is dropped and marked truncated.
+- [x] AC7 Given a dropped blocker and a warning that would fit, When recorded, Then only blockers are stored, sorted, and the event is marked truncated.
 
 ## Gherkin Scenarios
 
@@ -136,7 +137,21 @@ Pending.
   `_SAFE_CODE`. That holds between 2 and about 5 codes, so the length budget is the count cap. Raising it would need a
   sanitizer change that Pedro's decision rules out.
 - 2026-11-04: when space runs out, blockers are kept ahead of warnings, because the production question is which rule
-  blocked. The stored value is still sorted. A shorter code may fill room a longer one could not use.
+  blocked. The stored value is still sorted. A shorter code may fill room a longer one could not use, with one limit
+  (next entry).
+- 2026-11-04 (review): a warning is stored only when no blocker was dropped. Before this, a long blocker that did not fit
+  was skipped and a shorter warning could take its place: blockers A, B, long C and warning `markup_leak` stored
+  `A.B.markup_leak`, which reads as if `markup_leak` blocked. Now any dropped blocker leaves blockers only, still sorted
+  and still `truncated: true`. A blocker dropped for an unknown code or a malformed entry counts too; an entry with no
+  readable severity counts as a blocker, as the violation model defaults. No new key and no sanitizer change.
+- 2026-11-04 (review): the value still does not say which code is a blocker. With every blocker stored, a stored warning
+  sits next to them unmarked, and `truncated` does not say what was dropped. Marking that would need a new key or a
+  value format change, which is out of scope here.
+- 2026-11-04 (review): the known set now has a test that each code is `[a-z0-9_]+` and survives the sanitizer, so a
+  `VIOLATION_*` constant that is not a rule id fails a test. The check uses `sanitize_event_details` rather than the
+  private `_SAFE_CODE`.
+- 2026-11-04 (review): `DETAIL_TRUNCATED` repeats the sanitizer's literal because the sanitizer has no constant to import
+  and adding one is a sanitizer change Pedro's decision rules out. A test ties the two together.
 - 2026-11-04: any code not stored sets the existing `truncated` detail, so a partial list never reads as complete. This
   follows the sanitizer's "mark every omission" contract and adds no key.
 - 2026-11-04: a passing gate omits the key. The sanitizer treats an empty string as an omission and would mark it truncated.

@@ -46,8 +46,20 @@ Feature: The content gate event names the rules that fired (AE-0613)
     When the content phase artifacts are recorded
     Then the blocker's code is stored
 
+  Scenario: A warning never takes the place of a dropped blocker
+    Given a report with a blocker that is not stored and a warning that would fit
+    When the content phase artifacts are recorded
+    Then only blockers' codes are stored, sorted
+    And the event is marked truncated
+
   Scenario: The sanitizer still bites around the new key
     Given details with a key that is not allowlisted
     And violation_codes values that are oversized or unsafe
     When the details are sanitized
     Then the key and the values are dropped and the details are marked truncated
+
+  Scenario: Every known code is a value the sanitizer stores
+    Given the known violation codes
+    When each one is checked as a rule id and sanitized
+    Then each one is lowercase letters, digits and underscores
+    And each one survives the sanitizer unchanged

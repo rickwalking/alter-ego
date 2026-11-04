@@ -5,6 +5,7 @@ Feature: content_gate_violation_codes_ae0613.feature
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +23,7 @@ from rag_backend.modules.generation_queue.application.generation_events import (
     generation_event_scope,
 )
 from rag_backend.modules.generation_queue.constants import (
+    DETAIL_TRUNCATED,
     VIOLATION_CODES_MAX_CHARS,
     VIOLATION_CODES_SEPARATOR,
 )
@@ -39,6 +41,7 @@ _CONTRACTS = (
 _TRUNCATED = "truncated"
 _CODES = "violation_codes"
 _PLANTED = "private slide text"
+_RULE_ID = re.compile(r"[a-z0-9_]+")
 
 
 @dataclass
@@ -63,6 +66,13 @@ def _blocker(code: object) -> dict[str, object]:
 
 def _warning(code: str) -> dict[str, object]:
     return {"code": code, "message": _PLANTED, "severity": "warning"}
+
+
+def _is_storable_rule_id(code: str) -> bool:
+    return (
+        _RULE_ID.fullmatch(code) is not None
+        and sanitize_event_details({_CODES: code}) == {_CODES: code}
+    )
 
 
 def _report(violations: list[object]) -> dict[str, object]:
@@ -235,6 +245,66 @@ def test_a_code_seen_as_warning_and_blocker_counts_as_a_blocker() -> None:
     assert "wrong_language" in str(details[_CODES])
 
 
+def test_a_warning_never_replaces_a_blocker_that_did_not_fit() -> None:
+    """Scenario: A warning never takes the place of a dropped blocker"""
+    details = violation_code_details(
+        _report([
+            _blocker("body_too_long"),
+            _blocker("heading_not_sentence_case_en"),
+            _blocker("layout_presentation_below_footer"),
+            _warning("markup_leak"),
+        ])
+    )
+
+    assert details == {
+        _CODES: "body_too_long.heading_not_sentence_case_en",
+        _TRUNCATED: True,
+    }
+
+
+@pytest.mark.parametrize(
+    "lost",
+    [_blocker("not_a_rule"), {"message": _PLANTED}, {"code": 7}, "markup_leak"],
+)
+def test_a_warning_is_not_stored_when_a_blocker_was_dropped_as_unknown(
+    lost: object,
+) -> None:
+    """Scenario: A warning never takes the place of a dropped blocker"""
+    details = violation_code_details(
+        _report([lost, _blocker("body_too_long"), _warning("markup_leak")])
+    )
+
+    assert details == {_CODES: "body_too_long", _TRUNCATED: True}
+
+
+def test_a_warning_stays_when_only_a_warning_was_dropped() -> None:
+    """Scenario: A warning never takes the place of a dropped blocker"""
+    unknown_warning = {"code": "not_a_rule", "severity": "warning"}
+
+    details = violation_code_details(
+        _report([unknown_warning, _blocker("body_too_long"), _warning("markup_leak")])
+    )
+
+    assert details == {_CODES: "body_too_long.markup_leak", _TRUNCATED: True}
+
+
+def test_warnings_fill_the_room_once_every_blocker_fits() -> None:
+    """Scenario: A warning never takes the place of a dropped blocker"""
+    details = violation_code_details(
+        _report([
+            _blocker("body_too_long"),
+            _blocker("heading_not_sentence_case_en"),
+            _warning("layout_presentation_below_footer"),
+            _warning("markup_leak"),
+        ])
+    )
+
+    assert details == {
+        _CODES: "body_too_long.heading_not_sentence_case_en.markup_leak",
+        _TRUNCATED: True,
+    }
+
+
 def test_the_sanitizer_still_drops_a_key_that_is_not_allowlisted() -> None:
     """Scenario: The sanitizer still bites around the new key"""
     details = sanitize_event_details({
@@ -265,6 +335,15 @@ def test_the_sanitizer_rejects_a_bad_value_under_the_new_key(value: object) -> N
     assert sanitize_event_details({_CODES: value}) == {_TRUNCATED: True}
 
 
+def test_the_truncated_detail_is_the_key_the_sanitizer_writes() -> None:
+    """Scenario: The sanitizer still bites around the new key
+
+    The sanitizer has no constant to import, so this ties the two literals together.
+    """
+    assert sanitize_event_details({"not_allowlisted": 1}) == {DETAIL_TRUNCATED: True}
+    assert sanitize_event_details({DETAIL_TRUNCATED: True}) == {DETAIL_TRUNCATED: True}
+
+
 def test_the_length_budget_is_the_sanitizer_limit() -> None:
     """Scenario: Many codes stay within the sanitizer bounds"""
     fits = "a" * VIOLATION_CODES_MAX_CHARS
@@ -292,3 +371,22 @@ def test_known_codes_are_bare_rule_ids_without_the_separator() -> None:
     assert all(code.islower() for code in KNOWN_VIOLATION_CODES)
     assert not any(VIOLATION_CODES_SEPARATOR in c for c in KNOWN_VIOLATION_CODES)
     assert max(map(len, KNOWN_VIOLATION_CODES)) <= VIOLATION_CODES_MAX_CHARS
+
+
+def test_every_known_code_is_a_rule_id_the_sanitizer_stores() -> None:
+    """Scenario: Every known code is a value the sanitizer stores"""
+    rejected = [c for c in KNOWN_VIOLATION_CODES if not _is_storable_rule_id(c)]
+
+    assert KNOWN_VIOLATION_CODES
+    assert rejected == []
+
+
+@pytest.mark.parametrize(
+    "not_a_code",
+    ["Not a rule id.", "UPPER_CASE", "dotted.code", "trailing_newline\n", "a" * 65, ""],
+)
+def test_the_rule_id_check_fires_on_a_value_that_is_not_a_code(
+    not_a_code: str,
+) -> None:
+    """Scenario: Every known code is a value the sanitizer stores"""
+    assert not _is_storable_rule_id(not_a_code)
