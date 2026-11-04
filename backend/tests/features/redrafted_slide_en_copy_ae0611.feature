@@ -41,6 +41,18 @@ Feature: A re-drafted slide stays in step with its EN copy and its slide row
     When the content phase builds both locales
     Then the old EN copy is not shown
     And the failure is logged with the slide numbers
+    And the slide stays blocked for the gate repair or the reviewer
+
+  Scenario: A provider failure of the translation call never keeps the old EN copy
+    Given the translation call of the re-drafted slide fails at the provider
+    When the content phase builds both locales
+    Then the old EN copy is not shown
+    And the failure is logged with the slide numbers
+
+  Scenario: A bug in the translation call is not taken for a failed call
+    Given the translation call of the re-drafted slide raises an unexpected error
+    When the content phase builds both locales
+    Then the error reaches the caller
 
   Scenario: Nothing is translated when no slide was re-drafted
     Given a deck that blocks and a retry that answers with no draft

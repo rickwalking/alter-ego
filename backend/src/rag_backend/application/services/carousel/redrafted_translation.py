@@ -32,6 +32,7 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_draft,
 )
+from rag_backend.application.services.carousel.provider_errors import PROVIDER_ERRORS
 from rag_backend.application.services.carousel.slide_scaffold_recovery import (
     recover_parse_failures,
 )
@@ -39,6 +40,13 @@ from rag_backend.application.services.carousel.slide_scaffold_recovery import (
 LOG_REDRAFT_TRANSLATION_MISSING = "carousel_redraft_translation_missing"
 
 logger = structlog.get_logger(__name__)
+
+_FAILED_CALL_ERRORS: tuple[type[Exception], ...] = (
+    ValueError,
+    TypeError,
+    TimeoutError,
+    *PROVIDER_ERRORS,
+)
 
 SlideDrafts = list[dict[str, object]]
 Translations = dict[int, dict[str, object]]
@@ -87,12 +95,18 @@ def _sources(request: RedraftedTranslationRequest) -> SlideDrafts:
 async def _translated(
     request: RedraftedTranslationRequest, sources: SlideDrafts
 ) -> Translations:
-    """The answered slides; a failure or a skipped slide is logged, never raised."""
+    """The answered slides; a failed call or a skipped slide is logged, never raised.
+
+    A failed call is what the translation path raises for one: ``ValueError`` or
+    ``TypeError`` once the answer does not parse (after the retries and the fallback
+    model), the provider SDK's ``APIError`` (connection, timeout, status) or a
+    ``TimeoutError``. Any other exception is a bug and propagates.
+    """
     wanted = sorted(int(str(source[SLIDE_INDEX_KEY])) for source in sources)
     error = ""
     try:
         answered = await request.translate(sources)
-    except Exception as exc:
+    except _FAILED_CALL_ERRORS as exc:
         answered, error = {}, str(exc)
     found = {index: answered[index] for index in wanted if index in answered}
     missing = [index for index in wanted if index not in found]

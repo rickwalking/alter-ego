@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import cast
 
+import httpx
+import openai
 import pytest
 from structlog.testing import capture_logs
 
@@ -19,6 +21,9 @@ from rag_backend.application.services.carousel.content_fail_closed import (
 )
 from rag_backend.application.services.carousel.redrafted_translation import (
     LOG_REDRAFT_TRANSLATION_MISSING,
+)
+from rag_backend.domain.constants.carousel_presentation import (
+    VIOLATION_TRANSLATION_NOT_ENGLISH,
 )
 from tests.unit.application.content_quality_fixtures_ae0366 import clean_drafts
 from tests.unit.application.owner_autofix_fixtures_ae0367 import V3
@@ -137,6 +142,17 @@ def _blocking_slides(updates: dict[str, object]) -> set[int]:
     return {item["slide_index"] for item in report.get("violations", [])}
 
 
+def _blocking_codes(updates: dict[str, object], slide_index: int) -> set[str]:
+    """The codes a slide blocks on; the deck's fixtures block other slides too."""
+    report = updates["content_gate_validation"]
+    assert isinstance(report, dict)
+    return {
+        item["code"]
+        for item in report.get("violations", [])
+        if item["slide_index"] == slide_index
+    }
+
+
 @pytest.mark.unit
 class TestRedraftedSlideEn:
     async def test_en_follows_the_new_pt(self) -> None:
@@ -216,6 +232,7 @@ class TestRedraftedSlideEn:
         assert missing[0]["error"] == "en_translation_parse_failed"
         assert str(_SLIDE) not in updates["translations_en"]
         assert _SLIDE in _blocking_slides(updates)
+        assert VIOLATION_TRANSLATION_NOT_ENGLISH in _blocking_codes(updates, _SLIDE)
 
     async def test_a_skipped_slide_drops_the_old_en(self) -> None:
         """Scenario: A translation that skips the slide never keeps the old EN copy."""
@@ -238,6 +255,34 @@ class TestRedraftedSlideEn:
         assert _en(updates, _OTHER_SLIDE)["heading"] == _NEW_HEADING_EN
         missing = [e for e in logs if e["event"] == LOG_REDRAFT_TRANSLATION_MISSING]
         assert [entry["slides"] for entry in missing] == [[_SLIDE]]
+        assert _SLIDE in _blocking_slides(updates)
+        assert VIOLATION_TRANSLATION_NOT_ENGLISH in _blocking_codes(updates, _SLIDE)
+        assert _OTHER_SLIDE not in _blocking_slides(updates)
+
+    async def test_a_provider_failure_drops_the_old_en(self) -> None:
+        """Scenario: A provider failure of the translation call never keeps the old EN copy."""
+        drafts, translations = _deck(_SLIDE)
+        request = httpx.Request("POST", "https://llm.invalid/v1/chat/completions")
+        translate = _Translator(error=openai.APIConnectionError(request=request))
+
+        with capture_logs() as logs:
+            updates = await _run(
+                drafts, translations, (_retry(s3=_plain(_SLIDE)), translate)
+            )
+
+        assert _OLD_HEADING not in str(_en(updates, _SLIDE))
+        missing = [e for e in logs if e["event"] == LOG_REDRAFT_TRANSLATION_MISSING]
+        assert [entry["slides"] for entry in missing] == [[_SLIDE]]
+        assert _SLIDE in _blocking_slides(updates)
+        assert VIOLATION_TRANSLATION_NOT_ENGLISH in _blocking_codes(updates, _SLIDE)
+
+    async def test_a_bug_in_the_call_propagates(self) -> None:
+        """Scenario: A bug in the translation call is not taken for a failed call."""
+        drafts, translations = _deck(_SLIDE)
+        translate = _Translator(error=KeyError("slide_index"))
+
+        with pytest.raises(KeyError, match="slide_index"):
+            await _run(drafts, translations, (_retry(s3=_plain(_SLIDE)), translate))
 
     async def test_no_redraft_no_call(self) -> None:
         """Scenario: Nothing is translated when no slide was re-drafted."""

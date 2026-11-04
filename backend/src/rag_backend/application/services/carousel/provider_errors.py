@@ -25,7 +25,7 @@ _RATE_LIMIT_ERRORS: tuple[type[Exception], ...] = (
     anthropic.RateLimitError,
 )
 
-_PROVIDER_ERRORS: tuple[type[Exception], ...] = (
+PROVIDER_ERRORS: tuple[type[Exception], ...] = (
     openai.APIError,
     anthropic.APIError,
 )
@@ -42,7 +42,7 @@ def classify_provider_error(exc: BaseException) -> str | None:
     """
     if isinstance(exc, _RATE_LIMIT_ERRORS):
         return ERR_PROVIDER_RATE_LIMITED
-    if isinstance(exc, _PROVIDER_ERRORS):
+    if isinstance(exc, PROVIDER_ERRORS):
         return ERR_PROVIDER_UNAVAILABLE
     return None
 
@@ -61,4 +61,4 @@ def provider_retry_after(exc: BaseException) -> str | None:
     return str(value) if value else None
 
 
-__all__ = ["classify_provider_error", "provider_retry_after"]
+__all__ = ["PROVIDER_ERRORS", "classify_provider_error", "provider_retry_after"]

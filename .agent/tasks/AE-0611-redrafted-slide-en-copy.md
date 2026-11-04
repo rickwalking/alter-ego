@@ -92,6 +92,9 @@ See `backend/tests/features/redrafted_slide_en_copy_ae0611.feature`.
 ### ADDED
 
 - `application/services/carousel/redrafted_translation.py`: `refresh_redrafted_translations`.
+- `application/services/carousel/content_review_step.py`: the content review step moved out of the runner
+  (`ContentReviewContext`, `build_presentation_review_updates`, `review_content` with the scope and the row sync
+  after a retry, and `RedraftTranslator`).
 - `backend/tests/features/redrafted_slide_en_copy_ae0611.feature`
 - `backend/tests/unit/application/test_redrafted_slide_en_ae0611.py`
 - `backend/tests/unit/application/test_redrafted_slide_rows_ae0611.py`
@@ -100,8 +103,11 @@ See `backend/tests/features/redrafted_slide_en_copy_ae0611.feature`.
 
 - `application/services/carousel/content_fail_closed.py`: the retry refreshes the translations before its rebuild;
   `translate_slides` on the command.
-- `application/services/carousel/phase_artifact_runner.py`: `_review_content` (the review, the scope and the row sync
-  after a retry) and `_translate_slides`.
+- `application/services/carousel/phase_artifact_runner.py`: calls `review_content`; the review step it held moved to
+  `content_review_step.py`, so the file is 842 lines (880 on main).
+- `application/services/carousel/provider_errors.py`: the provider error tuple is public (`PROVIDER_ERRORS`).
+- `backend/tests/unit/application/test_content_budget_step_ae0588.py`: its review spy patches
+  `build_fail_closed_review_updates` where the call now lives (`content_review_step`). Same spy, same assertions.
 - `application/services/carousel/editorial_distribution_persist.py`: `_symmetric_translation` drops the stale
   `content_kind`.
 - `docs/backend/slide-copy-validators.md`: one paragraph on this rule.
@@ -150,7 +156,15 @@ Ticket created, root cause traced.
 
 ### 2026-11-04 13:00
 
-Fix in. 7 of the 11 new tests failed before it, and the row test fails again with the new sync turned off.
+Fix in. 10 of the 11 new tests failed on the base commit, 7 of them on behaviour (see Test Evidence), and the row
+test fails again with the new sync turned off.
+
+### 2026-11-04 16:00
+
+Review fixes. The skipped-slide test asserts the slide blocks, and on the language check, so it fails if the missing
+EN were filled from the stale translation. The review step left the runner (909 lines, now 842). The translation
+catch is narrowed to the errors of a failed call. Two tests added (provider failure, bug propagates). The count of
+tests that failed before the fix is stated precisely.
 
 ## Files Touched
 
@@ -158,9 +172,22 @@ See Delta.
 
 ## Test Evidence
 
-- `test_redrafted_slide_en_ae0611.py` and `test_redrafted_slide_rows_ae0611.py`: 11 passed.
-- Before the fix 7 of the 11 failed, among them the row's stale `content_kind: insight` and the old EN heading on a
-  re-drafted slide. The other 4 pin what must not change (no call without a re-draft, for example).
+- `test_redrafted_slide_en_ae0611.py` and `test_redrafted_slide_rows_ae0611.py`: 13 passed (11 first, 2 added in
+  review).
+- The first 11 against the base commit b8783527 (only `LOG_REDRAFT_TRANSLATION_MISSING` added, so the EN module
+  imports): 10 fail and 1 passes. The 8 EN tests fail on `FailClosedReviewCommand(translate_slides=...)`, a
+  `TypeError` on the new argument, not on behaviour; the 2 row tests fail on behaviour (no row sync, stale
+  `content_kind: insight`); `test_no_redraft_leaves_the_rows_alone` passes.
+- Same base with `translate_slides` accepted and ignored: 7 fail on behaviour (5 EN tests, among them the old EN
+  heading on a re-drafted slide, and the 2 row tests). The other 4 pass on the old code too: they pin what must not
+  change (`test_a_redraft_with_its_own_en_needs_no_call`, `test_no_redraft_no_call`,
+  `test_no_stored_translations_no_call`, `test_no_redraft_leaves_the_rows_alone`).
+- The skipped-slide and failed-call tests assert the slide blocks on `translation_not_english`. Slide membership alone
+  does not tell the defect apart: the deck's fixtures block slide 3 on `translation_shape_mismatch` either way. With
+  the missing EN filled from the stale translation, slide 3 blocks only on `translation_shape_mismatch`, so the
+  assertion fails.
+- Catch narrowing: with `except Exception` back, `test_a_bug_in_the_call_propagates` fails; with the provider errors
+  left out of the tuple, `test_a_provider_failure_drops_the_old_en` fails.
 - The 300 existing tests that import the touched modules pass. Run as that subset, one test fails on an unclosed event
   loop `ResourceWarning`. It lands on a different test each run and does the same on the base commit b8783527, so it is
   an existing leak, not this change.
@@ -183,6 +210,14 @@ Pending.
 - **A failed translation is fail-closed.** The slide loses its stored translation, so EN falls back to the draft and
   the gate blocks it. Keeping the old EN would be the defect again, and raising would throw away a whole content
   phase for one slide. The same goes for a slide the answer skips. Both log `carousel_redraft_translation_missing`.
+- **Only a failed call is caught.** The translation path signals one as `ValueError` or `TypeError` (the answer does
+  not parse after the retries and the fallback model; the `JsonAnswers` contract), the provider SDK's `APIError`
+  (`openai`, `anthropic`: connection, timeout, status; the shared `PROVIDER_ERRORS`) or a `TimeoutError`. Anything
+  else is a bug and propagates. The distribution's own translation call catches nothing, so there is no broader catch
+  to keep parity with.
+- **The review step leaves the runner.** The file was over the 400-line rule on main (880) and the fix grew it to 909.
+  The review step the fix changed (its context, the fail-closed call, the scope, the row sync and the translator)
+  moved as one unit to `content_review_step.py`, unchanged in behaviour. The rest of the runner is not split here.
 - **Rows: sync right after the retry, keep the end-of-phase sync.** Writing rows only from the final copy is not
   possible: the design tokens step needs the rows before the review. The sync runs only when the retry changed a
   slide, and after `keep_unscoped_slides`, so a scoped revision does not touch the other rows. A short window remains
