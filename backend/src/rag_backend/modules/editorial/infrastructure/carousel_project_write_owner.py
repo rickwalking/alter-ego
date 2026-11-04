@@ -34,6 +34,7 @@ Only ``blog_markdown`` stays synced; its canonical home is the carousel-origin
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,6 +59,21 @@ from rag_backend.platform.database import SqlAlchemyUnitOfWork
 _DISTRIBUTION_SYNC_FIELDS: tuple[tuple[str, str], ...] = (
     ("blog_markdown", "blog_markdown"),
 )
+
+
+@dataclass(frozen=True, kw_only=True)
+class RetryRow:
+    """The carousel fields an owner Retry decides on, read under the row lock."""
+
+    project_id: str
+    owner_id: str | None
+    assigned_reviewer_id: str | None
+    topic: str
+    current_phase: str
+    phase_status: str
+    status: str
+    workflow_status: str
+    lock_version: int
 
 
 class CarouselProjectWriteOwner:
@@ -193,6 +209,30 @@ class CarouselProjectWriteOwner:
             project.needs_republish_since = None
         await self._session.commit()
 
+    async def lock_for_retry(self, project_id: str) -> RetryRow | None:
+        """Lock the carousel row ``FOR UPDATE`` and read what a Retry decides on.
+
+        A select, not an UPDATE: a second Retry waits on the lock, then reads
+        the first one's ``in_progress``. None when the carousel is missing.
+        """
+        project = await self._session.get(
+            CarouselProjectModel,
+            project_id,
+            with_for_update=True,
+            populate_existing=True,
+        )
+        if project is None:
+            return None
+        return _retry_row(project)
+
+    async def restore_active_status(self, project_id: str, status: str) -> None:
+        """Set the carousel ``status`` a Retry brings back (flush only)."""
+        project = await self._session.get(CarouselProjectModel, project_id)
+        if project is None:
+            return
+        project.status = status
+        await self._session.flush()
+
     async def bump_resume_lock_version(
         self,
         project_id: str,
@@ -214,7 +254,21 @@ class CarouselProjectWriteOwner:
         )
 
 
-__all__ = ["CarouselProjectWriteOwner"]
+__all__ = ["CarouselProjectWriteOwner", "RetryRow"]
+
+
+def _retry_row(project: CarouselProjectModel) -> RetryRow:
+    return RetryRow(
+        project_id=str(project.id),
+        owner_id=str(project.owner_id) if project.owner_id else None,
+        assigned_reviewer_id=project.assigned_reviewer_id,
+        topic=str(project.topic or ""),
+        current_phase=str(project.current_phase or ""),
+        phase_status=str(project.phase_status or ""),
+        status=str(project.status or ""),
+        workflow_status=str(project.workflow_status or ""),
+        lock_version=int(project.lock_version or 1),
+    )
 
 
 def _stamped_by(marker: datetime | None, rendered_from: datetime) -> bool:

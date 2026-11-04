@@ -3212,6 +3212,120 @@
         "title": "CarouselRepublishResponse",
         "type": "object"
       },
+      "CarouselRetryAcceptedResponse": {
+        "description": "The accepted Retry: what it runs and the carousel's new state.",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "autopilot_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autopilot Run Id"
+          },
+          "current_phase": {
+            "title": "Current Phase",
+            "type": "string"
+          },
+          "lock_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Version"
+          },
+          "phase_status": {
+            "title": "Phase Status",
+            "type": "string"
+          },
+          "retry_kind": {
+            "title": "Retry Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepted",
+          "retry_kind",
+          "current_phase",
+          "phase_status",
+          "lock_version"
+        ],
+        "title": "CarouselRetryAcceptedResponse",
+        "type": "object"
+      },
+      "CarouselRetryCapabilityResponse": {
+        "description": "Whether a Retry would be accepted now, and as which kind.",
+        "properties": {
+          "can_retry": {
+            "title": "Can Retry",
+            "type": "boolean"
+          },
+          "lock_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Version"
+          },
+          "refusal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal Code"
+          },
+          "retry_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Kind"
+          }
+        },
+        "required": [
+          "can_retry"
+        ],
+        "title": "CarouselRetryCapabilityResponse",
+        "type": "object"
+      },
+      "CarouselRetryRequest": {
+        "description": "A Retry fenced by the workspace lock version.",
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "CarouselRetryRequest",
+        "type": "object"
+      },
       "CarouselSlideEditRequest": {
         "description": "Reviewer text edits for a completed carousel's slides (no image regen).",
         "properties": {
@@ -17439,6 +17553,112 @@
         "tags": [
           "carousels",
           "carousel_editorial_workflow"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/workflow/retry": {
+      "get": {
+        "description": "Whether the carousel can be retried now, and as which kind.",
+        "operationId": "get_retry_capability_api_carousels__project_id__workflow_retry_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRetryCapabilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Retry Capability",
+        "tags": [
+          "carousel_owner_retry"
+        ]
+      },
+      "post": {
+        "description": "Retry the carousel's failed, blocked or rejected phase.",
+        "operationId": "retry_carousel_api_carousels__project_id__workflow_retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarouselRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRetryAcceptedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Carousel",
+        "tags": [
+          "carousel_owner_retry"
         ]
       }
     },
