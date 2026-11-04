@@ -64,15 +64,6 @@ def _replace_forbidden_dashes(text: str) -> str:
     return text.replace(_EM_DASH, "-").replace(_EN_DASH, "-")
 
 
-def _repair_heading_sentence_case_en(heading: str) -> str:
-    chars = list(heading)
-    for index, char in enumerate(chars):
-        if char.isalpha():
-            chars[index] = char.upper()
-            break
-    return "".join(chars)
-
-
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 
 
@@ -122,7 +113,7 @@ def _repair_text_field(
         and locale == LANGUAGE_EN
         and VIOLATION_HEADING_NOT_SENTENCE_CASE_EN in violations
     ):
-        repaired = _repair_heading_sentence_case_en(repaired)
+        repaired = repair_text_sentence_case_en(repaired)
     payload[field] = repaired
 
 
