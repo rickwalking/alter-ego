@@ -97,7 +97,8 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   off. The `completed == 0` assertion fails on any insert that escapes the hold, the stored-event mechanism.
 - (c) Affected gates: `backend:test`, `backend:mutation` (its clean-tests phase runs this suite), and backend format,
   lint, comments, docstrings, gherkin-refs, duplication and dead-code.
-- (d) Reviewer or QA sign-off on the no-`.feature` classification is requested on the PR. Both tests cite the
+- (d) Reviewer sign-off on the no-`.feature` classification (2026-11-04): accepted. Tests only; nothing under
+  `backend/src` changes and no budget, timeout, assertion or gate is loosened. Both tests cite the
   existing scenario "Recorder timeout preserves authoritative generation state".
 
 ## Decision Log
@@ -157,7 +158,9 @@ in the event loop before half of all statements.
 
 ## QA Report
 
-Not run yet: the no-`.feature` classification sign-off is requested on the PR.
+Review (2026-11-04): approved. Re-run by the reviewer: 20/20 as shipped; WAL off -> 3/3 `database is locked`; recorder
+on the workflow's connection -> 3/3 fail. No-`.feature` classification signed off (see (d)). Full gate at 19d107df:
+26 pass, 0 fail, 1 skip (mutation runs in CI).
 
 ## Blockers
 
