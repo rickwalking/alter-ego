@@ -38,7 +38,6 @@ from rag_backend.application.services.carousel.presentation_review_pipeline impo
 )
 from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,
-    VIOLATION_TRANSLATION_SHAPE_MISMATCH,
 )
 from tests.unit.application.gate_shape_builder_ae0599 import (
     POLICY,
@@ -142,18 +141,14 @@ class TestBlockedShapesPassTheGate:
 
         assert violations == []
 
-    async def test_news_shape_keeps_only_its_quote_card_blocker(self) -> None:
+    async def test_news_shape_passes_the_content_gate(self) -> None:
         """Scenario: The quote card keeps the same shape in PT and EN through the step.
 
         41c4f437 blocked on one ``translation_shape_mismatch``: slide 4's EN
-        translation kept a quote card its PT draft no longer had. No copy budget
-        path touches that, so the gate still reports it, and only it.
+        translation kept a quote card its PT draft no longer had. EN now follows
+        PT (tests/features/pt_en_same_cards_ae0602.feature), so nothing blocks.
         """
-        violations = await _gate("41c4f437", ShapeFitter())
-
-        assert [(v["code"], v["slide_index"]) for v in violations] == [
-            (VIOLATION_TRANSLATION_SHAPE_MISMATCH, 4)
-        ]
+        assert await _gate("41c4f437", ShapeFitter()) == []
 
     async def test_quote_card_stays_in_both_locales(self) -> None:
         """Scenario: The quote card keeps the same shape in PT and EN through the step."""
