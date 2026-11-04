@@ -129,7 +129,8 @@ Ticket created. `.feature` and failing tests first, then the code. Implementatio
 - Failing first: the three new test files failed at collection on the commit that holds only the tests.
 - 81 passed on Postgres across the three new files; 1,393 passed across `tests/unit/modules/autopilot`,
   `tests/unit/modules/generation_queue` and the daily-scan integration files.
-- Branch coverage on the new code: 100% after the last tests.
+- Line and branch coverage: 100% on the new files and `recovery_scan.py` (targeted run, 99 passed).
+- PR #360 CI at `8ade4019`: all checks passed, mutation included.
 - Without Postgres the concurrent-scans test is skipped through `requires_postgres`: it needs real row locks.
 - Cheap gates green (see the dev summary). Full gate: lead's heavy slot.
 
@@ -170,10 +171,12 @@ Pending.
 
 ## Blockers
 
-None.
+The move to Dev Complete needs the `GATES_JSON` line of a full gate run in the dev summary (`move_ticket.py` refuses it
+otherwise). That run is pending, so the status stays In Development; it was not forced.
 
 ## Final Summary
 
 The daily scan now emits one `content.autopilot.escalation_renotice` event, with its ledger marker, for each stuck run
-that never got the Retry, and reports the count. The first scan after the deploy should pick runs b5f5ff39, a8a3b196,
-66873e0d and 92bdb9d9 and skip the two failed runs of 2026-10-18, whose carousels were auto-rejected.
+that never got the Retry, and reports the count. From the read-only check of 2026-11-04, the first scan after
+the deploy should pick runs b5f5ff39, a8a3b196, 66873e0d and 92bdb9d9 and skip the two failed runs of 2026-10-18, whose
+carousels were auto-rejected. This code has not been run against production data.
