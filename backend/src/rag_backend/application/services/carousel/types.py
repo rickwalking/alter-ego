@@ -13,6 +13,7 @@ phase-progress label during image generation.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import TypedDict
@@ -192,7 +193,11 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
     )
 
 
-def slides_data_for_language(slides: list[SlideData], language: str) -> list[SlideData]:
+def slides_data_for_language(
+    slides: list[SlideData],
+    language: str,
+    allowlist: Iterable[str] = (),
+) -> list[SlideData]:
     """Return a copy of slides with text overridden to the target language.
 
     For 'pt' we return the originals untouched. For 'en' we swap heading,
@@ -201,7 +206,8 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
 
     The ``translation_en`` payload is the EN render source, so the EN sentence-case
     repair is applied here: all-lowercase EN copy cannot reach the renderer even when
-    the localized-slides repair path was bypassed.
+    the localized-slides repair path was bypassed. ``allowlist`` holds the policy's
+    intentionally lowercase tokens, which the repair leaves alone.
     """
     if language == "pt":
         return slides
@@ -217,8 +223,12 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
         en_insight = en.get("insight") if isinstance(en, dict) else None
         en_summary_points = en.get("summary_points") if isinstance(en, dict) else None
         en_tldr_strip = en.get("tldr_strip") if isinstance(en, dict) else None
-        en_heading = repair_text_sentence_case_en(str(en.get("heading") or sd.heading))
-        en_body = repair_text_sentence_case_en(str(en.get("body") or sd.body))
+        en_heading = repair_text_sentence_case_en(
+            str(en.get("heading") or sd.heading), allowlist
+        )
+        en_body = repair_text_sentence_case_en(
+            str(en.get("body") or sd.body), allowlist
+        )
         swapped.append(
             SlideData(
                 slide_number=sd.slide_number,

@@ -1,6 +1,6 @@
 # AE-0605 — The EN heading-case check reads the first visible letter
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -174,4 +174,6 @@ rule's exemptions, so it is left alone.
 
 ## Final Summary
 
-Pending.
+Delivered. Merged in #348 and deployed on 2026-11-04. Pedro's decision (2026-11-04): the rule-fires regression
+test in #348 is accepted as the production proof, since no production heading opens with inline markup. The
+allowlist-inside-markup follow-up is AE-0612.
