@@ -89,7 +89,7 @@ that job (run 41733730478) and never in `Test & Coverage`.
 - [x] `test_carousel_run_guard` passes alone and in every order tried with the files that share its table.
 - [x] Every table-wide sweep count has its own database, proven with a two-hour gap between the files.
 - [x] `carousel_consolidation` passes with a zero budget, and only its budget test keeps the real one.
-- [ ] CI is green, mutation included.
+- [x] CI is green, mutation included (#354).
 
 ## Classification
 
@@ -173,7 +173,7 @@ See `.agent/reports/AE-0608.dev-summary.md`.
 
 ## QA Report
 
-Pending.
+Not run yet: the no-`.feature` classification sign-off is requested on the PR.
 
 ## Blockers
 
@@ -195,4 +195,6 @@ None.
 
 ## Final Summary
 
-Pending.
+The four flakes and the second form of the budget race are fixed in tests and tooling, with no production
+change and no limit, gate or filter touched. CI on #354 was green, mutation included. The unclosed-connection warning
+did not reproduce and stays open under Follow-ups.
