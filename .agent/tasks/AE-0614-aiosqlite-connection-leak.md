@@ -109,7 +109,8 @@ Test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   aiosqlite engine through the failing lifecycle and asserts the `ResourceWarning` fires exactly once.
 - (c) Affected gates: `backend:test`, plus backend comments, strict-diff, lint-diff, duplication, integrity and
   gherkin-refs.
-- (d) Reviewer or QA sign-off on the no-`.feature` classification is requested on the PR.
+- (d) Reviewer sign-off on the no-`.feature` classification (2026-11-04): accepted. Tests only; nothing under
+  `backend/src`, `pyproject.toml`, `pytest.ini` or the CI command changes, and nothing suppresses the warning.
 
 ## Delta
 
