@@ -1,6 +1,6 @@
 # AE-0612 — The EN heading-case allowlist applies to the first visible word
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
