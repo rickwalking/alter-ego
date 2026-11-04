@@ -40,6 +40,7 @@ from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
 )
 from tests.integration.carousel_copy_support import CopyEnv, copy_env_context
+from tests.integration.generation_event_support import SettledEventRecorder
 
 if TYPE_CHECKING:
     from httpx import AsyncClient, Response
@@ -233,16 +234,17 @@ async def test_stored_rows_and_api_exclude_sensitive_failure_content(
     )
     from rag_backend.infrastructure.database.config import get_session_maker
 
+    recorder = SettledEventRecorder(SqlGenerationEventRecorder(get_session_maker()))
     async with generation_event_scope(
         GenerationEventRun(
             id=run_id,
             kind=GenerationKind.WORKFLOW_RESUME,
             carousel_project_id=project_id,
         ),
-        SqlGenerationEventRecorder(get_session_maker()),
+        recorder,
     ):
-        assert await record_generation_event(event) is True
-        stored = await record_generation_event(
+        await record_generation_event(event)
+        await record_generation_event(
             GenerationEventInput(
                 event_type="phase_artifacts",
                 outcome="succeeded",
@@ -251,7 +253,7 @@ async def test_stored_rows_and_api_exclude_sensitive_failure_content(
                 + "a" * 32,
             )
         )
-    assert stored is True
+    assert await recorder.settled() == [True, True]
 
     async with get_session_maker()() as session:
         rows = (await session.scalars(select(CarouselGenerationEventModel))).all()
@@ -333,6 +335,7 @@ async def test_nullable_autopilot_mismatch_is_rejected(log_env: CopyEnv) -> None
     parent_id, run_id = await _seed_nullable_autopilot(project_a)
     from rag_backend.infrastructure.database.config import get_session_maker
 
+    recorder = SettledEventRecorder(SqlGenerationEventRecorder(get_session_maker()))
     async with generation_event_scope(
         GenerationEventRun(
             id=run_id,
@@ -340,14 +343,12 @@ async def test_nullable_autopilot_mismatch_is_rejected(log_env: CopyEnv) -> None
             carousel_project_id=project_b,
             autopilot_run_id=str(parent_id),
         ),
-        SqlGenerationEventRecorder(get_session_maker()),
+        recorder,
     ):
-        assert (
-            await record_generation_event(
-                GenerationEventInput(event_type="run_started", outcome="running")
-            )
-            is False
+        await record_generation_event(
+            GenerationEventInput(event_type="run_started", outcome="running")
         )
+    assert await recorder.settled() == [False]
     async with get_session_maker()() as session:
         session.add(_event_row(project_b, run_id, 101))
         await session.commit()
