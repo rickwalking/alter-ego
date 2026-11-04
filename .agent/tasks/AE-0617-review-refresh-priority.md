@@ -118,13 +118,33 @@ with no latency goal; the hour was never intended.
 
 Ticket created, root cause verified in code.
 
+### 2026-11-04 16:00
+
+Fix, tests and ADR note done; PR opened.
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/queue_bridge.py`
+- `backend/src/rag_backend/modules/generation_queue/`: `application/dispatcher.py`, `bootstrap.py`, `constants.py`,
+  `domain/models.py`, `domain/ports.py`, `infrastructure/pgq_gateway.py`, `infrastructure/repository.py`
+- `backend/tests/features/review_refresh_priority_ae0617.feature`, four new `*_ae0617.py` test files, `queue_fakes.py`
+- `docs/decisions/0026-carousel-generation-queue.md`
 
 ## Test Evidence
 
-Pending.
+- Red, with `dispatcher.py` at main and the other plumbing in place: 8 failed, 8 passed in the dispatcher and Postgres
+  files. The real PgQueuer failures include `test_a_new_refresh_is_picked_before_older_drives`,
+  `test_a_drive_staged_earlier_is_raised_and_keeps_its_job` and `test_a_running_drive_is_not_interrupted`.
+  `test_a_rework_with_work_left_keeps_fifo` and the running-refresh test pass on main, as guards should.
+- Green: 33 passed across the four new files; 311 + 1 across `tests/unit/modules/generation_queue` and the bridge,
+  manual-kick and queue Postgres files.
+- `backend:test`: 8863 passed, 2 skipped, 1 failed. The failure is `test_check_env_permissions.py::
+  test_fires_on_wrong_owner_expectation`: it expects a non-root runner and this host runs as uid 0. This branch does
+  not touch that script or test.
+- `backend:diff-cover` PASS (100%). 18 cheap gates PASS: format, lint, lint-diff, blanket-ignore, strict-diff, type,
+  imports, arch-ratchet, docstrings, dead-code, inline-prompts, gherkin-refs, comments, redis-factory, autopilot-env,
+  openapi-fresh, integrity, duplication.
+- Full gate: lead's heavy slot.
 
 ## QA Report
 
