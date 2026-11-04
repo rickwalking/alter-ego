@@ -224,10 +224,10 @@ def auto_cover_selector() -> AutoCoverSelector:
     return AutoCoverSelector(EditorialAutoCoverStore(get_session_maker()))
 
 
-async def _select(selection: AutoCoverSelection) -> None:
-    """Run the selection; a crash is logged and never escapes the task."""
+async def select_logged(selection: AutoCoverSelection) -> str:
+    """The selection's outcome; a crash is logged (``crashed``), never raised."""
     try:
-        await auto_cover_selector().select(selection)
+        return await auto_cover_selector().select(selection)
     except Exception:
         logger.exception(
             LOG_COVER_AUTO_SELECT,
@@ -235,6 +235,7 @@ async def _select(selection: AutoCoverSelection) -> None:
             project_id=selection.project_id,
             generation_id=str(selection.generation_id),
         )
+        return OUTCOME_AUTO_SELECT_CRASHED
 
 
 def with_cover_selection(
@@ -250,7 +251,7 @@ def with_cover_selection(
     async def _execute() -> CoverGenerationStatus:
         status = await generate()
         if status is CoverGenerationStatus.SUCCEEDED:
-            await _select(selection)
+            await select_logged(selection)
         return status
 
     return _execute
@@ -265,17 +266,26 @@ def selecting_cover_task(
     so a cover already chosen, or any change the owner makes while the job
     runs, wins over the generated one.
     """
-    selection = AutoCoverSelection(
+    selection = cover_selection(run, project)
+    return with_cover_selection(cover_generation_task(wiring, run), selection)
+
+
+def cover_selection(
+    run: CoverGenerationRun, project: CarouselProject
+) -> AutoCoverSelection:
+    """The selection of ``run`` with slide 1's cover as ``project`` has it now."""
+    return AutoCoverSelection(
         project_id=str(project.id),
         generation_id=run.generation.id,
         baseline=cover_baseline(project),
     )
-    return with_cover_selection(cover_generation_task(wiring, run), selection)
 
 
 __all__ = [
     "EditorialAutoCoverStore",
     "auto_cover_selector",
+    "cover_selection",
+    "select_logged",
     "selecting_cover_task",
     "with_cover_selection",
 ]

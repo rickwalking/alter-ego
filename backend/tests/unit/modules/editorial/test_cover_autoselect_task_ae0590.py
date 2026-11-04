@@ -38,6 +38,7 @@ from rag_backend.domain.constants.carousel_autofix import (
 from rag_backend.domain.constants.cover_autoselect import (
     LOG_COVER_AUTO_SELECT,
     OUTCOME_AUTO_SELECT_CRASHED,
+    OUTCOME_AUTO_SELECT_SELECTED,
     REASON_AUTO_SELECT_ASSET_GONE,
     REASON_AUTO_SELECT_MANUAL_CHOICE,
 )
@@ -51,6 +52,7 @@ from rag_backend.infrastructure.database.creator_asset_repository import (
 from rag_backend.modules.editorial.infrastructure import (
     carousel_cover_autoselect,
     carousel_cover_autostart,
+    carousel_cover_gate_select,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
     with_cover_selection,
@@ -148,25 +150,30 @@ class _Run:
 @pytest.mark.unit
 class TestScheduleWiring:
     # Scenario: A succeeded autopilot cover becomes slide 1's cover
-    def test_schedules_the_wrapped_task_with_the_baseline(
+    @pytest.mark.asyncio
+    async def test_schedules_the_wrapped_task_with_the_baseline(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         hook = uuid4()
         project = CarouselProject(topic="T", audience="A", niche="N")
         project.hook_asset_id = hook
-        wrapped: list[tuple[object, AutoCoverSelection]] = []
-        scheduled: list[tuple[object, str]] = []
+        selected: list[AutoCoverSelection] = []
+        scheduled: list[tuple[Callable[[], Awaitable[object]], str]] = []
         generation_id = uuid4()
 
+        async def _generate() -> CoverGenerationStatus:
+            return CoverGenerationStatus.SUCCEEDED
+
+        async def _select(selection: AutoCoverSelection) -> str:
+            selected.append(selection)
+            return OUTCOME_AUTO_SELECT_SELECTED
+
         monkeypatch.setattr(
-            carousel_cover_autoselect, "cover_generation_task", lambda _w, _r: "gen"
+            carousel_cover_gate_select,
+            "cover_generation_task",
+            lambda _w, _r: _generate,
         )
-
-        def _wrap(generate: object, selection: AutoCoverSelection) -> object:
-            wrapped.append((generate, selection))
-            return "wrapped"
-
-        monkeypatch.setattr(carousel_cover_autoselect, "with_cover_selection", _wrap)
+        monkeypatch.setattr(carousel_cover_gate_select, "select_logged", _select)
         monkeypatch.setattr(
             cover_generation_tasks,
             "schedule_cover_generation",
@@ -179,9 +186,9 @@ class TestScheduleWiring:
             project,
         )
 
-        assert scheduled == [("wrapped", str(generation_id))]
-        generate, selection = wrapped[0]
-        assert generate == "gen"
+        assert [gid for _, gid in scheduled] == [str(generation_id)]
+        assert await scheduled[0][0]() is CoverGenerationStatus.SUCCEEDED
+        selection = selected[0]
         assert selection.project_id == str(project.id)
         assert selection.generation_id == generation_id
         assert selection.baseline == CoverBaseline(

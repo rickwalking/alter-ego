@@ -11,7 +11,8 @@ retried run never enqueues a second job.
 
 Once the run settles ``succeeded`` the cover becomes slide 1's cover, unless
 a cover was already chosen or the owner chose one since the job was
-scheduled (see ``carousel_cover_autoselect``).
+scheduled (see ``carousel_cover_autoselect``); the drive also asks for it at
+each gate (see ``carousel_cover_gate_select``).
 """
 
 from __future__ import annotations
@@ -30,8 +31,9 @@ from rag_backend.domain.models import CarouselProject
 from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     CarouselAutomationAcl,
 )
-from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
-    selecting_cover_task,
+from rag_backend.modules.editorial.infrastructure.carousel_cover_gate_select import (
+    remembering_cover_task,
+    select_cover_at_gate,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
@@ -140,7 +142,7 @@ def _schedule(
         schedule_cover_generation,
     )
 
-    task = selecting_cover_task(wiring, run, project)
+    task = remembering_cover_task(wiring, run, project)
     schedule_cover_generation(task, str(run.generation.id))
 
 
@@ -164,4 +166,5 @@ __all__ = [
     "REASON_AUTO_COVER_UNAVAILABLE",
     "AutoCoverOutcome",
     "schedule_autopilot_cover",
+    "select_cover_at_gate",
 ]

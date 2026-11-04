@@ -156,6 +156,7 @@ LOG_COVER_PHOTO_FAILED = "photo_failed"
 LOG_COVER_RENDER_FAILED = "render_failed"
 LOG_COVER_AUTO_STARTED = "auto_started"
 LOG_COVER_AUTO_SKIPPED = "auto_skipped"
+ACTION_APPLY_COVER = "apply_cover"
 
 SKIP_COVER_NO_CONSENT = "no_consent"
 SKIP_COVER_NO_PHOTOS = "no_photos"
@@ -164,6 +165,7 @@ SKIP_COVER_REFUSED = "refused"
 SKIP_COVER_UNAVAILABLE = "bridge_unavailable"
 
 __all__ = [
+    "ACTION_APPLY_COVER",
     "ANSWER_COVER_NOT_NOW",
     "ANSWER_COVER_OFF",
     "ANSWER_COVER_ON",
