@@ -1,6 +1,6 @@
 # AE-0611 — A re-drafted slide keeps the old EN copy, and the slide rows keep the pre-retry card
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Bug
