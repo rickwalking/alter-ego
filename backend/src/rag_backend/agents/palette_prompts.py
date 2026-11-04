@@ -33,7 +33,10 @@ from rag_backend.domain.constants.palette_generation import (
     TRACE_CONTENT_TYPE_PALETTE,
     TRACE_PHASE_PALETTE_GENERATION,
 )
-from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
+from rag_backend.infrastructure.monitoring_langfuse import (
+    get_langfuse_runnable_config,
+    propagate_attributes,
+)
 
 
 def palette_generation_prompt(description: str) -> str:
@@ -61,6 +64,10 @@ def palette_generation_trace(user_id: str) -> AbstractContextManager[object]:
     )
 
 
+class EmptyPaletteAnswerError(ValueError):
+    """The model answered no content (e.g. its whole token budget went to reasoning)."""
+
+
 class PaletteCompletion:
     """The fast chat model with the palette generation's token cap and temperature."""
 
@@ -70,12 +77,22 @@ class PaletteCompletion:
         )
 
     async def complete(self, prompt: str) -> str:
-        """The model's text answer to ``prompt``."""
-        response = await self._model.ainvoke([HumanMessage(content=prompt)])
-        return str(response.content)
+        """The model's text answer to ``prompt``, as a Langfuse generation.
+
+        An answer with no content raises ``EmptyPaletteAnswerError``, a model failure
+        the service logs.
+        """
+        response = await self._model.ainvoke(
+            [HumanMessage(content=prompt)], get_langfuse_runnable_config()
+        )
+        answer = str(response.content)
+        if not answer.strip():
+            raise EmptyPaletteAnswerError
+        return answer
 
 
 __all__ = [
+    "EmptyPaletteAnswerError",
     "PaletteCompletion",
     "palette_generation_prompt",
     "palette_generation_trace",

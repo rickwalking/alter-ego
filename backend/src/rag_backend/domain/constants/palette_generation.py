@@ -6,7 +6,9 @@ call when the first answer has fewer valid ones. ``WCAG_AA_TEXT_CONTRAST`` is th
 ratio for normal text; the slide ink colours are the template's own (dark ink on
 a light background, white on a dark one), so the check matches what renders.
 A failing colour is mixed towards black or white in ``CONTRAST_REPAIR_STEP``
-increments until it passes.
+increments until it passes. ``GENERATION_MAX_TOKENS`` matches the chat models'
+32000 default: the fast models spend this budget on reasoning before they answer,
+up to about 6k tokens in prod, so ``GENERATION_TIMEOUT_SECONDS`` is the real bound.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ MIX_TARGET_BLACK: str = "#000000"
 MIX_TARGET_WHITE: str = "#ffffff"
 
 GENERATION_TEMPERATURE: float = 0.8
-GENERATION_MAX_TOKENS: int = 2000
+GENERATION_MAX_TOKENS: int = 32000
 GENERATION_TIMEOUT_SECONDS: float = 90.0
 GENERATION_ATTEMPTS: int = 2
 
@@ -43,6 +45,7 @@ TRACE_CONTENT_TYPE_PALETTE: str = "palette"
 
 ERR_PALETTE_GENERATION_UNAVAILABLE: str = "palette_generation_unavailable"
 ERR_DESCRIPTION_TOO_SHORT: str = "description is too short"
+LOG_PALETTE_CALL_FAILED: str = "palette_generation_call_failed"
 
 __all__ = [
     "CONTRAST_DECIMALS",
@@ -61,6 +64,7 @@ __all__ = [
     "KEY_KEYWORDS",
     "KEY_NAME",
     "KEY_PRIMARY",
+    "LOG_PALETTE_CALL_FAILED",
     "MIX_TARGET_BLACK",
     "MIX_TARGET_WHITE",
     "PALETTE_CANDIDATE_COUNT",
