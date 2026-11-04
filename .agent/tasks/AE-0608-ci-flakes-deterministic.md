@@ -28,6 +28,13 @@ production contract for best-effort diagnostics. The tests asserted the return v
 all needed a write to finish inside the budget, and `test_nullable_autopilot_mismatch_is_rejected` could pass on a
 timeout instead of on the rejection it exists to prove.
 
+A full run with a zero budget found one more form of the same race, in tests that assert no event at all.
+`carousel_consolidation` runs on a `StaticPool`, so the workflow and its event writes share one SQLite connection.
+Cancelling a slow write there breaks the workflow's own statements (`no active connection`, `database is locked`), which
+failed `test_background_resume_publishes_review_required_for_outline_gate`,
+`test_content_revise_persists_phase_feedback` and `test_send_back_files_feedback_under_content_and_preserves_images`.
+Production sessions each hold their own connection, so this failure belongs to the fixture.
+
 ### 2. The frontend comment gate spent its time in a parser it did not need
 
 `check-comments.mjs` called `parser.parseForESLint`, which builds an ESTree and runs scope analysis for every file
@@ -55,6 +62,9 @@ that job (run 41733730478) and never in `Test & Coverage`.
   `WorkflowFailureAlertService` reads the real clock, so the row falls out of the failure window on a long run.
 - `test_timeout_auto_reject_clears_leftover_run_columns` counts a table-wide sweep on the session-wide SQLite engine.
   After `test_workflow_timeout_repository.py` it sees that file's stale rows too and returns 3 instead of 1.
+- `test_sweep_bumps_the_rejected_and_keeps_the_rest` counts the same sweep with a 72-hour timeout.
+  `test_within_window_is_untouched` leaves a row idle for 71 hours on the shared engine, so once more than an hour
+  separates the two, that row has expired and the count is 2. Natural order hides this, since reject-bumps runs first.
 
 ## Scope
 
@@ -77,6 +87,8 @@ that job (run 41733730478) and never in `Test & Coverage`.
 - [x] Production tracing code is unchanged.
 - [x] The two clock tests pass with import-time clocks hours stale.
 - [x] `test_carousel_run_guard` passes alone and in every order tried with the files that share its table.
+- [x] Every table-wide sweep count has its own database, proven with a two-hour gap between the files.
+- [x] `carousel_consolidation` passes with a zero budget, and only its budget test keeps the real one.
 - [ ] CI is green, mutation included.
 
 ## Classification
@@ -88,6 +100,7 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
 - (b) Seeded-violation tests: `check-comments.test.ts` keeps its `FAILS on a seeded ...` cases and adds literals that
   must not read as comments. `test_the_same_client_exports_when_the_switch_is_gone` proves the exporter check fires.
   `test_the_write_is_stored_however_slow_against_the_budget` confirms the zero budget really drops the wait.
+  `test_recorder_timeout_preserves_authoritative_generation_state` proves the real budget still fires.
 - (c) Affected gates: `frontend:lint` (`lint:comments`, `lint:knip`), `frontend:test`, `backend:test`, and backend
   format, lint, comments, docstrings and gherkin-refs.
 - (d) Reviewer or QA sign-off on the no-`.feature` classification is requested on the PR. The tests keep citing their
@@ -101,6 +114,12 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   answered, so a write that fails or is refused still fails the test. No production seam was needed, because
   `GenerationEventRecorder` is already injected. Calling the recorder directly would have dropped the production
   path from these tests.
+- `carousel_consolidation` injects the budget out of the suite with an autouse fixture, the seam this ticket was
+  allowed for a test that does not cover the budget. Waiting with `SettledEventRecorder` would not work here: a shielded
+  write keeps running on the connection the workflow is using. A second connection would hit `database is locked`.
+  `test_generation_event_timeout.py` overrides the fixture and keeps the real budget, and
+  `test_a_write_slower_than_the_budget_runs_to_the_end` proves a slow write is not cancelled. The production budget
+  and every other test are unchanged.
 - Item 2 adds `ts-api-utils` 2.5.0 as a direct devDependency, the version already installed through
   `typescript-eslint`, because knip rejects an unlisted import. Reading comments from `ts.createSourceFile` and
   `iterateComments` gave the same 4,307 comments as `parseForESLint` on all 1,273 files compared. One difference:
@@ -110,7 +129,8 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   `test_langfuse_cloud_ae0545.py` did not need changing.
 - Item 4 injects the clock for `revive_stale` by replacing `queue_bridge.SystemClock` in that test, since the
   production method takes no clock. The archive test dates its failed row when the test runs, because the service
-  under test reads the real clock. The run-guard test gets its own empty database and keeps `== 1`.
+  under test reads the real clock. `sweep_engine` moved to `tests/unit/infrastructure/conftest.py`, and the run-guard,
+  reject-bumps and timeout-repository tests all count their sweeps on it, keeping their exact assertions.
 - No static rule against module-level clocks was added: most of those constants are safe, so a rule would need an
   allowlist, and the import-time clock run below answers the question directly.
 
@@ -120,24 +140,36 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
 
 Ticket created. Root causes reproduced on an untouched checkout of 549c4b46 before any fix.
 
+### 2026-11-04 12:00
+
+Zero-budget and date sweeps over the full suite found the `StaticPool` race and the reject-bumps row. Both fixed.
+The unclosed-connection warning did not reproduce and is left as a follow-up below.
+
 ## Files Touched
 
 - `backend/tests/conftest.py`
+- `backend/tests/integration/carousel_consolidation/conftest.py`
+- `backend/tests/integration/carousel_consolidation/test_generation_event_timeout.py`
+- `backend/tests/integration/carousel_consolidation/test_shared_connection_event_budget.py` (new)
 - `backend/tests/integration/generation_event_support.py` (new)
 - `backend/tests/integration/test_carousel_generation_log_ae0556.py`
 - `backend/tests/integration/test_daily_recovery_events_ae0556.py`
 - `backend/tests/integration/test_daily_recovery_scan_ae0524.py`
 - `backend/tests/integration/test_generation_events_pg_ae0556.py`
 - `backend/tests/unit/application/test_carousel_archive_ae0527.py`
+- `backend/tests/unit/infrastructure/conftest.py` (new)
 - `backend/tests/unit/infrastructure/test_carousel_run_guard.py`
+- `backend/tests/unit/infrastructure/test_reject_bumps_lock_version_ae0604.py`
+- `backend/tests/unit/infrastructure/test_workflow_timeout_repository.py`
 - `backend/tests/unit/test_hermetic_tracing_ae0608.py` (new)
 - `frontend/package.json`, `frontend/package-lock.json`
 - `frontend/scripts/check-comments.mjs`
 - `frontend/src/scripts/check-comments.test.ts`
+- `.agent/reports/AE-0608.dev-summary.md` (new)
 
 ## Test Evidence
 
-Pending; see `.agent/reports/AE-0608.dev-summary.md`.
+See `.agent/reports/AE-0608.dev-summary.md`.
 
 ## QA Report
 
@@ -146,6 +178,20 @@ Pending.
 ## Blockers
 
 None.
+
+## Follow-ups
+
+- **Unclosed connection warning, not fixed.** `test_change_own_password_pg_ae0511.py` has failed on
+  `PytestUnraisableExceptionWarning` from `Connection.__del__`, once for
+  `test_admin_created_user_must_change_before_using_the_app` and once locally for
+  `test_a_wrong_current_password_leaves_the_store`. The local trace shows an `aiosqlite` connection, in a test that runs
+  on Postgres, so the test only hosts the garbage collection and the leak comes from an earlier test. A tracer naming
+  the opener of every unclosed `aiosqlite` or `asyncpg` connection, proven on a seeded leak, found none in a zero-budget
+  run (aiosqlite only), a +3h run (both drivers), or six runs of the two password files. Budget cancellation is ruled
+  out as the cause. The undisposed engine next to it, `autopilot_topic_support`, is closed through `close_db`. The
+  `no_outbox_relay` fixture describes one way to open such a connection, a relay running after its engine was disposed,
+  but no run showed it, so no fixture was changed. The next occurrence needs the opener: `tracemalloc` on the failing
+  job, or the same tracer.
 
 ## Final Summary
 
