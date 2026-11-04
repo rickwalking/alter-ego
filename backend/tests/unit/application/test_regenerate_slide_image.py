@@ -16,6 +16,7 @@ from rag_backend.domain.models import (
     CarouselProject,
     CarouselStatus,
 )
+from rag_backend.infrastructure.external.routed_chat_model import EmptyLLMResponseError
 
 from .carousel_refinement_helpers import (
     make_refinement_service_with_mocks,
@@ -111,7 +112,7 @@ class TestRegenerateSlideImage:
 
     # Scenario: Empty LLM response is rejected during image regeneration
     @patch("rag_backend.application.services.carousel_refinement.run_image_one")
-    async def test_regenerate_raises_when_llm_returns_empty_prompt(
+    async def test_regenerate_changes_nothing_when_llm_returns_empty_prompt(
         self, _mock_run_image_one: AsyncMock, tmp_path: Path
     ) -> None:
         agent, repo, _, _ = make_refinement_service_with_mocks()
@@ -125,10 +126,13 @@ class TestRegenerateSlideImage:
         repo.get_project_by_id = AsyncMock(return_value=project)
         slide = make_test_slide(1, extras={"image_prompt": "old scene"})
         repo.get_slides_by_project = AsyncMock(return_value=[slide])
-        agent._llm.generate = AsyncMock(return_value="   ")
+        agent._llm.generate = AsyncMock(side_effect=EmptyLLMResponseError("model"))
 
-        with pytest.raises(ValueError, match="empty image prompt"):
+        with pytest.raises(EmptyLLMResponseError):
             await agent.regenerate_slide_image(project.id, 1, "make it brighter")
+
+        repo.update_slide.assert_not_awaited()
+        _mock_run_image_one.assert_not_awaited()
 
     # Scenario: Missing image_prompt is rejected during image regeneration
     async def test_regenerate_raises_when_no_image_prompt(self) -> None:

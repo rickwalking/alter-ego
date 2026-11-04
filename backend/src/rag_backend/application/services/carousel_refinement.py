@@ -33,12 +33,10 @@ _ERR_NO_OUTPUT_DIR_IMAGE = (
 )
 _ERR_SLIDE_NOT_FOUND = "Slide {} not found in project {}"
 _ERR_NO_IMAGE_PROMPT = "Slide {} has no image_prompt to refine."
-_ERR_EMPTY_IMAGE_PROMPT = "LLM returned an empty image prompt; no changes applied."
 _ERR_NO_OUTPUT_DIR_DESIGN = (
     "Carousel project {} has no output_dir; cannot apply design changes."
 )
 _ERR_NO_SLIDES = "Carousel project {} has no slides."
-_ERR_EMPTY_CSS = "LLM returned empty CSS; no changes applied."
 _ERR_WRITE_OVERRIDES = "Could not write design overrides to {}: {}"
 
 IMAGE_PROMPT_REWRITE_TEMPLATE = (
@@ -179,8 +177,6 @@ class CarouselRefinementMixin:
             trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_IMAGE),
         )
         new_prompt = new_prompt.strip()
-        if not new_prompt:
-            raise ValueError(_ERR_EMPTY_IMAGE_PROMPT)
 
         slide.image_prompt = new_prompt
         extras: dict[str, object] = dict(slide.extras or {})
@@ -258,8 +254,6 @@ class CarouselRefinementMixin:
             trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_DESIGN),
         )
         override_css = override_css.strip()
-        if not override_css:
-            raise ValueError(_ERR_EMPTY_CSS)
 
         if override_css.startswith("```css"):
             override_css = override_css[6:]
