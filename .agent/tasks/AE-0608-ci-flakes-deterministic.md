@@ -89,7 +89,7 @@ that job (run 41733730478) and never in `Test & Coverage`.
 - [x] `test_carousel_run_guard` passes alone and in every order tried with the files that share its table.
 - [x] Every table-wide sweep count has its own database, proven with a two-hour gap between the files.
 - [x] `carousel_consolidation` passes with a zero budget, and only its budget test keeps the real one.
-- [x] CI is green, mutation included (#354).
+- [x] CI is green, mutation included (#354 at 783d48bd). The later run is under Follow-ups.
 
 ## Classification
 
@@ -193,8 +193,50 @@ None.
   but no run showed it, so no fixture was changed. The next occurrence needs the opener: `tracemalloc` on the failing
   job, or the same tracer.
 
+### Unclosed connection on #354: not caused by this ticket
+
+Run 41794303155 at bc76b98a, job 126454650566, passed 8,709 tests with one error at setup of
+`test_chat_stream.py::TestAlterEgoChatStream::test_anonymous_user_streams_chat`:
+
+```text
+E   ResourceWarning: <aiosqlite.core.Connection object at 0x7f9878c9fc20> was deleted before being closed.
+```
+
+**The same error appears without this change.** A scan of 216 backend runs and their 21 failed jobs, all attempts,
+matched the message in two other jobs:
+
+| Run | Job | Branch and commit | Test that hosted it |
+|---|---|---|---|
+| 41587274170 | 125755578935 | `fix/ae-0600-outline-failure-cause` dea45cd0, 2026-11-03 | `test_a_change_on_postgres_logs_out_the_other_session_only` |
+| 41202058535 | 124539705150 | `feat/ae-0579-meta-ads-env-passthrough` 11ae5931, 2026-10-31 | `test_duplicate_given_slug_is_clear_409` |
+
+Both commits predate this branch. At both, `backend/tests/conftest.py` has no `LANGFUSE` or `OTEL_ENABLED` line, and
+`generation_event_support.py`, `tests/unit/infrastructure/conftest.py`, `test_hermetic_tracing_ae0608.py` and
+`test_shared_connection_event_budget.py` do not exist. The warning names three different tests, so the test that
+reports it only hosts the garbage collection. The scan did not find an instance on the #351 branch: its one failed
+`Test & Coverage` job in the scan, 126319587486, has no match.
+
+**Nothing here touches the connection lifecycle `test_chat_stream` uses.** That test's `client` fixture lives in
+`test_chat_stream.py`, and neither that file nor `tests/integration/conftest.py` is in this diff. No line in
+`backend/src`, `pyproject.toml` or `uv.lock` changes, so `aiosqlite` stays at 0.22.1. In the order of the failed job,
+the error came at test 734:
+
+| Change | Runs before 734? | Why it cannot open the leaked connection |
+|---|---|---|
+| `tests/conftest.py`, item 3 | Yes | Sets four environment variables, none read by the database code. It removes a client and adds no connection. |
+| `carousel_consolidation/conftest.py` | Yes, tests 1 to 97 | Replaces one constant, so it removes cancellations. It opens nothing. |
+| `test_shared_connection_event_budget.py` | Yes, test 49 | Uses a stub recorder and no database. |
+| `SettledEventRecorder` in `test_carousel_generation_log_ae0556.py` | Yes, test 639 | Every use awaits `settled()`, so no write outlives its test. A full zero-budget run traced no leak here. |
+| `sweep_engine` | No, test 6070 onward | Runs after the error, and is disposed by its fixture. |
+| `test_hermetic_tracing_ae0608.py` | No, test 8653 | Runs after the error. |
+| The event tests in `test_daily_recovery_*`, `test_generation_events_pg_*` | No | Sort after `test_chat_stream`. |
+
+One effect cannot be excluded: removing the Langfuse client can shift when garbage collection runs, and so which test
+hosts the warning. That changes where the warning lands, not whether the connection leaked, which the table above and
+the two earlier runs settle. Fixing this class of leak is a separate ticket.
+
 ## Final Summary
 
 The four flakes and the second form of the budget race are fixed in tests and tooling, with no production
-change and no limit, gate or filter touched. CI on #354 was green, mutation included. The unclosed-connection warning
-did not reproduce and stays open under Follow-ups.
+change and no limit, gate or filter touched. CI on #354 was green at 783d48bd, mutation included. The unclosed-connection
+warning failed one later run. It is not caused by this ticket, and stays open under Follow-ups.
