@@ -43,7 +43,7 @@ queue); role-less = `GLM_MODEL`, default `glm-5.3`.
 | Refine image, `regenerate_slide_image` | `fast_llm_service` (agent tool) | fast | 0.7 | none | 0.7 / 32000 | 0.7 / 32000 | Queue |
 | Refine design, `refine_carousel_design` | `fast_llm_service` (agent tool) | fast | 0.3 | none | **0.7** / 32000 | **0.3** / 32000 | Queue |
 | LinkedIn, `LinkedInPostGenerator` | `fast_llm_service` | fast | 0.8 | none | **0.7** / 32000 | **0.8** / 32000 | Queue |
-| `extract_json_with_repair` | no caller in `src` | n/a | 0.2 | none | n/a | n/a | n/a |
+| JSON repair, `extract_json_with_repair` (`json_utils.py:105`) | no caller in `src` today | whichever `llm` it is given | 0.2 | none | not reached | 0.2 / 32000 if a caller appears | Depends on the `llm` |
 | `generate_stream` | no caller in `src` | n/a | n/a | none | n/a | n/a | n/a |
 
 Two corrections to the AE-0609 audit table, which says "fast" for all of these:
@@ -70,10 +70,19 @@ once.
 | Blog improve | 200 with empty `improved_text` | 500 |
 | Blog translation | `BlogTranslationError` (the empty answer fails the JSON parse) | `BlogTranslationError` |
 | Conversation title | Blank title saved | The service's first-message title |
-| Refine image / design | `AllModelsUnavailableError` from the queue | Same |
-| LinkedIn | `AllModelsUnavailableError` from the queue | Same |
+| Refine image / design | `AllModelsUnavailableError` from the queue | Same, with a queue. See below |
+| LinkedIn | `AllModelsUnavailableError` from the queue | Same, with a queue. See below |
 
 The 500 is what those two routes already return for any other model failure: they map only `ValueError` to 400.
+
+"Same" holds only when `LLM_MODEL_QUEUE_FAST` is set. `deploy.yml:173` sets it by default, so production has a queue.
+Without one, the fast role is a routed model with a fallback, and a blank answer from that fallback now raises
+`EmptyLLMResponseError`:
+
+- **LinkedIn:** before, the blank post was stored. Now the error leaves `build_editorial_distribution_updates`, which
+  has no handler around `generate_both`, and the content phase fails.
+- **Refine image / design:** before, the tool answered that it could not apply the change. Now it answers
+  `ERR_CAROUSEL_TOOL_UNEXPECTED`. Nothing is changed in either case.
 
 ## Scope
 
@@ -84,12 +93,15 @@ The 500 is what those two routes already return for any other model failure: the
 - `LlmCallTrace`, a domain value on the `LLMService.generate` port: a caller with no phase around it names its phase,
   agent and content type, and the adapter opens the trace. Refine image and design and the conversation title use it.
 - `blog_ai_propagate` names the `blog_ai` agent.
+- Traces carry the user where one is known: refine image and design, the conversation title, and blog suggest, improve,
+  section rewrite and the translation route. The conversation title also carries the conversation id as its project id.
 
 ## Non-Goals
 
 - No caller moves to another model or role (see Decision Log).
 - No timeout, gate or threshold change. No new LLM call. No prompt change.
-- `docs/backend/llm-model-routing.md` is not edited: PR #350 touches it.
+- The temperatures callers request stay as they are.
+- `EmptyLLMResponseError` on the blog suggest and improve routes stays a generic 500.
 
 ## Acceptance Criteria
 
@@ -98,6 +110,9 @@ The 500 is what those two routes already return for any other model failure: the
 - [x] The caller audit table covers each caller's `max_tokens`, role and model.
 - [x] An empty answer moves the call to the next model where there is one, and otherwise fails with a named error.
 - [x] Each call is one Langfuse generation, with phase, agent and content type on its trace.
+- [x] Refinement, conversation title and blog AI traces carry the user id where one is known, and the explicit
+  `unknown` fallback where none is.
+- [x] The conversation title trace carries the conversation id as its project id.
 - [x] The tests stay hermetic: no exporter and no network.
 - [x] The touched tests and the cheap backend gates pass.
 
@@ -119,9 +134,13 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
   Scenario: The call reaches Langfuse as a generation
   Scenario: Without Langfuse the call runs with no callbacks
   Scenario Outline: A blog AI call is traced with its phase, agent and content type
+  Scenario Outline: A blog AI call records the user who asked for it
+  Scenario: A blog translation with no user keeps the unknown fallback
   Scenario Outline: A refinement names its own phase
+  Scenario: A refinement of a project with no owner names no user
   Scenario: A conversation title names its own phase
   Scenario: The service opens the phase the call names
+  Scenario: A call that names no user keeps the unknown fallback
   Scenario: A failing call closes the phase it named
 ```
 
@@ -137,25 +156,29 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 - `AnthropicLLMService.generate` and `generate_stream`: temperature bound, traced; `generate` raises on empty.
 - `blog_ai_propagate`: names the `blog_ai` agent (it defaulted to `editorial_workflow`).
 - `regenerate_slide_image`, `refine_carousel_design`, `get_conversation_title_generator`: pass an `LlmCallTrace`.
+- `LlmCallTrace` gains `user_id`. `get_conversation_title_generator` takes the conversation id and the signed-in user.
+- `blog_ai_propagate` takes an optional `user_id`, and `BlogTranslationService.translate` an optional `user_id`.
+- `docs/backend/llm-model-routing.md`: the `LLMService` paragraph. AE-0609 ticket: the blog AI audit row.
 
 ### REMOVED
 
 - `max_tokens` from `generate`, `generate_stream`, `LLMServiceProtocol` and `TranslationLLM`.
 - `DEFAULT_TEMPERATURE` in `anthropic_llm.py`, which nothing else read.
+- The two `if not ...: raise ValueError` empty guards in `carousel_refinement.py`, their constants and their two tests.
 
 ## Affected Areas
 
 - Backend: `infrastructure/external/anthropic_llm.py`, `domain/protocols/ai.py`, `domain/constants/langfuse_tracing.py`,
   `domain/protocols/__init__.py`, `blog_post_ai_service.py`, `blog_translation_service.py`,
   `blog_workflow_observability.py`,
-  `carousel_refinement.py`, `api/dependencies/conversation.py`
+  `carousel_refinement.py`, `api/dependencies/conversation.py`, `api/routes/blog_post_sections.py`
 - Tests: new feature and two unit test files
 - Observability: new generations for every `LLMService` call
 - Frontend / Database / Deployment: none
 
 ## Dependencies
 
-- Related: AE-0607 (reasoning uses up a small cap), AE-0609 (audit, PR #350, not merged)
+- Related: AE-0607 (reasoning uses up a small cap), AE-0609 (audit, PR #350, merged)
 
 ## Implementation Plan
 
@@ -184,6 +207,10 @@ The first version opened the phases in the callers. `backend:imports`, `backend:
 failed on it: three new application/API imports of infrastructure. Those are real layering violations, and the
 baseline is not grown for them, so the trace moved onto the port as a domain value and the imports went away. The
 LinkedIn scenario went with them (see Decision Log). The tests were rewritten to match, then green.
+
+Review round 1 follow-ups. Against the old source, keeping only the new `LlmCallTrace.user_id` field so the tests
+collect, 14 tests failed on the behaviour: no user id on the refinement, title and blog traces, and the exact
+`blog_ai_propagate` arguments. Two new tests pass by design there: the `unknown` fallback and the project with no owner.
 
 ## Files Touched
 
@@ -228,24 +255,20 @@ Pending.
 - **LinkedIn is unchanged.** It runs inside the content phase, so its generation already gets that phase's metadata
   from `generate`, the same as the caption. A nested phase would overwrite the phase on the outer trace. Its
   generation is named `carousel.content`, like the caption.
+- **The refinement's user is the project owner.** Both agent tools run `load_authorized_project`, which refuses anyone
+  but the owner, so the owner is the caller. The project is already loaded there, so the `CarouselRefinementService`
+  port keeps its signature. A project with no owner records `unknown`.
+- **The conversation id goes in the title trace's project field.** It groups the title with its conversation and fills
+  a required field. `get_conversation_title_generator` reads both values through FastAPI, and the route keeps its
+  ownership check.
+- **`blog_ai_propagate` keeps `post_id` as metadata.** The user id was the ask. Its traces still record
+  `project_id=unknown`, which is a follow-up.
+- **Only the translation route passes a user.** `BlogDocumentTranslator` keeps its two arguments, because its callers,
+  the EN gate and the EN repair, are background work with no user.
+- **The blog image call is unchanged.** It goes to an image provider, not through `LLMService`.
+- **The refinement's empty guards are removed.** `generate` raises first, so they could only run with a test double.
 - **The temperature change is the visible effect.** Translation gets more literal (0.2), design more repeatable
   (0.3), LinkedIn looser (0.8). These are the values the code always asked for.
-
-## Doc update after #350 merges
-
-In `docs/backend/llm-model-routing.md`, replace the last sentence of the "Only four calls bind a cap" paragraph
-(`LLMService.generate(max_tokens=...)` does not reach the provider either...) with:
-
-> `LLMService.generate` has no `max_tokens` argument, so its callers always run at 32000. Its `temperature` is bound
-> on the model and reaches the provider. An answer with no visible text raises `EmptyLLMResponseError`.
-
-And add to the same section:
-
-> Blog suggest, improve and translation and the conversation title use the role-less `container.llm_service()`, so
-> they run on `GLM_MODEL` with no fallback and no per-call timeout. LinkedIn and the refine image / design tools use
-> `fast_llm_service`. All `LLMService` calls are Langfuse generations.
-
-In the AE-0609 audit table, blog AI suggest / improve / translation are `GLM_MODEL`, not fast.
 
 ## Follow-ups (not in this ticket)
 
@@ -253,8 +276,7 @@ In the AE-0609 audit table, blog AI suggest / improve / translation are `GLM_MOD
   `conversation.py` (`get_conversation_title_generator`) could use `fast_llm_service`. This is the owner's call. The
   routing doc records `glm-5.3` answering nothing after about 8.5 min, which is why it stopped being a fallback, and
   these calls still run on it.
-- **Refinement's empty guards are now only reachable with a test double.** `_ERR_EMPTY_IMAGE_PROMPT` and
-  `_ERR_EMPTY_CSS` stay, since the protocol does not promise the check.
+- **Blog AI traces record `project_id=unknown`.** `blog_ai_propagate` sends the post id as `post_id` only.
 
 ## Blockers
 
@@ -264,5 +286,5 @@ None.
 
 `LLMService.generate` now sends the requested temperature, which changes translation, design refinement and
 LinkedIn. `max_tokens` is gone, so every call keeps 32000. An empty answer is a named failure, after any fallback
-has run. Every call is a Langfuse generation, with phase, agent and content type. Blog AI and the title still have no
-fallback: moving them to the fast role is an open decision.
+has run. Every call is a Langfuse generation, with phase, agent and content type, and with the user id where one is known.
+Blog AI and the title still have no fallback: moving them to the fast role is an open decision.
