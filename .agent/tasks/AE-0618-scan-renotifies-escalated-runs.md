@@ -1,6 +1,6 @@
 # AE-0618 — The daily recovery scan re-sends the escalation notice with Retry once to stuck runs
 
-Status: In Progress
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Feature

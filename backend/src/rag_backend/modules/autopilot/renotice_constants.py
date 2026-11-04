@@ -1,8 +1,8 @@
 """The daily scan's one re-sent escalation notice.
 
 ``CAROUSEL_RETRY_SHIPPED_AT`` is the end of the deploy that added the owner's
-carousel Retry: an escalation event from then on is a notice that carried it. ``RENOTICE_KEY`` is the
-ledger marker that keeps a run to one re-sent notice, ever.
+carousel Retry: an escalation event from then on is a notice that carried it.
+``RENOTICE_KEY`` is the ledger marker that keeps a run to one re-sent notice, ever.
 """
 
 from datetime import UTC, datetime
