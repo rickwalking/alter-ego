@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
+    CarouselOpen,
     SqlEscalationRenotices,
 )
 
@@ -41,10 +42,11 @@ class AutopilotRenoticeBridge:
             for run in runs
         ]
 
-    async def renotify(self, run_id: str) -> bool:
-        """Stage one notice, committed; False when the run is no longer due."""
+    async def renotify(self, run_id: str, carousel_open: CarouselOpen) -> bool:
+        """Stage one notice, committed; False when the run is no longer eligible."""
         async with self.sessions() as session:
-            staged = await SqlEscalationRenotices(session).stage(UUID(run_id))
+            renotices = SqlEscalationRenotices(session)
+            staged = await renotices.stage(UUID(run_id), carousel_open)
             await session.commit()
         return staged
 

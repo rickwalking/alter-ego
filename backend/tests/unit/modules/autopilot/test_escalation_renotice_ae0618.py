@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.domain.messages import notice_kind
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, record_status
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
+from rag_backend.modules.autopilot.infrastructure.escalation_renotice import _mapping
 from rag_backend.modules.autopilot.notify_constants import (
     EVENT_TYPE_ESCALATION_RENOTICE,
     KIND_ESCALATED,
@@ -160,7 +161,7 @@ def test_a_failed_run_also_gets_the_carousel_retry() -> None:
 _PARKED = "queue_dead_letter:run_budget_exhausted"
 _STATE_CHANGED = "content.autopilot.state_changed"
 _PUBLISH = "content.autopilot.publish_notice"
-_FAILED_PUBLISH = {"outcome": "failed", "error_code": "ig_error"}
+_FAILED_PUBLISH = {"outcome": "publish_failed", "error_code": "ig_error"}
 
 
 def _past(
@@ -223,3 +224,19 @@ def test_any_other_notice_carried_no_retry(
 ) -> None:
     """Scenario: A failed run with a live carousel gets the same notice"""
     assert not carried_retry(_past(event_type, payload, since_retry=True))
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"state": "escalated"}, {"state": "escalated"}),
+        ({}, {}),
+        (["escalated"], {}),
+        (None, {}),
+    ],
+)
+def test_only_a_mapping_payload_is_read(
+    payload: object, expected: dict[str, object]
+) -> None:
+    """Scenario: A run already notified with Retry is skipped"""
+    assert _mapping(payload) == expected

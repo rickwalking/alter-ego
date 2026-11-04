@@ -49,7 +49,10 @@ __all__ = ["engine"]
 
 _S = AutopilotRunState
 PUBLISH_NOTICE = "content.autopilot.publish_notice"
-FAILED_PUBLISH: dict[str, object] = {"outcome": "failed", "error_code": "ig_error"}
+FAILED_PUBLISH: dict[str, object] = {
+    "outcome": "publish_failed",
+    "error_code": "ig_error",
+}
 OPEN = {"phase_status": "awaiting_human", "status": "pending"}
 PHASE_FAILED = {"phase_status": "failed", "status": "pending"}
 AUTO_REJECTED = {"phase_status": "rejected", "status": "failed"}
@@ -70,9 +73,7 @@ async def test_a_run_the_queue_parked_is_skipped(
 
 
 @pytest.mark.parametrize("state", ["escalated", "failed"])
-async def test_a_run_parked_earlier_is_skipped(
-    engine: AsyncEngine, state: str
-) -> None:
+async def test_a_run_parked_earlier_is_skipped(engine: AsyncEngine, state: str) -> None:
     """Scenario Outline: A run parked earlier is skipped whatever its reason is now"""
     run_id = await stuck(engine, (_S.ESCALATED, "phase_failed"))
     payload: dict[str, object] = {"state": state, "reason": DEAD}

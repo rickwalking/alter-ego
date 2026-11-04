@@ -7,6 +7,7 @@ notifier delivers the event. Neither the run's state nor ``updated_at`` moves.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Mapping
 from typing import cast
 from uuid import UUID
 
@@ -17,14 +18,16 @@ from rag_backend.infrastructure.database.models.event_outbox import EventOutboxM
 from rag_backend.infrastructure.events.outbox_dispatch import build_event_records
 from rag_backend.modules.autopilot.constants import (
     AGGREGATE_TYPE_AUTOPILOT_RUN,
+    EVENT_TYPE_PUBLISH_NOTICE,
     EVENT_TYPE_STATE_CHANGED,
-    PAYLOAD_STATE,
 )
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
+    PastNotice,
+    carried_retry,
     mark_renoticed,
     renotice_due,
 )
-from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
+from rag_backend.modules.autopilot.domain.models import AutopilotRun
 from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
@@ -39,6 +42,10 @@ from rag_backend.modules.autopilot.renotice_constants import (
 
 _R = AutopilotRunModel
 _E = EventOutboxModel
+_RETRY_EVENT_TYPES = (EVENT_TYPE_STATE_CHANGED, EVENT_TYPE_PUBLISH_NOTICE)
+
+CarouselOpen = Callable[[AsyncSession, str], Awaitable[bool]]
+"""Whether the carousel can still be retried, read on the staging transaction."""
 
 
 class SqlEscalationRenotices:
@@ -48,7 +55,7 @@ class SqlEscalationRenotices:
         self._session = session
 
     async def unsent(self) -> list[AutopilotRun]:
-        """Due runs that got no escalation notice since Retry shipped."""
+        """Due runs that never got a notice with a Retry."""
         result = await self._session.execute(
             select(_R)
             .where(
@@ -59,11 +66,15 @@ class SqlEscalationRenotices:
         )
         due = [run_from_row(row) for row in result.scalars().all()]
         runs = [run for run in due if renotice_due(run)]
-        notified = await self._escalated_since_retry(runs)
+        notified = await self._had_retry_notice(runs)
         return [run for run in runs if str(run.run_id) not in notified]
 
-    async def stage(self, run_id: UUID) -> bool:
-        """Stage the event and the marker; False when the run is no longer due."""
+    async def stage(self, run_id: UUID, carousel_open: CarouselOpen) -> bool:
+        """Stage the event and the marker; False when the run is no longer eligible.
+
+        Every listing check runs again under the row lock, ``carousel_open`` on the
+        same transaction: a run can change between the listing and this call.
+        """
         result = await self._session.execute(
             select(_R)
             .where(_R.id == run_id)
@@ -74,7 +85,7 @@ class SqlEscalationRenotices:
         if row is None:
             return False
         run = run_from_row(row)
-        if not renotice_due(run):
+        if not await self._still_eligible(run, carousel_open):
             return False
         audit, outbox = build_event_records(renotice_record(run))
         self._session.add(audit)
@@ -89,27 +100,43 @@ class SqlEscalationRenotices:
         )
         return True
 
-    async def _escalated_since_retry(self, runs: list[AutopilotRun]) -> set[str]:
-        """Runs with an escalation event since Retry shipped, delivered or not."""
+    async def _still_eligible(
+        self, run: AutopilotRun, carousel_open: CarouselOpen
+    ) -> bool:
+        if not renotice_due(run) or await self._had_retry_notice([run]):
+            return False
+        return await carousel_open(self._session, run.carousel_project_id or "")
+
+    async def _had_retry_notice(self, runs: list[AutopilotRun]) -> set[str]:
+        """Runs with an event whose notice offered a Retry, delivered or not."""
         result = await self._session.execute(
-            select(_E.aggregate_id, _E.payload).where(
+            select(
+                _E.aggregate_id,
+                _E.event_type,
+                _E.payload,
+                (_E.created_at >= CAROUSEL_RETRY_SHIPPED_AT).label("since_retry"),
+            ).where(
                 _E.aggregate_type == AGGREGATE_TYPE_AUTOPILOT_RUN,
-                _E.event_type == EVENT_TYPE_STATE_CHANGED,
+                _E.event_type.in_(_RETRY_EVENT_TYPES),
                 _E.aggregate_id.in_([str(run.run_id) for run in runs]),
-                _E.created_at >= CAROUSEL_RETRY_SHIPPED_AT,
             )
         )
         return {
-            cast(str, run_id)
-            for run_id, payload in result.all()
-            if _is_escalation(cast(object, payload))
+            run_id
+            for run_id, event_type, payload, since_retry in result.tuples().all()
+            if carried_retry(
+                PastNotice(
+                    run_id=UUID(run_id),
+                    event_type=event_type,
+                    payload=_mapping(cast(object, payload)),
+                    since_retry=bool(since_retry),
+                )
+            )
         }
 
 
-def _is_escalation(payload: object) -> bool:
-    if not isinstance(payload, dict):
-        return False
-    return payload.get(PAYLOAD_STATE) == AutopilotRunState.ESCALATED.value
+def _mapping(payload: object) -> Mapping[str, object]:
+    return cast(dict[str, object], payload) if isinstance(payload, dict) else {}
 
 
-__all__ = ["SqlEscalationRenotices"]
+__all__ = ["CarouselOpen", "SqlEscalationRenotices"]

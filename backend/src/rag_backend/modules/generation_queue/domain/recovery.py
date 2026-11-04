@@ -104,7 +104,7 @@ class EscalationRenotifier(Protocol):
         ...
 
     async def renotify(self, run_id: str) -> bool:
-        """Stage the run's one notice; False when it is no longer due."""
+        """Stage the run's one notice; False when it is no longer eligible."""
         ...
 
 
