@@ -5,18 +5,20 @@ Feature: carousel_pipeline_consolidation.feature
 
 from __future__ import annotations
 
-import asyncio
 import os
+from collections.abc import AsyncIterator
 from pathlib import Path
 
-import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from tests.integration.carousel_consolidation.event_connections import EventConnections
 from tests.integration.carousel_consolidation.helpers import TEST_SECRET
 
 DATABASE_FILE = "carousel-consolidation.db"
+JOURNAL_WAL = "wal"
+JOURNAL_MODE_WAL = f"PRAGMA journal_mode={JOURNAL_WAL}"
 
 
 @pytest.fixture(autouse=True)
@@ -39,32 +41,6 @@ def _reset_workflow_sse_hub() -> None:
     reset_workflow_sse_hub()
     yield
     reset_workflow_sse_hub()
-
-
-class _EventConnections:
-    """Open the recorder's connections where a cancelled write cannot orphan one.
-
-    The budget can cancel a write while its pool reconnects. A cancelled
-    ``aiosqlite`` connect still opens the database in its thread and drops it
-    unclosed. Each connect here runs shielded and is kept, so teardown closes
-    every connection the recorder ever opened.
-    """
-
-    def __init__(self, path: Path) -> None:
-        self._path = path
-        self._opening: list[asyncio.Task[aiosqlite.Connection]] = []
-
-    async def open(self) -> aiosqlite.Connection:
-        opening = asyncio.ensure_future(self._connect())
-        self._opening.append(opening)
-        return await asyncio.shield(opening)
-
-    async def _connect(self) -> aiosqlite.Connection:
-        return await aiosqlite.connect(self._path)
-
-    async def close_all(self) -> None:
-        for connection in await asyncio.gather(*self._opening):
-            await connection.close()
 
 
 def _record_events_on(engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -95,8 +71,28 @@ def _record_events_on(engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> N
 
 
 @pytest.fixture
-async def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """Persist the schema across recorder-driven connection invalidation."""
+async def event_connections(tmp_path: Path) -> AsyncIterator[EventConnections]:
+    """Every connection the suite's event recorder opens, closed at teardown."""
+    connections = EventConnections(tmp_path / DATABASE_FILE)
+    yield connections
+    await connections.close_all()
+
+
+@pytest.fixture
+async def client(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    event_connections: EventConnections,
+):
+    """Persist the schema across recorder-driven connection invalidation.
+
+    The file runs in WAL mode, so a reader never blocks a writer, as in Postgres.
+    A budget cancel during the recorder's read leaves that cursor alive until the
+    garbage collector frees it. SQLite defers closing a connection that still has
+    a live statement, so in rollback-journal mode the closed connection would keep
+    its read lock and the workflow's next commit would wait out the busy timeout
+    and fail with ``database is locked``.
+    """
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlalchemy.pool import StaticPool
 
@@ -106,13 +102,15 @@ async def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     database_url = f"sqlite+aiosqlite:///{tmp_path / DATABASE_FILE}"
     engine = create_async_engine(database_url, echo=False, poolclass=StaticPool)
-    event_connections = _EventConnections(tmp_path / DATABASE_FILE)
     event_engine = create_async_engine(
         database_url,
         echo=False,
         poolclass=StaticPool,
         async_creator=event_connections.open,
     )
+    async with engine.connect() as conn:
+        journal_mode = await conn.exec_driver_sql(JOURNAL_MODE_WAL)
+        assert journal_mode.scalar_one() == JOURNAL_WAL
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     _record_events_on(event_engine, monkeypatch)
@@ -131,4 +129,3 @@ async def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     await close_db()
     await engine.dispose()
     await event_engine.dispose()
-    await event_connections.close_all()
