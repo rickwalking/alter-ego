@@ -38,7 +38,8 @@ repair 4096 all run at 32000. A caller that starts binding one of those brings t
 back. `LLMService.generate` has no `max_tokens` argument, so its callers always run at 32000. Its
 `temperature` is bound on the model and reaches the provider. An answer with no visible text raises
 `EmptyLLMResponseError`. Blog suggest and improve answer it with a 503 and the `provider_unavailable`
-code, and store nothing.
+code, and store nothing. Improve with a persona calls `chat_model` through `PersonaAgent.enforce`, not
+`generate`, so the service raises the same error on a blank rewrite.
 
 Blog suggest, improve and translation and the conversation title use the role-less
 `container.llm_service()`, so they run on `GLM_MODEL` with no fallback and no per-call timeout.

@@ -10,9 +10,12 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from rag_backend.application.services.blog_post_ai_service import BlogPostAIService
-from rag_backend.infrastructure.external.routed_chat_model import EmptyLLMResponseError
+from rag_backend.domain.protocols.ai import EmptyLLMResponseError
+from rag_backend.infrastructure.database.config import get_session_maker
+from rag_backend.infrastructure.database.models import PersonaProfileModel
 from tests.blog_v2_support import v2_content
 from tests.integration.blog_editor_support_ae0424 import (
     BLOG_POSTS_URL,
@@ -23,6 +26,7 @@ from tests.integration.blog_editor_support_ae0424 import (
 )
 
 _MODEL_ID = "secret-model-id"
+_PERSONA_ID = "0610aaaa-0000-4000-8000-000000000610"
 _SAFE_MESSAGE = "The model returned nothing. Please try again."
 
 
@@ -80,6 +84,41 @@ class TestEmptyAnswer:
         assert response.status_code == 503, response.text
         stored = await get_post(clients.author, post["id"])
         assert stored["ai_suggestions"] == []
+
+
+async def _a_persona() -> str:
+    async with get_session_maker()() as session:
+        session.add(PersonaProfileModel(id=_PERSONA_ID, name="Pedro"))
+        await session.commit()
+    return _PERSONA_ID
+
+
+# Scenario: An empty answer through a persona on ai-improve is a typed 503
+@pytest.mark.parametrize("reply", ["", "  \n "])
+async def test_a_blank_persona_rewrite_is_a_typed_503(
+    clients: EditorClients, monkeypatch: pytest.MonkeyPatch, reply: str
+) -> None:
+    from rag_backend.api.routes import blog_post_ai
+
+    llm = MagicMock()
+    llm.chat_model.ainvoke = AsyncMock(return_value=AIMessage(content=reply))
+    service = BlogPostAIService(llm_service=llm)
+    monkeypatch.setattr(blog_post_ai, "_build_ai_service", lambda: service)
+    post = await create_post(clients.author, v2_content("Corpo"))
+
+    response = await clients.author.post(
+        f"{BLOG_POSTS_URL}/{post['id']}/ai-improve",
+        json={"text": "Corpo", "persona_id": await _a_persona()},
+    )
+
+    llm.chat_model.ainvoke.assert_awaited_once()
+    assert response.status_code == 503, response.text
+    assert response.json() == {
+        "detail": _SAFE_MESSAGE,
+        "code": "provider_unavailable",
+    }
+    stored = await get_post(clients.author, post["id"])
+    assert not stored["ai_generation_metadata"].get("ai_actions")
 
 
 # Scenario: A bad request on a blog AI route stays a 400

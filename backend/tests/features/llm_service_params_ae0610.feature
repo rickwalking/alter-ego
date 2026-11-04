@@ -147,6 +147,18 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
       | ai-suggest |
       | ai-improve |
 
+  Scenario Outline: An empty answer through a persona on ai-improve is a typed 503
+    Given the post's editor picked a persona
+    And the persona rewrite answers <reply>
+    When the editor POSTs /blog-posts/{id}/ai-improve with that persona
+    Then the response is 503 with code provider_unavailable and a safe message
+    And the post records no AI action
+
+    Examples:
+      | reply       |
+      | nothing     |
+      | only blanks |
+
   Scenario: An empty answer on ai-suggest stores no suggestion
     Given the model answers nothing
     When the editor POSTs /blog-posts/{id}/ai-suggest

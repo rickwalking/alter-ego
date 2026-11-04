@@ -67,7 +67,8 @@ once.
 | Caller | Before, on an empty answer | Now |
 |---|---|---|
 | Blog suggest | 200 with an empty suggestion, stored on the post | 503 `provider_unavailable`, nothing stored |
-| Blog improve | 200 with empty `improved_text` | 503 `provider_unavailable`, nothing stored |
+| Blog improve, no persona | 200 with empty `improved_text`, AI action recorded | 503 `provider_unavailable`, nothing stored |
+| Blog improve, with a persona (`PersonaAgent.enforce`, not `generate`) | 200 with empty `improved_text`, AI action recorded | 503 `provider_unavailable`, nothing stored |
 | Blog translation | `BlogTranslationError` (the empty answer fails the JSON parse) | `BlogTranslationError` |
 | Conversation title | Blank title saved | The service's first-message title |
 | Refine image / design | `AllModelsUnavailableError` from the queue | Same, with a queue. See below |
@@ -91,6 +92,7 @@ Without one, the fast role is a routed model with a fallback, and a blank answer
 - `generate` and `generate_stream` bind the temperature on the model.
 - `max_tokens` removed from `LLMService` and the two protocols that restate it.
 - `generate` raises `EmptyLLMResponseError` on an answer with no visible text.
+- `BlogPostAIService.improve` raises the same error on a blank persona rewrite, which never goes through `generate`.
 - Both methods pass `get_langfuse_runnable_config()`.
 - `LlmCallTrace`, a domain value on the `LLMService.generate` port: a caller with no phase around it names its phase,
   agent and content type, and the adapter opens the trace. Refine image and design and the conversation title use it.
@@ -115,8 +117,8 @@ Without one, the fast role is a routed model with a fallback, and a blank answer
 - [x] Refinement, conversation title and blog AI traces carry the user id where one is known, and the explicit
   `unknown` fallback where none is.
 - [x] The conversation title trace carries the conversation id as its project id.
-- [x] An empty answer on blog suggest and improve is a 503 with the `provider_unavailable` code and a safe message, and
-  stores nothing.
+- [x] An empty answer on blog suggest and improve, with or without a persona, is a 503 with the `provider_unavailable`
+  code and a safe message, and stores nothing.
 - [x] The tests stay hermetic: no exporter and no network.
 - [x] The touched tests and the cheap backend gates pass.
 
@@ -147,6 +149,7 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
   Scenario: A call that names no user keeps the unknown fallback
   Scenario: A failing call closes the phase it named
   Scenario Outline: An empty answer on a blog AI route is a typed 503
+  Scenario Outline: An empty answer through a persona on ai-improve is a typed 503
   Scenario: An empty answer on ai-suggest stores no suggestion
 ```
 
@@ -165,6 +168,7 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 - `LlmCallTrace` gains `user_id`. `get_conversation_title_generator` takes the conversation id and the signed-in user.
 - `blog_ai_propagate` takes an optional `user_id`, and `BlogTranslationService.translate` an optional `user_id`.
 - `ai_suggest` and `ai_improve` answer `EmptyLLMResponseError` with a coded 503.
+- `BlogPostAIService.improve` raises `EmptyLLMResponseError` on a blank persona rewrite.
 - `EmptyLLMResponseError` moves to `domain/protocols/ai.py`. `routed_chat_model` still exports it.
 - `docs/backend/llm-model-routing.md`: the `LLMService` paragraph. AE-0609 ticket: the blog AI audit row.
 
@@ -223,6 +227,12 @@ collect, 14 tests failed on the behaviour: no user id on the refinement, title a
 
 Owner answers applied. The three new route tests failed with the 503 mapping removed (the error reached the generic
 handler) and pass with it.
+
+Review round 2. Improve with a persona still answered 200 with blank text, because `PersonaAgent.enforce` calls
+`chat_model` and never reaches the check in `generate`. Without the fix, the 4 new tests failed on the behaviour: `200 == 503`
+with `improved_text: ""` at the route (empty and whitespace replies), and `DID NOT RAISE` at the service. The first run of
+the route test failed for another reason: its persona id was not a UUID, so the route answered 400 and the model was never
+called. That run is not counted. With a UUID the failure above is the real one, and all 4 pass with the fix.
 
 ## Files Touched
 
@@ -290,6 +300,10 @@ Pending.
   `api-client.ts` reads a top-level `code`. `detail` holds the safe message.
 - **`EmptyLLMResponseError` moved to the domain.** Importing it into the route from infrastructure is a new layering
   pair, and the baseline is not grown. Exceptions already sit on ports, as `StrategyNotFoundError` does.
+- **The persona path of Improve raises the same error, in the service.** `PersonaAgent.enforce` has other callers and
+  its section rewrite already refuses a blank answer with a `ValueError`, so the check sits in `improve`, not in the agent.
+  It raises inside the `blog_ai_propagate` block, like `generate` inside its phase. The message is a constant: the
+  application layer may not read the model id, and the route never shows the message.
 - **Only these two routes map it.** A section rewrite is outside the decision.
 - **The temperature change is the visible effect.** Translation gets more literal (0.2), design more repeatable
   (0.3), LinkedIn looser (0.8). These are the values the code always asked for.
@@ -313,5 +327,5 @@ None.
 
 `LLMService.generate` now sends the requested temperature, which changes translation, design refinement and
 LinkedIn. `max_tokens` is gone, so every call keeps 32000. An empty answer is a named failure, after any fallback
-has run. Every call is a Langfuse generation, with phase, agent and content type, and with the user id where one is known.
+has run, and Improve with a persona fails the same way. Every call is a Langfuse generation, with phase, agent and content type, and with the user id where one is known.
 Blog AI and the title still have no fallback: moving them to the fast role is an open decision.

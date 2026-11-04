@@ -41,6 +41,7 @@ TEXT:
 Return only the rewritten text.
 """
 
+ERR_PERSONA_REWRITE_EMPTY = "persona rewrite returned no text"
 ERR_INVALID_AI_ACTION = (
     "Invalid AI action. Must be one of: improve, shorten, expand, add_opinion"
 )

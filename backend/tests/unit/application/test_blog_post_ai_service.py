@@ -19,6 +19,7 @@ from rag_backend.application.services.blog_post_ai_service import (
 from rag_backend.application.services.blog_workflow_observability import StartupParams
 from rag_backend.domain.constants.blog_ai import ERR_INVALID_AI_ACTION
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.protocols.ai import EmptyLLMResponseError
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 
 
@@ -313,6 +314,28 @@ class TestBlogPostAIService:
             )
 
         assert result["improved_text"] == "Pedro-style text"
+
+
+@pytest.mark.parametrize("blank", ["", " \n\t "])
+async def test_improve_raises_on_a_blank_persona_rewrite(blank: str) -> None:
+    """Scenario: An empty answer through a persona on ai-improve is a typed 503."""
+    service = BlogPostAIService(llm_service=MagicMock())
+    db = AsyncMock()
+    db.get = AsyncMock(
+        return_value=MagicMock(to_entity=lambda: PersonaProfile(name="Pedro"))
+    )
+    agent = MagicMock(enforce=AsyncMock(return_value=blank))
+
+    with (
+        patch(
+            "rag_backend.application.services.blog_post_ai_service.PersonaAgent",
+            return_value=agent,
+        ),
+        pytest.raises(EmptyLLMResponseError),
+    ):
+        await service.improve(
+            _ImproveInput(db=db, text="draft", action="improve", persona_id="p-1")
+        )
 
 
 class TestLLMServiceProtocol:
