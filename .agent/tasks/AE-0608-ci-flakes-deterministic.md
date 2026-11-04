@@ -1,6 +1,6 @@
 # AE-0608 — Four recurring CI flakes made deterministic
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Chore
