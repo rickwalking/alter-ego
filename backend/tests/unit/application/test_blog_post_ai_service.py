@@ -285,7 +285,6 @@ class TestBlogPostAIService:
                 self,
                 messages: list[dict[str, str]],
                 temperature: float = 0.7,
-                max_tokens: int | None = None,
             ) -> str:
                 return "fallback"
 
@@ -328,7 +327,6 @@ class TestLLMServiceProtocol:
                 self,
                 messages: list[dict[str, str]],
                 temperature: float = 0.7,
-                max_tokens: int | None = None,
             ) -> str:
                 return "test response"
 
