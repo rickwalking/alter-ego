@@ -26,9 +26,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_NOTHING_TO_REDRIVE,
     ERR_RESUME_ALREADY_IN_PROGRESS,
+    ERR_RESUME_CAROUSEL_REJECTED,
     ERR_RESUME_RENDER_PENDING,
     PHASE_FINAL_REVIEW,
     PHASE_STATUS_IN_PROGRESS,
+    PHASE_STATUS_REJECTED,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
     RUN_ACTION_REDRIVE,
@@ -53,6 +55,7 @@ class AutomationRun:
     reviewer_id: str = ""
     feedback: str = ""
     structured_feedback: Mapping[str, object] | None = None
+    mark_in_progress: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -62,32 +65,54 @@ class _RowFacts:
     render_pending: bool = False
 
 
+@dataclass(frozen=True, kw_only=True)
+class AutomationClaim:
+    """The run start staged by ``claim_automation_phase``: new version, title."""
+
+    lock_version: int
+    topic: str
+
+
+async def claim_automation_phase(run: AutomationRun) -> AutomationClaim:
+    """Stage the run start on the caller's session; never commit.
+
+    The pre-run half of ``run_automation_phase``: the in-progress guard, the
+    rejected-approve refusal, the render-pending refusal, the revision cap, the
+    ``lock_version`` compare-and-swap and the ``in_progress`` flip. Raises
+    ``ValueError`` before any write: ``resume_already_in_progress`` when a run is
+    in flight, ``carousel_rejected`` when an approve meets a rejected carousel
+    (Retry is its only way back), ``resume_render_pending`` when a final-review
+    approve meets a pending re-render (the needs-republish marker of a cover
+    switch or a slide edit), ``version_conflict`` when the CAS loses, and
+    ``revision_cap_exceeded`` for a revise over the cap. With
+    ``mark_in_progress=False`` the flip is left to the caller (``QuietRunStart``).
+    """
+    facts = await _row_facts(run.session, run.project_id)
+    if facts.phase_status == PHASE_STATUS_IN_PROGRESS:
+        raise ValueError(ERR_RESUME_ALREADY_IN_PROGRESS)
+    if run.action == REVIEW_ACTION_APPROVE:
+        _ensure_approvable(facts)
+    await _ensure_revision_room(run, facts.topic)
+    owner = CarouselProjectWriteOwner(run.session)
+    version = await owner.bump_resume_lock_version(run.project_id, run.expected_version)
+    if run.mark_in_progress:
+        await run.engine.mark_resume_in_progress(run.project_id, run.session)
+    return AutomationClaim(lock_version=version, topic=facts.topic)
+
+
 async def run_automation_phase(run: AutomationRun) -> None:
     """Commit the run start, then run the phase inline with run ownership.
 
-    Raises ``ValueError`` before any work: ``resume_already_in_progress``
-    when a run is in flight, ``resume_render_pending`` when a final-review
-    approve meets a pending re-render (the needs-republish marker of a cover
-    switch or a slide edit),
-    ``version_conflict`` when the CAS loses, and ``revision_cap_exceeded`` for
-    a revise over the cap. A failure inside the
-    phase does not raise: the run wrapper marks the row ``failed`` and
-    publishes ``run.finished``, as for the HTTP resume.
+    Raises the ``claim_automation_phase`` refusals before any work. A failure
+    inside the phase does not raise: the run wrapper marks the row ``failed``
+    and publishes ``run.finished``, as for the HTTP resume.
     """
     from rag_backend.application.services.carousel import (
         editorial_workflow_resume_runner as resume_runner,
     )
 
-    facts = await _row_facts(run.session, run.project_id)
-    if facts.phase_status == PHASE_STATUS_IN_PROGRESS:
-        raise ValueError(ERR_RESUME_ALREADY_IN_PROGRESS)
-    if run.action == REVIEW_ACTION_APPROVE and facts.render_pending:
-        raise ValueError(ERR_RESUME_RENDER_PENDING)
-    await _ensure_revision_room(run, facts.topic)
-    owner = CarouselProjectWriteOwner(run.session)
-    await owner.bump_resume_lock_version(run.project_id, run.expected_version)
-    await run.engine.mark_resume_in_progress(run.project_id, run.session)
-    await owner.commit()
+    claim = await claim_automation_phase(run)
+    await CarouselProjectWriteOwner(run.session).commit()
     await resume_runner.execute_resume_run(
         run.engine,
         resume_runner.BackgroundResumeParams(
@@ -95,10 +120,18 @@ async def run_automation_phase(run: AutomationRun) -> None:
             action=run.action,
             reviewer_id=run.reviewer_id,
             feedback=run.feedback or None,
-            project_title=facts.topic,
+            project_title=claim.topic,
             structured_feedback=_structured(run.structured_feedback),
         ),
     )
+
+
+def _ensure_approvable(facts: _RowFacts) -> None:
+    """Refuse an approve on a rejected carousel or one owing a re-render."""
+    if facts.phase_status == PHASE_STATUS_REJECTED:
+        raise ValueError(ERR_RESUME_CAROUSEL_REJECTED)
+    if facts.render_pending:
+        raise ValueError(ERR_RESUME_RENDER_PENDING)
 
 
 async def redrive_automation_phase(run: AutomationRun) -> None:
@@ -179,7 +212,9 @@ def _structured(
 
 
 __all__ = [
+    "AutomationClaim",
     "AutomationRun",
+    "claim_automation_phase",
     "redrive_automation_phase",
     "run_automation_phase",
 ]

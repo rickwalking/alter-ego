@@ -31,6 +31,7 @@ from rag_backend.modules.autopilot.schedule_constants import (
     SCHEDULE_PENDING_PHASE,
 )
 from rag_backend.modules.autopilot.webhook_constants import (
+    TEXT_APPROVE_CAROUSEL_REJECTED,
     TEXT_APPROVE_REFUSED,
     TEXT_APPROVE_RENDER_PENDING,
 )
@@ -95,6 +96,8 @@ def refusal_text(status: ResumeStatus) -> str:
     """The owner's message for a refused approve."""
     if status is ResumeStatus.RENDER_PENDING:
         return TEXT_APPROVE_RENDER_PENDING
+    if status is ResumeStatus.CAROUSEL_REJECTED:
+        return TEXT_APPROVE_CAROUSEL_REJECTED
     return TEXT_APPROVE_REFUSED
 
 

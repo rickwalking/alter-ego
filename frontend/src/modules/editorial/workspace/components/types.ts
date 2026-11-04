@@ -49,6 +49,11 @@ export interface WorkflowFailedCardProps {
   errorMessage: string | null | undefined;
   onRetry: () => void;
   isRetrying: boolean;
+  /** The phase Retry, shown before the restart button. */
+  recoveryAction?: React.ReactNode;
+  /** Names the restart and makes it the secondary action. */
+  restartLabel?: string;
+  restartDisabled?: boolean;
 }
 
 /**

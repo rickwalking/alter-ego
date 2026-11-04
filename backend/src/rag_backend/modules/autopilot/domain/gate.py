@@ -44,7 +44,8 @@ class ResumeStatus(StrEnum):
 
     ``IN_PROGRESS``: a run is already in flight. ``NOT_PARKED``: a re-drive found no
     parked node. ``RENDER_PENDING``: a final-review approve while the slides wait
-    for a re-render. None changes anything.
+    for a re-render. ``CAROUSEL_REJECTED``: an approve on a carousel the system
+    rejected (only the owner's Retry brings it back). None changes anything.
     """
 
     APPLIED = "applied"
@@ -54,6 +55,7 @@ class ResumeStatus(StrEnum):
     IN_PROGRESS = "in_progress"
     NOT_PARKED = "not_parked"
     RENDER_PENDING = "render_pending"
+    CAROUSEL_REJECTED = "carousel_rejected"
 
 
 @dataclass(frozen=True, kw_only=True)

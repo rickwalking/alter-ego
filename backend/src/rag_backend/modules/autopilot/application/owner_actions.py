@@ -16,12 +16,18 @@ from uuid import UUID
 import structlog
 
 from rag_backend.modules.autopilot.application.boost_actions import BoostOwnerActions
+from rag_backend.modules.autopilot.application.carousel_retry_actions import (
+    CarouselRetryOwnerActions,
+)
 from rag_backend.modules.autopilot.application.cover_actions import CoverOwnerActions
 from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
 )
-from rag_backend.modules.autopilot.application.owner_approval import (
-    FinalReviewApproval,
+from rag_backend.modules.autopilot.application.owner_action_helpers import (
+    choice_deps,
+    delivery_of,
+    pending_of,
+    prompt_of,
 )
 from rag_backend.modules.autopilot.application.owner_replies import OwnerReplies
 from rag_backend.modules.autopilot.application.owner_steps import (
@@ -34,7 +40,6 @@ from rag_backend.modules.autopilot.application.owner_steps import (
 from rag_backend.modules.autopilot.application.publish_choice import (
     CHOICE_KINDS,
     PublishChoiceActions,
-    PublishChoiceDeps,
 )
 from rag_backend.modules.autopilot.application.queue_actions import QueueOwnerActions
 from rag_backend.modules.autopilot.application.schedule_steps import is_schedule_reply
@@ -50,6 +55,7 @@ from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
     parse_callback,
 )
+from rag_backend.modules.autopilot.domain.carousel_retry import CarouselRetrier
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverChoiceStore,
     CoverOffers,
@@ -65,14 +71,11 @@ from rag_backend.modules.autopilot.domain.messages import (
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
-    TelegramUpdate,
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.owner_ports import (
     CarouselReleaser,
-    ForceReplyPrompt,
     OwnerMessenger,
-    PendingRework,
     PendingReworkStore,
     UpdateClaimStore,
 )
@@ -137,6 +140,7 @@ class OwnerActionDeps:
     - ``covers`` / ``cover_choices`` are the GrokBot cover offer and the owner's
       slide-1 choice.
     - ``queue``, ``backlog`` and ``dead_letters`` serve the queue buttons.
+    - ``carousel_retrier`` runs "Tentar de novo" on an escalated run's carousel.
     """
 
     runs: AutopilotRunRepository
@@ -162,10 +166,15 @@ class OwnerActionDeps:
     boosts: BoostStore | None = None
     boost_limits: BoostLimits | None = None
     pauser: CampaignPauser | None = None
+    carousel_retrier: CarouselRetrier | None = None
 
 
 class OwnerActionService(
-    ThesisOwnerActions, CoverOwnerActions, QueueOwnerActions, BoostOwnerActions
+    ThesisOwnerActions,
+    CoverOwnerActions,
+    QueueOwnerActions,
+    BoostOwnerActions,
+    CarouselRetryOwnerActions,
 ):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
@@ -173,23 +182,28 @@ class OwnerActionService(
         self._deps = deps
         self._replies = DeferredOwnerMessenger(deps.messenger)
         self._out = OwnerReplies(self._replies)
-        self._choice = PublishChoiceActions(_choice_deps(deps), self._out)
+        self._choice = PublishChoiceActions(choice_deps(deps), self._out)
 
     async def deliver(self) -> int:
         """Publish queue notices and replies after the commit."""
         if self._deps.queue is not None:
             await self._deps.queue.deliver_notifications()
-        return await self._replies.deliver()
+        delivered = await self._replies.deliver()
+        await self._deliver_retries()
+        return delivered
 
     def discard(self) -> int:
         """Drop queue notices and replies after a rollback."""
         if self._deps.queue is not None:
             self._deps.queue.discard_notifications()
+        self._discard_retries()
         return self._replies.discard()
 
     async def handle(self, update: WebhookUpdate) -> None:
         """Dedupe, allowlist, then dispatch. Non-owners leave every run unchanged."""
-        claimed = await self._deps.updates.claim_update(_delivery(update, self._deps))
+        claimed = await self._deps.updates.claim_update(
+            delivery_of(update, self._deps.clock)
+        )
         if not claimed or update.kind == KIND_IGNORED:
             return
         if not is_owner(update.actor_id, self._deps.owner_chat_id):
@@ -206,6 +220,7 @@ class OwnerActionService(
         handled = handled or await self._thesis_callback(update)
         handled = handled or await self._cover_callback(update)
         handled = handled or await self._queue_callback(update)
+        handled = handled or await self._carousel_retry_callback(update)
         if handled:
             return
         parsed = parse_callback(update.data)
@@ -242,10 +257,10 @@ class OwnerActionService(
         if run is None:
             await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        await self._deps.pending.put(_pending(update, run.run_id, parsed.phase))
+        await self._deps.pending.put(pending_of(update, run.run_id, parsed.phase))
         await self._answer(update, TEXT_FORCE_REPLY)
         await self._edit(update, TEXT_FORCE_REPLY, None)
-        await self._replies.ask(_prompt(update))
+        await self._replies.ask(prompt_of(update))
 
     async def _reject(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
         run = await self._awaiting(parsed.run_id)
@@ -352,35 +367,6 @@ class OwnerActionService(
 
     async def _tell(self, update: WebhookUpdate, text: str) -> None:
         await self._out.tell(update, text)
-
-
-def _choice_deps(deps: OwnerActionDeps) -> PublishChoiceDeps:
-    approval = FinalReviewApproval(
-        editorial=deps.editorial,
-        release_port=deps.release,
-        carousels=deps.carousels,
-    )
-    return PublishChoiceDeps(
-        runs=deps.runs,
-        pending=deps.pending,
-        approval=approval,
-        clock=deps.clock,
-        default_publish=deps.default_publish,
-        signals=deps.schedule_signals,
-    )
-
-
-def _delivery(update: WebhookUpdate, deps: OwnerActionDeps) -> TelegramUpdate:
-    return TelegramUpdate(update_id=update.update_id, received_at=deps.clock.now())
-
-
-def _pending(update: WebhookUpdate, run_id: UUID, phase: str) -> PendingRework:
-    return PendingRework(owner_chat_id=update.actor_id, run_id=run_id, phase=phase)
-
-
-def _prompt(update: WebhookUpdate) -> ForceReplyPrompt:
-    chat_id = update.chat_id or update.actor_id
-    return ForceReplyPrompt(chat_id=chat_id, text=TEXT_FORCE_REPLY)
 
 
 def _handlers() -> dict[str, _Handler]:

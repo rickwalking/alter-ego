@@ -132,4 +132,64 @@ describe("WorkflowFailedCard", () => {
 
     expect(onRetry).not.toHaveBeenCalled();
   });
+
+  // Scenario: The Retry button shows on a failed card
+  it("shows the recovery action next to a secondary Start over", async () => {
+    const onRetry = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <WorkflowFailedCard
+        currentPhase="content"
+        errorMessage="boom"
+        onRetry={onRetry}
+        isRetrying={false}
+        recoveryAction={<button type="button">Retry</button>}
+        restartLabel="Start over"
+      />,
+    );
+
+    const retry = screen.getByRole("button", { name: "Retry" });
+    const startOver = screen.getByRole("button", { name: "Start over" });
+    expect(
+      retry.compareDocumentPosition(startOver) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(startOver).not.toHaveClass("bg-gradient-to-r");
+    await user.click(startOver);
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  // Scenario: Start over is the primary action when Retry is not offered
+  it("makes Start over the primary button without a recovery action", () => {
+    render(
+      <WorkflowFailedCard
+        currentPhase="content"
+        errorMessage="boom"
+        onRetry={vi.fn()}
+        isRetrying={false}
+        recoveryAction={null}
+        restartLabel="Start over"
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Start over" })).toHaveClass(
+      "bg-gradient-to-r",
+    );
+  });
+
+  // Scenario: The pending button stays while the request runs
+  it("disables Start over while a retry is pending", () => {
+    render(
+      <WorkflowFailedCard
+        currentPhase="content"
+        errorMessage="boom"
+        onRetry={vi.fn()}
+        isRetrying={false}
+        restartLabel="Start over"
+        restartDisabled
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Start over" })).toBeDisabled();
+  });
 });

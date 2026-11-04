@@ -1,0 +1,12 @@
+---
+name: owner_retry_feedback
+version: "1.0.0"
+description: "System-written feedback line of an owner Retry that revises a blocked, failed or rejected phase (AE-0606). Loaded by render_prompt('owner_retry', 'retry_feedback', version='v1'). Stored in the carousel.retry.requested audit, so a retry revision is told apart from an owner one."
+
+template: |
+  The owner asked to retry the {{ phase }} phase.
+  Reason: {{ reason }}.
+  {%- if detail %}
+  Measured: {{ detail }}.
+  {%- endif %}
+  Revise this phase so the problem above no longer blocks it. Keep the topic and the audience.
