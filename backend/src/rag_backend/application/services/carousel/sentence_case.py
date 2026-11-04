@@ -29,6 +29,11 @@ _HANDLE_MARK = "@"
 _URL_START = re.compile(r"(?:https?://|www\.)", flags=re.IGNORECASE)
 
 
+def strip_html_tags(text: str) -> str:
+    """Return the text with every HTML tag removed."""
+    return _HTML_TAG_PATTERN.sub("", text)
+
+
 def _first_significant_index(text: str, start: int) -> int | None:
     """Index of the first letter or digit at/after ``start``, skipping markup."""
     index = start
@@ -131,4 +136,5 @@ __all__ = [
     "capitalize_sentence_starts",
     "has_lowercase_sentence",
     "starts_lowercase",
+    "strip_html_tags",
 ]
