@@ -26,6 +26,23 @@ def _test_settings() -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_event_budget_on_the_shared_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep the event-write budget off the one connection this suite shares.
+
+    ``client`` runs on a ``StaticPool``, so the workflow and its best-effort event
+    writes use a single connection. Cancelling a slow write there breaks the
+    workflow's own statements with ``no active connection`` or ``database is locked``.
+    Production sessions each hold their own connection, so that failure belongs to
+    this fixture alone. ``test_generation_event_timeout.py`` keeps the real budget.
+    """
+    from rag_backend.modules.generation_queue.application import generation_events
+
+    monkeypatch.setattr(generation_events, "EVENT_WRITE_TIMEOUT_SECONDS", None)
+
+
+@pytest.fixture(autouse=True)
 def _reset_workflow_sse_hub() -> None:
     from rag_backend.application.services.carousel.workflow_sse_hub import (
         reset_workflow_sse_hub,
