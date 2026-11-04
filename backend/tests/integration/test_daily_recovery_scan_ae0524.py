@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.autopilot import queue_bridge
 from rag_backend.modules.autopilot.bootstrap import AutopilotTickConfig
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.infrastructure.models import (
@@ -325,10 +326,18 @@ async def test_a_failed_run_is_retried_once_per_theme(engine: AsyncEngine) -> No
     assert len(await _queued_runs_for_topic(engine, failed)) == 1
 
 
+@pytest.mark.parametrize("run_age", [timedelta(0), timedelta(hours=6)])
 async def test_a_stale_run_is_resumed_once_and_not_too_early(
-    engine: AsyncEngine,
+    engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch, run_age: timedelta
 ) -> None:
-    """Scenario: A stale run is resumed only once, and not in its first hour"""
+    """Scenario: A stale run is resumed only once, and not in its first hour
+
+    ``revive_stale`` gets the same fixed clock as the seeded rows. ``run_age`` moves
+    that clock back as a long test run does to a time fixed at import: on the real
+    clock the 20-minute-old run would be hours old and resumed too early.
+    """
+    monkeypatch.setitem(globals(), "_NOW", _NOW - run_age)
+    monkeypatch.setattr(queue_bridge, "SystemClock", _Clock)
     stale = await _autopilot_run(engine, _S.ESCALATED, "run_stale", timedelta(hours=5))
     fresh = await _autopilot_run(
         engine, _S.ESCALATED, "run_stale", timedelta(minutes=20)

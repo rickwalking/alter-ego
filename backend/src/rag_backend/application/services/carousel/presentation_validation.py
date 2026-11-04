@@ -34,6 +34,9 @@ from rag_backend.application.services.carousel.presentation_validation_fields im
     validate_structured_items,
     validate_visible_field,
 )
+from rag_backend.application.services.carousel.sentence_case import (
+    opens_with_allowlisted,
+)
 from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.carousel_presentation import (
     VALIDATION_STATUS_INVALID,
@@ -126,7 +129,9 @@ def _validate_en_heading_case(
     if ctx.locale != LANGUAGE_EN:
         return
     first_alpha = first_cased_alpha(heading)
-    allowlisted = heading.strip() in policy.intentional_lowercase_allowlist
+    allowlisted = opens_with_allowlisted(
+        heading, policy.intentional_lowercase_allowlist
+    )
     if first_alpha is not None and first_alpha.islower() and not allowlisted:
         ctx.violations.append(
             SlideValidationViolation(
