@@ -7,6 +7,7 @@
  */
 
 import type { CarouselReprocessCapability } from "@/schemas/carousel-reprocess";
+import type { CarouselRetryCapability } from "@/schemas/carousel-retry";
 
 export interface BlogPostEditExtrasProps {
   postId: string;
@@ -53,4 +54,12 @@ export interface CarouselReprocessActionProps {
   pending: boolean;
   canSubmit: boolean;
   onReprocess: () => void;
+}
+
+export interface CarouselRetryActionProps {
+  capability: CarouselRetryCapability | null;
+  pending: boolean;
+  canSubmit: boolean;
+  error: string | null;
+  onRetry: () => void;
 }

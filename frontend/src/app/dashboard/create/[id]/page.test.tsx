@@ -3,7 +3,14 @@
  * a workspace hook and parts. Covers the loading / not-found states, the step
  * routing, starting and retrying the workflow and the publish-step hand-off.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
@@ -21,6 +28,8 @@ const hooks = vi.hoisted(() => ({
   workflow: vi.fn<() => unknown>(),
   workflowOptions: vi.fn(),
   reprocess: vi.fn<() => unknown>(),
+  retry: vi.fn<() => unknown>(),
+  retryOptions: vi.fn<(options: unknown) => void>(),
   follow: vi.fn<(options: unknown) => unknown>(),
 }));
 
@@ -56,13 +65,40 @@ vi.mock("@/modules/editorial", () => ({
     hooks.workflowOptions(options);
     return hooks.workflow();
   },
-  WorkflowFailedCard: ({ onRetry }: { onRetry: () => void }) => (
-    <button type="button" onClick={onRetry}>
-      retry-card
-    </button>
+  WorkflowFailedCard: ({
+    onRetry,
+    recoveryAction,
+    restartLabel,
+    restartDisabled,
+  }: {
+    onRetry: () => void;
+    recoveryAction?: ReactNode;
+    restartLabel?: string;
+    restartDisabled?: boolean;
+  }) => (
+    <div data-testid="failed-card">
+      {recoveryAction}
+      <button
+        type="button"
+        aria-label={restartLabel}
+        onClick={onRetry}
+        disabled={restartDisabled}
+      >
+        retry-card
+      </button>
+    </div>
   ),
   useCarouselReprocess: () => hooks.reprocess(),
   CarouselReprocess: () => <div>reprocess-control</div>,
+  useCarouselRetry: (options: unknown) => {
+    hooks.retryOptions(options);
+    return hooks.retry();
+  },
+  CarouselRetryAction: ({ onRetry }: { onRetry: () => void }) => (
+    <button type="button" onClick={onRetry}>
+      retry-control
+    </button>
+  ),
 }));
 vi.mock("@/app/dashboard/create/use-follow-workflow-step", () => ({
   useFollowWorkflowStep: (options: unknown) => hooks.follow(options),
@@ -193,9 +229,33 @@ function setReprocess(overrides: ReprocessMock = {}): void {
   });
 }
 
+interface RetryMock {
+  visible?: boolean;
+  pending?: boolean;
+  toast?: { id: number; message: string; variant: "success" | "error" } | null;
+}
+
+const retryAction = vi.fn<() => Promise<void>>();
+const dismissToast = vi.fn<() => void>();
+
+function setRetry(overrides: RetryMock = {}): void {
+  const { visible = false, pending = false, toast = null } = overrides;
+  hooks.retry.mockReturnValue({
+    capability: null,
+    pending,
+    canSubmit: visible,
+    error: null,
+    visible,
+    toast,
+    dismissToast,
+    retry: retryAction,
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   nav.step = null;
+  setRetry();
   hooks.project.mockReturnValue({
     data: project,
     isLoading: false,
@@ -424,5 +484,123 @@ describe("CreateWorkspacePage", () => {
       control.compareDocumentPosition(failure) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
+  });
+
+  // Scenario: The Retry button shows on a failed card
+  it("renders Retry inside the failed card", () => {
+    setWorkflow(workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }));
+    setRetry({ visible: true });
+    render(<CreateWorkspacePage />);
+    const card = screen.getByTestId("failed-card");
+    expect(within(card).getByText("retry-control")).toBeInTheDocument();
+    expect(
+      within(card).getByRole("button", { name: "startOver" }),
+    ).toBeEnabled();
+  });
+
+  // Scenario: The Retry button shows on a blocked gate
+  it("renders Retry above a blocked gate's phase content", () => {
+    setWorkflow(workflowState());
+    nav.step = "content";
+    setRetry({ visible: true });
+    render(<CreateWorkspacePage />);
+    const control = screen.getByText("retry-control");
+    const content = screen.getByText("workflow-step:content");
+    expect(
+      control.compareDocumentPosition(content) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+  });
+
+  // Scenario: The Retry button shows on a rejected carousel
+  it("renders Retry on a rejected carousel", () => {
+    setWorkflow(
+      workflowState({ phase_status: WORKFLOW_PHASE_STATUS.REJECTED }),
+    );
+    nav.step = "content";
+    setRetry({ visible: true });
+    render(<CreateWorkspacePage />);
+    expect(screen.getByText("retry-control")).toBeInTheDocument();
+  });
+
+  // Scenario: The Retry button is hidden when the capability refuses
+  it.each([WORKFLOW_PHASE_STATUS.FAILED, WORKFLOW_PHASE_STATUS.AWAITING_HUMAN])(
+    "hides Retry at %s when the capability refuses",
+    (phaseStatus) => {
+      setWorkflow(workflowState({ phase_status: phaseStatus }));
+      nav.step = "content";
+      render(<CreateWorkspacePage />);
+      expect(screen.queryByText("retry-control")).not.toBeInTheDocument();
+    },
+  );
+
+  // Scenario: The Retry button is hidden while Reprocessar is shown
+  it.each([WORKFLOW_PHASE_STATUS.FAILED, WORKFLOW_PHASE_STATUS.AWAITING_HUMAN])(
+    "never shows Retry together with Reprocessar at %s",
+    (phaseStatus) => {
+      setWorkflow(workflowState({ phase_status: phaseStatus }));
+      nav.step = "content";
+      setReprocess({ stuckKind: "dead_letter" });
+      setRetry({ visible: true });
+      render(<CreateWorkspacePage />);
+      expect(screen.getByText("reprocess-control")).toBeInTheDocument();
+      expect(screen.queryByText("retry-control")).not.toBeInTheDocument();
+    },
+  );
+
+  // Scenario: A 202 shows the accepted toast
+  it("sends the click to the retry action", () => {
+    setWorkflow(workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }));
+    setRetry({ visible: true });
+    render(<CreateWorkspacePage />);
+    fireEvent.click(screen.getByText("retry-control"));
+    expect(retryAction).toHaveBeenCalledOnce();
+  });
+
+  // Scenario: The accepted toast outlives the button
+  it("shows the toast with no button, and dismisses it", () => {
+    setWorkflow(
+      workflowState({ phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS }),
+    );
+    nav.step = "content";
+    setRetry({ toast: { id: 1, message: "accepted", variant: "success" } });
+    render(<CreateWorkspacePage />);
+    expect(screen.queryByText("retry-control")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("accepted");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(dismissToast).toHaveBeenCalledOnce();
+  });
+
+  // Scenario: The pending button stays while the request runs
+  it("disables Start over while the Retry request runs", () => {
+    setWorkflow(workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }));
+    setRetry({ visible: true, pending: true });
+    render(<CreateWorkspacePage />);
+    expect(screen.getByRole("button", { name: "startOver" })).toBeDisabled();
+  });
+
+  // Scenario: The capability is read again when the carousel changes
+  it("gives the retry hook the workflow state", () => {
+    const state = workflowState({ lock_version: 7 });
+    setWorkflow(state);
+    nav.step = "content";
+    render(<CreateWorkspacePage />);
+    expect(hooks.retryOptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "p1",
+        enabled: true,
+        workflowState: state,
+      }),
+    );
+  });
+
+  // Scenario: Start over still works
+  it("keeps Start over restarting the workflow", async () => {
+    const start = setWorkflow(
+      workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }),
+    );
+    render(<CreateWorkspacePage />);
+    fireEvent.click(screen.getByRole("button", { name: "startOver" }));
+    await waitFor(() => expect(start).toHaveBeenCalledOnce());
   });
 });

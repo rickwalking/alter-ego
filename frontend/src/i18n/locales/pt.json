@@ -1919,6 +1919,37 @@
         "failed": "O reprocessamento falhou.",
         "failedWithCode": "O reprocessamento falhou ({code})."
       }
+    },
+    "retry": {
+      "action": "Tentar de novo",
+      "pending": "Tentando de novo…",
+      "startOver": "Recomeçar",
+      "accepted": "Nova tentativa aceita. A fase está rodando de novo.",
+      "finishedOk": "A nova tentativa terminou. A fase está pronta para você.",
+      "finishedFailed": "A nova tentativa terminou com falha.",
+      "errors": {
+        "actionFailed": "Não foi possível tentar o carrossel de novo. Tente novamente.",
+        "unavailable": "A versão atual do fluxo não está disponível. Atualize a página e tente novamente."
+      },
+      "kind": {
+        "redrive": "Roda a fase de novo a partir de onde parou.",
+        "revise": "Refaz a fase e pontua de novo. Conta como uma revisão.",
+        "reopen": "Reabre a revisão final para você."
+      },
+      "refusals": {
+        "not_found": "Este carrossel não existe mais.",
+        "not_owner": "Só o dono do carrossel pode tentar de novo.",
+        "not_assigned_reviewer": "Só o revisor designado pode tentar este carrossel de novo.",
+        "not_retryable": "Este carrossel não tem nada para tentar de novo.",
+        "resume_already_in_progress": "Já existe uma execução em andamento para este carrossel.",
+        "mutation_in_progress": "O carrossel está sendo editado. Tente de novo em instantes.",
+        "use_reprocess": "Esta execução travou na fila. Use Reprocessar.",
+        "autopilot_active": "O piloto automático está trabalhando neste carrossel. Tente de novo quando ele parar.",
+        "no_checkpoint": "Este carrossel não tem um ponto salvo para tentar de novo. Use Recomeçar.",
+        "version_conflict": "O carrossel mudou depois que esta página carregou. A versão atual foi atualizada; tente de novo.",
+        "revision_cap_exceeded": "O limite de revisões desta fase acabou, então ela não pode ser tentada de novo.",
+        "concurrent_update": "O carrossel mudou ao mesmo tempo. Aguarde a atualização e tente de novo."
+      }
     }
   },
   "dashboard": {

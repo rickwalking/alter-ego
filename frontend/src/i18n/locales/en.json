@@ -1919,6 +1919,37 @@
         "failed": "Reprocessing failed.",
         "failedWithCode": "Reprocessing failed ({code})."
       }
+    },
+    "retry": {
+      "action": "Retry",
+      "pending": "Retrying…",
+      "startOver": "Start over",
+      "accepted": "Retry accepted. The phase is running again.",
+      "finishedOk": "The retry finished. The phase is ready for you.",
+      "finishedFailed": "The retry finished with a failure.",
+      "errors": {
+        "actionFailed": "Could not retry the carousel. Try again.",
+        "unavailable": "The current workflow version is unavailable. Refresh and try again."
+      },
+      "kind": {
+        "redrive": "Runs the phase again from where it stopped.",
+        "revise": "Redoes the phase and scores it again. Counts as one revision.",
+        "reopen": "Reopens the final review for you."
+      },
+      "refusals": {
+        "not_found": "This carousel no longer exists.",
+        "not_owner": "Only the carousel owner can retry it.",
+        "not_assigned_reviewer": "Only the assigned reviewer can retry this carousel.",
+        "not_retryable": "This carousel has nothing to retry.",
+        "resume_already_in_progress": "A run is already in progress for this carousel.",
+        "mutation_in_progress": "The carousel is being edited. Try again in a moment.",
+        "use_reprocess": "This run is stuck in the queue. Use Reprocess instead.",
+        "autopilot_active": "Autopilot is working on this carousel. Try again when it stops.",
+        "no_checkpoint": "This carousel has no saved point to retry from. Use Start over.",
+        "version_conflict": "The carousel changed after this page loaded. The current version has been refreshed; try again.",
+        "revision_cap_exceeded": "The revision limit for this phase is exhausted, so it cannot be retried.",
+        "concurrent_update": "The carousel changed at the same time. Wait for the refresh and try again."
+      }
     }
   },
   "dashboard": {
