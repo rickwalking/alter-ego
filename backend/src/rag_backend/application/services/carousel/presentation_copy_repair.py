@@ -9,7 +9,7 @@ the result back over budget.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Set
+from collections.abc import Iterable, Mapping, Set
 from typing import TypedDict
 
 from rag_backend.application.services.carousel.owner_autofix_paths import map_texts
@@ -21,6 +21,9 @@ from rag_backend.application.services.carousel.presentation_policy import (
 )
 from rag_backend.application.services.carousel.presentation_validation_fields import (
     body_budget_for_slide_type,
+)
+from rag_backend.application.services.carousel.sentence_case import (
+    opens_with_allowlisted,
 )
 from rag_backend.application.services.carousel.slide_scaffold_recovery import (
     recover_scaffold_body,
@@ -65,17 +68,19 @@ def _replace_forbidden_dashes(text: str) -> str:
 
 
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+_HEADING_CASE_FIELDS = frozenset({None, "heading"})
 
 
-def repair_text_sentence_case_en(text: str) -> str:
+def repair_text_sentence_case_en(text: str, allowlist: Iterable[str] = ()) -> str:
     """Uppercase the first visible letter of EN render-source copy.
 
     Skips leading HTML tags so headings/bodies wrapped in markup
     (e.g. ``<b>insight</b>``) are sentence-cased on the first visible
     letter rather than a character inside the tag. Idempotent: already
-    sentence-cased text is returned unchanged.
+    sentence-cased text is returned unchanged, and so is text that opens with
+    an allowlisted token.
     """
-    if not text:
+    if not text or opens_with_allowlisted(text, allowlist):
         return text
     index = 0
     length = len(text)
@@ -91,6 +96,23 @@ def repair_text_sentence_case_en(text: str) -> str:
             return text
         index += 1
     return text
+
+
+def _slide_field_codes(
+    violations: tuple[SlideValidationViolation, ...],
+) -> set[str]:
+    """Violation codes of the slide's own fields.
+
+    An item title reports the heading case code too, and that says nothing about the
+    slide heading: left in, it would make the heading repair rewrite a heading that
+    passed the check, such as one that opens with an allowlisted token.
+    """
+    return {
+        violation.code
+        for violation in violations
+        if violation.code != VIOLATION_HEADING_NOT_SENTENCE_CASE_EN
+        or violation.field in _HEADING_CASE_FIELDS
+    }
 
 
 def _repair_text_field(
@@ -229,7 +251,7 @@ def deterministic_repair_slide_payload(
 ) -> dict[str, object]:
     """Apply deterministic markup/case/scaffold repairs for supported codes."""
     repaired = dict(payload)
-    codes = {violation.code for violation in violations}
+    codes = _slide_field_codes(violations)
     _repair_scaffold_fields(repaired, codes, locale)
     _repair_emphasis_locale(repaired, codes, locale)
     _repair_text_field(

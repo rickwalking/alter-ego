@@ -25,12 +25,15 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import { parser } from "typescript-eslint";
+import { iterateComments } from "ts-api-utils";
+import ts from "typescript";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..");
 const SCAN_DIRS = ["src", "tests", "scripts", ".storybook"];
 const SKIP_DIRS = new Set(["node_modules", "braces-patched", ".next"]);
 const SOURCE_RE = /\.(ts|tsx|js|mjs|cjs)$/;
+const COMMENT_MARKER_RE = /\/[/*]/;
+const COMMENT_DELIMITER_CHARS = 2;
 const GENERATED = new Set(["next-env.d.ts"]);
 const FEATURE_ROOTS = [
   join(FRONTEND_ROOT, "tests", "features"),
@@ -131,29 +134,50 @@ function isJsDoc(code, comment) {
   );
 }
 
+/**
+ * Every comment of `code` in source order, read from the TypeScript parser
+ * alone: this gate needs neither the ESTree conversion nor the scope analysis
+ * of the ESLint parser, which took two thirds of its run time. A file with no
+ * comment marker cannot hold a comment, so it is never parsed.
+ */
+function commentsOf(filePath, code) {
+  if (!COMMENT_MARKER_RE.test(code)) return [];
+  const source = ts.createSourceFile(
+    filePath,
+    code,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const lineOf = (pos) => source.getLineAndCharacterOfPosition(pos).line + 1;
+  return Array.from(iterateComments(source, source), ({ kind, pos, end }) => {
+    const block = kind === ts.SyntaxKind.MultiLineCommentTrivia;
+    const valueEnd = block ? end - COMMENT_DELIMITER_CHARS : end;
+    return {
+      type: block ? "Block" : "Line",
+      value: code.slice(pos + COMMENT_DELIMITER_CHARS, valueEnd),
+      range: [pos, end],
+      line: lineOf(pos),
+      endLine: lineOf(end),
+    };
+  });
+}
+
 function isToolComment(comment) {
   return DIRECTIVE_RE.test(comment.value) || LICENCE_RE.test(comment.value);
 }
 
 /** Every comment of `code` the policy rejects, as `{ line, reason, text }`. */
 export function checkSource(filePath, code) {
-  const { ast } = parser.parseForESLint(code, {
-    comment: true,
-    jsx: filePath.endsWith("x") || filePath.endsWith(".js"),
-    loc: true,
-    range: true,
-    filePath,
-  });
   const violations = [];
   let scenarioLine = -2;
   let scenarioText = "";
-  for (const comment of ast.comments ?? []) {
-    const line = comment.loc.start.line;
+  for (const comment of commentsOf(filePath, code)) {
+    const { line } = comment;
     const text =
       comment.type === "Line" ? `//${comment.value}` : `/*${comment.value}*/`;
     const alone = standalone(code, comment);
     if (alone && SCENARIO_RE.test(comment.value)) {
-      scenarioLine = comment.loc.end.line;
+      scenarioLine = comment.endLine;
       scenarioText = comment.value.replace(SCENARIO_PREFIX_RE, "");
       continue;
     }
