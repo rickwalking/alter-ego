@@ -1,6 +1,6 @@
 # AE-0609 — Fast-role calls leave the reasoning model room to answer
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bug
