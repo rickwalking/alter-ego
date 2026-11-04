@@ -32,15 +32,19 @@ async def clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
         yield built
 
 
-@pytest.fixture
-def empty_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The real AI service over an LLM that fails on an empty answer."""
+def _service_failing_with(monkeypatch: pytest.MonkeyPatch, failure: Exception) -> None:
+    """The real AI service over an LLM that raises ``failure``."""
     from rag_backend.api.routes import blog_post_ai
 
     llm = MagicMock()
-    llm.generate = AsyncMock(side_effect=EmptyLLMResponseError(_MODEL_ID))
+    llm.generate = AsyncMock(side_effect=failure)
     service = BlogPostAIService(llm_service=llm)
     monkeypatch.setattr(blog_post_ai, "_build_ai_service", lambda: service)
+
+
+@pytest.fixture
+def empty_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    _service_failing_with(monkeypatch, EmptyLLMResponseError(_MODEL_ID))
 
 
 @pytest.mark.usefixtures("empty_model")
@@ -76,3 +80,18 @@ class TestEmptyAnswer:
         assert response.status_code == 503, response.text
         stored = await get_post(clients.author, post["id"])
         assert stored["ai_suggestions"] == []
+
+
+# Scenario: A bad request on a blog AI route stays a 400
+@pytest.mark.parametrize("route", ["ai-suggest", "ai-improve"])
+async def test_a_bad_request_stays_a_400(
+    clients: EditorClients, monkeypatch: pytest.MonkeyPatch, route: str
+) -> None:
+    _service_failing_with(monkeypatch, ValueError("bad input"))
+    post = await create_post(clients.author, v2_content("Corpo"))
+
+    response = await clients.author.post(
+        f"{BLOG_POSTS_URL}/{post['id']}/{route}", json={"text": "Corpo"}
+    )
+
+    assert response.status_code == 400, response.text

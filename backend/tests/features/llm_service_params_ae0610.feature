@@ -151,3 +151,13 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
     Given the model answers nothing
     When the editor POSTs /blog-posts/{id}/ai-suggest
     Then the post has no stored suggestion
+
+  Scenario Outline: A bad request on a blog AI route stays a 400
+    Given the AI service rejects the request
+    When the editor POSTs /blog-posts/{id}/<route>
+    Then the response is 400
+
+    Examples:
+      | route      |
+      | ai-suggest |
+      | ai-improve |
