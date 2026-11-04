@@ -88,7 +88,10 @@ that job (run 41733730478) and never in `Test & Coverage`.
 - [x] The two clock tests pass with import-time clocks hours stale.
 - [x] `test_carousel_run_guard` passes alone and in every order tried with the files that share its table.
 - [x] Every table-wide sweep count has its own database, proven with a two-hour gap between the files.
-- [x] `carousel_consolidation` passes with a zero budget, and only its budget test keeps the real one.
+- [x] `carousel_consolidation` keeps the real 100 ms budget, and passes with a zero budget too.
+- [x] A cancelled event write cannot reach the workflow's connection in `carousel_consolidation`, with a test that
+  fails on the shared connection.
+- [x] The archive alert test fails on the import-time date it used to use.
 - [x] CI is green, mutation included (#354 at 783d48bd). The later run is under Follow-ups.
 
 ## Classification
@@ -96,10 +99,16 @@ that job (run 41733730478) and never in `Test & Coverage`.
 CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
 
 - (a) No public or user-visible behavior change: nothing under `backend/src` changes, and the comment policy accepts
-  and rejects exactly what it did.
+  and rejects the same comments. One difference: `lint:comments` no longer fails on a file with a syntax error. The old
+  `parseForESLint` threw on such a file and the gate exited 1. `ts.createSourceFile` is error-tolerant, so the gate
+  still checks that file's comments, and exits 0 when they pass (`never parses a file that has no comment marker` pins
+  this with `export const = ;`). This is safe because the gate's job is comments, not syntax: `eslint --quiet` runs
+  first in the same `npm run lint`, and `tsc` in `typecheck`, and both fail on that file.
 - (b) Seeded-violation tests: `check-comments.test.ts` keeps its `FAILS on a seeded ...` cases and adds literals that
   must not read as comments. `test_the_same_client_exports_when_the_switch_is_gone` proves the exporter check fires.
   `test_the_write_is_stored_however_slow_against_the_budget` confirms the zero budget really drops the wait.
+  `test_cancelled_event_writes_leave_the_workflow_intact` fails when the recorder shares the workflow's connection.
+  The `run_age` case of `test_the_same_carousels_alert_when_not_archived` fails on the import-time date.
   `test_recorder_timeout_preserves_authoritative_generation_state` proves the real budget still fires.
 - (c) Affected gates: `frontend:lint` (`lint:comments`, `lint:knip`), `frontend:test`, `backend:test`, and backend
   format, lint, comments, docstrings and gherkin-refs.
@@ -114,12 +123,28 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   answered, so a write that fails or is refused still fails the test. No production seam was needed, because
   `GenerationEventRecorder` is already injected. Calling the recorder directly would have dropped the production
   path from these tests.
-- `carousel_consolidation` injects the budget out of the suite with an autouse fixture, the seam this ticket was
-  allowed for a test that does not cover the budget. Waiting with `SettledEventRecorder` would not work here: a shielded
-  write keeps running on the connection the workflow is using. A second connection would hit `database is locked`.
-  `test_generation_event_timeout.py` overrides the fixture and keeps the real budget, and
-  `test_a_write_slower_than_the_budget_runs_to_the_end` proves a slow write is not cancelled. The production budget
-  and every other test are unchanged.
+- `carousel_consolidation` first ran without the budget, through an autouse fixture setting it to `None`. Review
+  rejected that: it removed a time limit in 15 files, so a hung write there would wait for the CI job timeout. It is
+  replaced by a fix for the cause. The suite's `client` gives the event recorder its own engine on the same SQLite
+  file, so the workflow keeps its one `StaticPool` connection and the recorder holds another, as production sessions
+  each hold their own. The seam is `bootstrap.SqlGenerationEventRecorder`, replaced by `monkeypatch` with a factory
+  that builds the real recorder on the event engine; nothing in `backend/src` changes. The earlier note that a second
+  connection would hit `database is locked` did not hold: the full suite passes with the real budget and with a zero
+  budget, and no run with its own connection logged `database is locked` or `no active connection`.
+- The event engine opens its connections through `async_creator`, shielded, and keeps every one so teardown closes
+  them. Without that, a zero-budget run had 11 failures and 13 errors, all but the new test's own from
+  `ResourceWarning: unclosed database`: the cancel invalidates the connection, the pool reconnects inside the next
+  write, the budget cancels that `aiosqlite` connect, and its thread opens the database anyway with nobody to close
+  it. With the shielded connect, the same run has no warning.
+  This keeps the budget, adds no timeout and closes what the suite opens.
+- `test_cancelled_event_writes_leave_the_workflow_intact` holds every event insert for three budgets inside SQLite's
+  trace callback, on the driver's thread, so the budget expires while the insert is in flight. With the recorder on
+  the workflow's connection it failed in all five runs: the cancelled insert stays in the workflow's transaction,
+  its next commit stores the event the recorder reported dropped, and teardown logs `no active connection`. With its
+  own connection it passes. It replaces `test_shared_connection_event_budget.py`, which tested
+  the removed fixture with a stub recorder and cited a scenario that said the opposite.
+- The archive alert test gets a `run_age` case like the stale-run test: it moves the import-time `_NOW` back six
+  hours. Dating the failed row from `_NOW` again fails that case (`assert 1 == 2`); dating it at test time passes.
 - Item 2 adds `ts-api-utils` 2.5.0 as a direct devDependency, the version already installed through
   `typescript-eslint`, because knip rejects an unlisted import. Reading comments from `ts.createSourceFile` and
   `iterateComments` gave the same 4,307 comments as `parseForESLint` on all 1,273 files compared. One difference:
@@ -145,12 +170,17 @@ Ticket created. Root causes reproduced on an untouched checkout of 549c4b46 befo
 Zero-budget and date sweeps over the full suite found the `StaticPool` race and the reject-bumps row. Both fixed.
 The unclosed-connection warning did not reproduce and is left as a follow-up below.
 
+### 2026-11-04 14:00
+
+Review fixes: the suite's `None` budget is replaced by a recorder on its own connection, the stub budget test by a
+test that fails on the shared connection, the comment-gate classification states the syntax-error difference, and
+the archive alert test gets a long-run case.
+
 ## Files Touched
 
 - `backend/tests/conftest.py`
 - `backend/tests/integration/carousel_consolidation/conftest.py`
-- `backend/tests/integration/carousel_consolidation/test_generation_event_timeout.py`
-- `backend/tests/integration/carousel_consolidation/test_shared_connection_event_budget.py` (new)
+- `backend/tests/integration/carousel_consolidation/test_event_recorder_connection.py` (new)
 - `backend/tests/integration/generation_event_support.py` (new)
 - `backend/tests/integration/test_carousel_generation_log_ae0556.py`
 - `backend/tests/integration/test_daily_recovery_events_ae0556.py`
@@ -234,6 +264,11 @@ the error came at test 734:
 One effect cannot be excluded: removing the Langfuse client can shift when garbage collection runs, and so which test
 hosts the warning. That changes where the warning lands, not whether the connection leaked, which the table above and
 the two earlier runs settle. Fixing this class of leak is a separate ticket.
+
+The table describes the branch at that run. Since then `carousel_consolidation/conftest.py` opens a second engine for
+the event recorder and `test_shared_connection_event_budget.py` is gone. That engine's connections are opened shielded
+and all closed at teardown, and a zero-budget run of the suite, which cancels every event write, logged no unclosed
+connection.
 
 ## Final Summary
 
