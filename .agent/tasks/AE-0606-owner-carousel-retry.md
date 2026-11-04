@@ -1,6 +1,6 @@
 # AE-0606 — Owner Retry for failed, blocked, escalated and rejected carousels (backend)
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
