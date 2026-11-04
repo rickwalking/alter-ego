@@ -8,7 +8,7 @@ The approve is bound to the revision of the message the owner tapped: the
 editorial resume runs its lock-version compare-and-set at that revision, so a
 review or reminder sent for an older render (slide 1 changed since, the new
 review maybe not delivered yet) never approves the current one.
-``current_revision`` lets the caller refuse before any run state moves.
+``review_gate`` lets the caller refuse before any run state moves.
 """
 
 from __future__ import annotations
@@ -35,6 +35,14 @@ from rag_backend.modules.editorial.public import (
 
 
 @dataclass(frozen=True, kw_only=True)
+class ReviewGate:
+    """The revision an approve answers (None: already approved), and the reject."""
+
+    revision: int | None
+    rejected: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
 class FinalReviewApproval:
     """The editorial approve and the public release, for one request.
 
@@ -45,22 +53,22 @@ class FinalReviewApproval:
     release_port: CarouselReleaser
     carousels: CarouselPublishSource | None = None
 
-    async def current_revision(self, run: AutopilotRun) -> int | None:
-        """The revision an approve must answer now; None when no approve is needed.
+    async def review_gate(self, run: AutopilotRun) -> ReviewGate:
+        """The revision an approve must answer now, and whether it was rejected.
 
-        An already approved carousel needs no approve: a slide-1 change drops
-        the approval in the same commit, so its slide 1 is the approved one.
+        One gate read for both, so the revision the tap is compared with is the
+        one the rejected check saw. An already approved carousel needs no approve
+        (revision None, no read): a slide-1 change drops the approval in the same
+        commit, so its slide 1 is the approved one.
         """
         project_id = run.carousel_project_id or ""
         if await self._already_approved(project_id):
-            return None
-        return (await self.editorial.read_gate(project_id)).lock_version
-
-    async def carousel_rejected(self, run: AutopilotRun) -> bool:
-        """True when the run's carousel is in the terminal rejected state."""
-        project_id = run.carousel_project_id or ""
+            return ReviewGate(revision=None)
         snapshot = await self.editorial.read_gate(project_id)
-        return snapshot.phase_status == PHASE_STATUS_REJECTED
+        return ReviewGate(
+            revision=snapshot.lock_version,
+            rejected=snapshot.phase_status == PHASE_STATUS_REJECTED,
+        )
 
     async def approve(
         self, run: AutopilotRun, revision: int | None = None

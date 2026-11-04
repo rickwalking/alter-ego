@@ -1,7 +1,7 @@
 """Refuse a Telegram approve, publish or schedule tap for an outdated review.
 
 The tapped message's revision (``tapped_revision``) must be the revision an
-approve would answer now (``FinalReviewApproval.current_revision``). When it is
+approve would answer now (``FinalReviewApproval.review_gate``). When it is
 not, nothing is approved and nothing moves toward publishing, and the answer
 says which way to go:
 
@@ -95,12 +95,13 @@ class RevisionGuard:
         run = tapped.run
         if run is None or run.state is not _S.AWAITING_OWNER:
             return OutdatedTap.CURRENT
-        if await self.approval.carousel_rejected(run):
+        gate = await self.approval.review_gate(run)
+        if gate.rejected:
             await self.runs.transition(
                 TransitionCommand.moving(run, _S.REJECTED, REASON_CAROUSEL_REJECTED)
             )
             return OutdatedTap.REJECTED
-        current = await self.approval.current_revision(run)
+        current = gate.revision
         if current is None or current == tapped.revision:
             return OutdatedTap.CURRENT
         return await self._outdated(run, current)
