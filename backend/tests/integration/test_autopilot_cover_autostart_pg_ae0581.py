@@ -40,7 +40,12 @@ from rag_backend.modules.editorial.infrastructure.cover_generations import (
 )
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
 
-_ROOT_TABLES = ("carousel_cover_generations", "carousel_creator_assets", "blog_posts")
+_ROOT_TABLES = (
+    "carousel_cover_autopilot_baselines",
+    "carousel_cover_generations",
+    "carousel_creator_assets",
+    "blog_posts",
+)
 
 
 def _tables() -> list[str]:

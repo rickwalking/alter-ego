@@ -1,12 +1,15 @@
 Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-0615)
-  The autopilot drive approves each gate and starts the next phase at once,
-  so the background selection, which waits for the workflow to pause, never
-  sees a pause: the first settled state it reads is the final review, where
-  it must skip, and the owner's first review shows the default slide 1.
-  The drive itself always stands at a gate before it resumes, so it asks for
-  the succeeded cover there first. The cover is stored with the same rules
-  and the same write as the background selection (consent, the generation
-  belongs to this carousel, the owner's choice wins, the lock-version
+  The background selection waits for the workflow to pause, but the
+  autopilot drive approves each gate and starts the next phase at once, so
+  it never sees a pause: the first settled state it reads is the final
+  review, where it must skip. Its conflict is never retried, and a restart
+  (a deploy) loses it. So the owner's first review showed the default
+  slide 1. The drive itself always stands at a gate before it resumes, so it
+  asks for the succeeded cover there first. The autopilot's generation and
+  slide 1's cover fields at scheduling are read from the database, so a
+  restart loses nothing. The cover is stored with the same rules and the
+  same write as the background selection (consent, the generation belongs
+  to this carousel, the owner's choice wins, the lock-version
   compare-and-set), before the finalize render, so the first final review
   already shows it. Nothing is re-rendered or published by the selection.
 
@@ -17,11 +20,25 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
     Then slide_cover is the generated asset with kind ai_image
     And the background selection's own skip changed nothing
 
+  Scenario: A restart before the next gate still shows the cover
+    Given the autopilot's cover generation succeeded
+    And a deploy restarted the worker before the next gate
+    When the resumed drive stands at a gate
+    Then slide_cover is the generated asset with kind ai_image
+    And it is stored before the first final review
+
+  Scenario: An owner's pick made after scheduling is kept across a restart
+    Given the autopilot's cover generation succeeded
+    And a deploy restarted the worker
+    And the owner bound another slide-1 photo after the job was scheduled
+    When the resumed drive stands at a gate
+    Then slide 1 keeps the owner's photo and the skip reason is manual_choice
+
   Scenario: The drive stores the cover at a gate before it resumes
     Given a succeeded autopilot cover waits for slide 1
     When the drive stands at a gate
     Then the cover is stored and the gate is read again before any resume
-    And the next gate resumes without storing it twice
+    And the next gate finds it already in place and resumes
 
   Scenario: The owner's photo chosen before the gate is kept
     Given the owner bound another slide-1 photo after the job was scheduled

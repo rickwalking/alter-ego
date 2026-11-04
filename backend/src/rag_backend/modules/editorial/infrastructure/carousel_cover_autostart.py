@@ -11,8 +11,10 @@ retried run never enqueues a second job.
 
 Once the run settles ``succeeded`` the cover becomes slide 1's cover, unless
 a cover was already chosen or the owner chose one since the job was
-scheduled (see ``carousel_cover_autoselect``); the drive also asks for it at
-each gate (see ``carousel_cover_gate_select``).
+scheduled (see ``carousel_cover_autoselect``). The generation row records
+that the autopilot started it and slide 1's cover fields at scheduling, so
+the drive also asks for it at each gate, after any restart (see
+``carousel_cover_gate_select``).
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.cover_autoselect import cover_baseline
 from rag_backend.domain.constants.cover_generation import (
     COVER_GENERATION_MAX_PHOTOS,
     COVER_GENERATION_PROMPT_MIN_LEN,
@@ -31,8 +34,10 @@ from rag_backend.domain.models import CarouselProject
 from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     CarouselAutomationAcl,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
+    selecting_cover_task,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_gate_select import (
-    remembering_cover_task,
     select_cover_at_gate,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
@@ -107,6 +112,7 @@ async def _start_cover(
     run = await _record_generation(session, project, photos)
     if isinstance(run, str):
         return _skip(run)
+    await _record_baseline(session, run, project)
     _schedule(wiring, run, project)
     return AutoCoverOutcome(scheduled=True, generation_id=str(run.generation.id))
 
@@ -134,6 +140,21 @@ async def _record_generation(
         return f"{REASON_AUTO_COVER_REFUSED}:{exc.code}"
 
 
+async def _record_baseline(
+    session: AsyncSession, run: CoverGenerationRun, project: CarouselProject
+) -> None:
+    """Mark the row as the autopilot's, with slide 1's cover fields now."""
+    from rag_backend.modules.editorial.infrastructure.cover_generations import (
+        SqlCoverGenerationRepository,
+    )
+
+    repository = SqlCoverGenerationRepository(session)
+    await repository.record_autopilot_baseline(
+        run.generation.id, cover_baseline(project)
+    )
+    await repository.commit()
+
+
 def _schedule(
     wiring: CoverRunWiring, run: CoverGenerationRun, project: CarouselProject
 ) -> None:
@@ -142,7 +163,7 @@ def _schedule(
         schedule_cover_generation,
     )
 
-    task = remembering_cover_task(wiring, run, project)
+    task = selecting_cover_task(wiring, run, project)
     schedule_cover_generation(task, str(run.generation.id))
 
 

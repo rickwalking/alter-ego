@@ -31,6 +31,9 @@ from rag_backend.infrastructure.database.models.carousel_archive import (
 from rag_backend.infrastructure.database.models.carousel_artifact_build import (
     CarouselArtifactBuildModel,
 )
+from rag_backend.infrastructure.database.models.carousel_cover_autopilot_baseline import (
+    CarouselCoverAutopilotBaselineModel,
+)
 from rag_backend.infrastructure.database.models.carousel_cover_generation import (
     CarouselCoverGenerationModel,
 )
@@ -79,6 +82,7 @@ __all__ = [
     "IMAGE_BRIDGE_TABLES",
     "BlogPostModel",
     "CarouselArtifactBuildModel",
+    "CarouselCoverAutopilotBaselineModel",
     "CarouselCoverGenerationModel",
     "CarouselCreatorAssetModel",
     "CarouselImageGenerationModel",

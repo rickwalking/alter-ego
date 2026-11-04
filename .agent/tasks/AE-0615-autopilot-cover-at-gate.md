@@ -29,7 +29,28 @@ Prod, 2026-11-04, carousel `9aaf2096`, run `facfa460`, `AUTOPILOT_COVER_CONSENT=
 - 12:38:55Z the final review went out with `slide_cover` empty, 31 min after the cover succeeded. The owner
   set the cover by hand on the website at 12:41:42Z (`PUT /api/carousels/{id}/cover`).
 
+Prod, same day, carousel `d418daf9`, run `77a6593b`:
+
+- Cover generation `ab9f19c0` was created at 13:16:46Z and succeeded at 13:18:25Z (asset `2467d172`) in the
+  old containers.
+- 13:39:49Z: a deploy restarted the backend and the generation worker. The drive was reaped and resumed at
+  13:43:28Z.
+- No `cover_auto_select` outcome was ever logged for it after the restart. It reached
+  final_review/awaiting_human at 14:20Z with `slide_cover` empty. Deploys happen several times a day and a
+  drive takes 30-60 min, so this case is common.
+
 ## Root Cause (verified)
+
+Three paths lose the cover. All three come from the same design: the only actor is an in-process
+background wait.
+
+1. **The drive never pauses where the poll can see it** (carousel `9aaf2096`).
+2. **A conflict is never retried.** A held lock or a moved version at the one pause the poll catches
+   ends the selection for good.
+3. **A restart loses the task** (carousel `d418daf9`). The wait runs inside the in-process background task.
+   A deploy kills it, and nothing re-creates it.
+
+Details:
 
 - The background selection (`selecting_cover_task` → `with_cover_selection` →
   `AutoCoverSelector.select`, `application/services/carousel/cover_autoselect.py:229`) waits in `_paused`
@@ -43,6 +64,9 @@ Prod, 2026-11-04, carousel `9aaf2096`, run `facfa460`, `AUTOPILOT_COVER_CONSENT=
   only from the gate read to the resume, which is shorter than the 5 s poll interval. So the poll almost
   never sees a pause. The first settled state it reads is the final review, and that is a permanent skip.
   The prod log line above shows exactly this.
+- The background task is in-process (`schedule_cover_generation`, `asyncio.create_task`). The owner-choice
+  baseline (slide 1's cover fields at scheduling) was held only in that task's closure, so after a restart
+  neither the task nor the baseline exists any more.
 - The AE-0590 tests (`tests/integration/test_autopilot_cover_autoselect_pg_ae0590.py`, seed at `:174-180`)
   start from a carousel that is already paused at the content gate, so the drive-through case was never
   tested.
@@ -58,10 +82,26 @@ the committed row), the project lock and the lock-version CAS. It runs before th
 approval), so the first final review shows the cover with no re-render and no second review. It writes
 nothing without `AUTOPILOT_COVER_CONSENT`.
 
-The baseline (slide 1's cover fields when the job was scheduled) is not persisted anywhere. The autopilot's
-task remembers the succeeded selection in the worker process, which is the one that runs the drive. A
-conflict, a held lock or a wait that ran out keeps it for the next gate. Any other outcome forgets it. A
-restart loses it, which is the same limit the background wait already has. No schema change.
+Everything the gate needs is durable. When the autopilot schedules its generation, it writes one row in the
+new table `carousel_cover_autopilot_baselines`, in its own commit before the background task is scheduled.
+The row holds the generation id (FK, cascade), plus slide 1's `slide_cover` asset id and `hook_asset_id` at
+that moment. Asset ids are plain columns with no FK, so a deleted asset does not erase the record. At each
+gate, `select_cover_at_gate` reads the carousel's newest generation that is succeeded, has a result asset
+and has a baseline row, and runs the selection with that baseline. Nothing is held in process memory:
+
+- a restart between the cover's success and the next gate changes nothing;
+- a conflict is simply asked again at the next gate;
+- a cover already in place is an `already_selected` no-op.
+
+An owner's own pick made after the job was scheduled differs from the recorded baseline. The selection
+refuses it (`manual_choice`), and the conditional UPDATE re-checks it on the committed row, across any
+restart. Nothing depends on the planned owner-pick audit (AE-0616).
+
+Why a new table, not new columns on `carousel_cover_generations`: production adds new tables through the
+app's startup `create_all` (and the Alembic revision on deploy, ADR-012). A new column on an existing table
+would need a deploy one-shot script and a `deploy.yml` step, and every read of the generation rows would
+fail until it ran. The revision `b2c3d4e5f6a8` is additive and idempotent, and the schema-drift and
+migrations gates cover it.
 
 Why not at the final-review stop (`runner._stop`), as option A was first written: at that point the slides
 are already rendered. Writing `slide_cover` there without a render would send a review whose slide 1 does
@@ -74,10 +114,12 @@ already shows the cover.
 
 ## Scope
 
-- `carousel_cover_gate_select` (editorial infrastructure): `remembering_cover_task` (the autopilot's task:
-  generate, remember on success, background selection, settle) and `select_cover_at_gate` (one selection
-  without waiting).
-- `carousel_cover_autostart._schedule` uses `remembering_cover_task`. The manual website path is unchanged.
+- `carousel_cover_autopilot_baselines` table (model, constant, Alembic revision `b2c3d4e5f6a8`).
+- `SqlCoverGenerationRepository.record_autopilot_baseline` / `autopilot_selection`.
+- `carousel_cover_autostart._start_cover` records the baseline before it schedules the run. The background
+  task and the manual website path are unchanged.
+- `carousel_cover_gate_select.select_cover_at_gate` (editorial infrastructure): one selection without
+  waiting, from the database.
 - `AutoCoverApplier` port and `cover_at_gate` (autopilot domain). `RunnerDependencies.cover_apply`.
   `AutopilotRunner._resume` asks first. `EditorialAutoCoverScheduler.apply_cover` checks consent first and
   logs a crash instead of raising it. Bootstrap wires the same scheduler to both ports.
@@ -88,7 +130,8 @@ already shows the cover.
 - No change to the manual "Gerar capa com Grok" path or to the website review switch (AE-0594).
 - A cover that succeeds only after the images gate was approved still stays a picker option (AE-0590
   non-goal, unchanged).
-- No prod data change.
+- No prod data change, no backfill: generations scheduled before this deploy have no baseline row and
+  keep today's behaviour.
 
 ## Acceptance Criteria
 
@@ -99,6 +142,9 @@ already shows the cover.
 - [x] Without consent nothing is read or written.
 - [x] A failed generation leaves slide 1 untouched.
 - [x] A conflict at a gate is retried at the next gate. A crash never breaks the drive.
+- [x] A restart between the cover's success and the next gate still puts the cover on slide 1 before the
+      first final review.
+- [x] An owner's pick made after the generation was scheduled is kept across a restart.
 - [x] Touched tests and the cheap backend gates pass.
 
 ## Gherkin Scenarios
@@ -109,6 +155,8 @@ already shows the cover.
 Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-0615)
 
   Scenario: A drive straight through to the final review shows the cover
+  Scenario: A restart before the next gate still shows the cover
+  Scenario: An owner's pick made after scheduling is kept across a restart
   Scenario: The drive stores the cover at a gate before it resumes
   Scenario: The owner's photo chosen before the gate is kept
   Scenario: A cover the owner chose before the job is kept
@@ -123,19 +171,22 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
 ### ADDED
 
 - `modules/editorial/infrastructure/carousel_cover_gate_select.py`.
+- Table `carousel_cover_autopilot_baselines` (`CarouselCoverAutopilotBaselineModel`,
+  `TABLE_COVER_AUTOPILOT_BASELINES`, revision `b2c3d4e5f6a8`).
+- `SqlCoverGenerationRepository.record_autopilot_baseline` / `autopilot_selection`.
 - `AutoCoverApplier`, `cover_at_gate`, `RunnerDependencies.cover_apply`,
   `EditorialAutoCoverScheduler.apply_cover`, `ACTION_APPLY_COVER`.
 - Editorial facade export `select_cover_at_gate`.
 
 ### MODIFIED
 
-- `carousel_cover_autoselect`: `_select` is now `select_logged` and returns the outcome. The selection is
-  built by `cover_selection`.
-- `carousel_cover_autostart._schedule`: the autopilot task remembers a succeeded cover.
+- `carousel_cover_autostart._start_cover`: records the baseline row before it schedules the run.
 - `AutopilotRunner._resume`: asks for the cover before it resumes a gate.
 - `autopilot/bootstrap.runner_dependencies`: one scheduler for both ports.
 - `editorial/public.py` docstring: shortened two lines so the file stays at 400.
-- `test_cover_autoselect_task_ae0590.py`: its wiring test now follows the autopilot task.
+- Tests: `test_autopilot_cover_autostart_pg_ae0581.py` creates the new table in its isolated schema;
+  the fake repository in `test_cover_autostart_editorial_ae0581.py` takes the baseline;
+  `test_autopilot_migration.py` moves the single head to `b2c3d4e5f6a8`.
 
 ### REMOVED
 
@@ -145,7 +196,8 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
 
 - Backend: editorial cover selection, autopilot runner and bootstrap
 - Tests: new feature, unit and Postgres tests
-- Frontend / Database / API / Deployment: none
+- Database: one new table (additive Alembic revision, created at startup by `create_all`)
+- Frontend / API / Deployment: none
 
 ## Dependencies
 
@@ -176,6 +228,15 @@ other Postgres tests have no gate answer (`assert [] == [('research', ...)]`). T
 `cover_apply` and `apply_cover` do not exist. Green after the fix, plus the related cover, runner and
 executor tests (413).
 
+Restart path (prod `d418daf9`). The first version held the selection in process memory, and a deploy lost
+it. Two new Postgres tests restart between the cover's success and the next gate: the background wait ends
+without a read and the gate module is loaded afresh. Red on the PR head `f8fe92a3` (fix version 1):
+
+- the restart test ends with `slide_cover` empty (`assert isinstance(row.slide_cover, dict)`);
+- the owner-pick test finds no gate check at all (`assert set() == {'manual_choice'}`).
+
+Green after the durable baseline. Touched and related tests plus every migration test: 392 passed.
+
 ## Files Touched
 
 See `.agent/reports/AE-0615.dev-summary.md`.
@@ -191,6 +252,9 @@ Pending.
 ## Decision Log
 
 - 2026-11-04: option A at the gate, not at the final-review stop and not option B (see Decision).
+- 2026-11-04: the selection and the owner-choice baseline move from process memory to the database (new
+  table `carousel_cover_autopilot_baselines`), because a deploy between the cover's success and the next
+  gate lost them in prod (`d418daf9`). A new table, not new columns, so no deploy one-shot is needed.
 
 ## Blockers
 

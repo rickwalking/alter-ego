@@ -7,13 +7,15 @@ locked write and the consent-gated scheduler are real; the image bridge is a
 fake editor, the background task runs inline and the drive is simulated by the
 poll's sleep: between two polls it passes every gate (the scheduler's
 ``apply_cover`` at each one, as the runner calls it) and lands in the final
-review, so the poll never sees a pause, as in production. Skipped without a
-Postgres ``DATABASE_URL`` (CI sets one).
+review, so the poll never sees a pause, as in production. A restart (a deploy)
+cancels the background task and reloads the gate module, so no process memory
+survives it. Skipped without a Postgres ``DATABASE_URL`` (CI sets one).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import importlib
+from collections.abc import Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,13 +33,17 @@ from rag_backend.domain.constants.cover_autoselect import (
     REASON_AUTO_SELECT_COMPLETED,
     REASON_AUTO_SELECT_MANUAL_CHOICE,
     REASON_AUTO_SELECT_OWNER_COVER,
+    REASON_AUTO_SELECT_TIMED_OUT,
 )
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.autopilot.infrastructure.cover_autostart import (
     EditorialAutoCoverScheduler,
 )
-from rag_backend.modules.editorial.infrastructure import carousel_cover_autoselect
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_cover_autoselect,
+    carousel_cover_gate_select,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
     EditorialAutoCoverStore,
 )
@@ -53,6 +59,8 @@ from tests.integration.test_autopilot_cover_autoselect_pg_ae0590 import (
     _start,
 )
 from tests.integration.test_autopilot_cover_autostart_pg_ae0581 import _tables
+
+Task = Callable[[], Awaitable[object]]
 
 _GATES = ("research", "outline", "content", "design", "images")
 _NEXT = {
@@ -198,7 +206,7 @@ async def test_drive_through_to_final_review_shows_the_cover(
         assert row.hook_asset_id == photos[0]
         assert row.lock_version == 4
         assert drive.applied == [(gate, gate == "research") for gate in _GATES]
-        assert _reasons(logs) == ["", REASON_AUTO_SELECT_COMPLETED]
+        assert _reasons(logs) == ["", "", "", "", "", REASON_AUTO_SELECT_COMPLETED]
 
 
 @requires_postgres
@@ -225,9 +233,8 @@ async def test_owner_photo_bound_before_the_gate_is_kept(
         assert row.hook_asset_id == photos[1]
         assert row.lock_version == 3
         assert drive.applied == [(gate, False) for gate in _GATES]
-        assert _reasons(logs) == [
-            REASON_AUTO_SELECT_MANUAL_CHOICE,
-            REASON_AUTO_SELECT_COMPLETED,
+        assert _reasons(logs) == [REASON_AUTO_SELECT_MANUAL_CHOICE] * len(_GATES) + [
+            REASON_AUTO_SELECT_COMPLETED
         ]
 
 
@@ -254,9 +261,8 @@ async def test_cover_chosen_before_the_job_is_kept(
         assert row.slide_cover == chosen
         assert row.lock_version == 3
         assert drive.applied == [(gate, False) for gate in _GATES]
-        assert _reasons(logs) == [
-            REASON_AUTO_SELECT_OWNER_COVER,
-            REASON_AUTO_SELECT_COMPLETED,
+        assert _reasons(logs) == [REASON_AUTO_SELECT_OWNER_COVER] * len(_GATES) + [
+            REASON_AUTO_SELECT_COMPLETED
         ]
 
 
@@ -337,3 +343,77 @@ async def test_conflict_at_a_gate_is_tried_again_at_the_next(
             ("outline", True),
             ("content", False),
         ]
+
+
+def _deploy_kills_the_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The background wait ends without a read: the process it ran in is gone."""
+
+    async def _gone(_self: AutoCoverSelector, _selection: object) -> str:
+        return REASON_AUTO_SELECT_TIMED_OUT
+
+    monkeypatch.setattr(AutoCoverSelector, "select", _gone)
+
+
+async def _succeed_then_restart(
+    harness_task: Task, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The cover succeeds, then a deploy restarts the worker: the gate module is
+    loaded afresh, so nothing the old process held in memory survives."""
+    with monkeypatch.context() as during:
+        _deploy_kills_the_wait(during)
+        await harness_task()
+    importlib.reload(carousel_cover_gate_select)
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_restart_after_the_cover_succeeded_still_shows_it(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A deploy between the cover and the next gate: the first review has it."""
+    # Scenario: A restart before the next gate still shows the cover
+    async with isolated_schema(_tables()) as engine:
+        project_id, photos = await _running_research(engine, dirs)
+        harness = _harness(engine, monkeypatch)
+        task = await _start(harness, project_id)
+        await _succeed_then_restart(task, monkeypatch)
+        drive = _Drive(engine=engine, project_id=project_id)
+
+        await drive.sleep(0.0)
+
+        asset = await _result_asset(engine, project_id)
+        row = await _row(engine, project_id)
+        assert asset is not None
+        assert isinstance(row.slide_cover, dict)
+        assert row.slide_cover["asset_id"] == asset
+        assert row.slide_cover["kind"] == "ai_image"
+        assert row.hook_asset_id == photos[0]
+        assert row.lock_version == 4
+        assert drive.applied == [(gate, gate == "research") for gate in _GATES]
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_owner_pick_across_a_restart_is_kept(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The baseline survives the restart: the owner's later photo wins."""
+    # Scenario: An owner's pick made after scheduling is kept across a restart
+    async with isolated_schema(_tables()) as engine:
+        project_id, photos = await _running_research(engine, dirs)
+        harness = _harness(engine, monkeypatch)
+        task = await _start(harness, project_id)
+        await _succeed_then_restart(task, monkeypatch)
+        drive = _Drive(
+            engine=engine, project_id=project_id, before={"hook_asset_id": photos[1]}
+        )
+
+        with capture_logs() as logs:
+            await drive.sleep(0.0)
+
+        row = await _row(engine, project_id)
+        assert row.slide_cover is None
+        assert row.hook_asset_id == photos[1]
+        assert row.lock_version == 3
+        assert drive.applied == [(gate, False) for gate in _GATES]
+        assert set(_reasons(logs)) == {REASON_AUTO_SELECT_MANUAL_CHOICE}
