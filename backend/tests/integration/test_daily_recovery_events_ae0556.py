@@ -35,6 +35,7 @@ from rag_backend.modules.generation_queue.infrastructure.recovery_store import (
 from rag_backend.modules.generation_queue.infrastructure.repository import (
     SqlGenerationRunStore,
 )
+from tests.integration.generation_event_support import SettledEventRecorder
 from tests.integration.queue_flow_db_support import on_postgres, queue_flow_engine
 from tests.integration.test_daily_recovery_scan_ae0524 import (
     _DEAD,
@@ -199,17 +200,19 @@ async def test_daily_revive_becomes_a_visible_queued_event(
         await session.commit()
 
     await _scan(engine).run_once()
+    recorder = SettledEventRecorder(SqlGenerationEventRecorder(_sessions(engine)))
     dispatcher = Dispatcher(
         DispatcherDependencies(
             store=SqlGenerationRunStore(_sessions(engine)),
             queue=FakeQueue(),
             autopilot=FakeActiveAutopilot(),
             notices=FakeNotices(),
-            events=SqlGenerationEventRecorder(_sessions(engine)),
+            events=recorder,
         )
     )
     report = await dispatcher.run_once()
     assert report.dispatched == 1
+    assert await recorder.settled() == [True]
     async with _sessions(engine)() as session:
         event_types = await session.scalars(
             select(CarouselGenerationEventModel.event_type).where(
