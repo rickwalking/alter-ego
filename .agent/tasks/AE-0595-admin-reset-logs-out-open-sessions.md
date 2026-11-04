@@ -1,6 +1,6 @@
 # AE-0595 — An admin password reset logs out the user's open sessions
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Feature
@@ -148,4 +148,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Delivered. Prod proof: Pedro tested the admin password reset in production on 2026-11-03 and it works.

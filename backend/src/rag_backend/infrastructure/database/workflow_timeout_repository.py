@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
@@ -95,27 +95,43 @@ class WorkflowTimeoutRepository:
         the existing phase-changed event.
         """
         cutoff = datetime.now(UTC) - timedelta(hours=timeout_hours)
-        stuck = await self._find_stuck(db, cutoff)
         cause = RejectCause.stuck(timeout_hours)
-        for project in stuck:
+        rejected = 0
+        for found in await self._find_stuck(db, cutoff):
+            project = await self._lock_if_stuck(db, str(found.id), cutoff)
+            if project is None:
+                continue
             await self.reject(db, project, cause)
-        return len(stuck)
+            rejected += 1
+        return rejected
 
     @staticmethod
     async def _find_stuck(
         db: AsyncSession, cutoff: datetime
     ) -> list[CarouselProjectModel]:
         result = await db.execute(
-            select(CarouselProjectModel).where(
-                CarouselProjectModel.current_phase != PHASE_PUBLISHED,
-                CarouselProjectModel.phase_status.in_(
-                    _AUTO_REJECT_ELIGIBLE_PHASE_STATUSES
-                ),
-                CarouselProjectModel.archived_at.is_(None),
-                CarouselProjectModel.updated_at <= cutoff,
-            )
+            select(CarouselProjectModel).where(*_stuck_where(cutoff))
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def _lock_if_stuck(
+        db: AsyncSession, project_id: str, cutoff: datetime
+    ) -> CarouselProjectModel | None:
+        """Re-read the row ``FOR UPDATE SKIP LOCKED``; None unless still stuck.
+
+        The first read takes no lock, so an owner Retry (which locks the row and
+        commits ``in_progress`` at a bumped version) may land in between; the
+        reject only touches a row that is still eligible under its lock, and a
+        row someone else holds is left for the next sweep.
+        """
+        result = await db.execute(
+            select(CarouselProjectModel)
+            .where(CarouselProjectModel.id == project_id, *_stuck_where(cutoff))
+            .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
+        )
+        return result.scalar_one_or_none()
 
     async def reject(
         self,
@@ -162,6 +178,16 @@ class WorkflowTimeoutRepository:
             },
             metadata={_EVENT_SOURCE_KEY: cause.source},
         )
+
+
+def _stuck_where(cutoff: datetime) -> tuple[ColumnElement[bool], ...]:
+    """Not published, pending-like, not archived, idle since ``cutoff``."""
+    return (
+        CarouselProjectModel.current_phase != PHASE_PUBLISHED,
+        CarouselProjectModel.phase_status.in_(_AUTO_REJECT_ELIGIBLE_PHASE_STATUSES),
+        CarouselProjectModel.archived_at.is_(None),
+        CarouselProjectModel.updated_at <= cutoff,
+    )
 
 
 __all__ = ["RejectCause", "WorkflowTimeoutRepository"]

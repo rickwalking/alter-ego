@@ -150,6 +150,24 @@ MANUAL_REPROCESS_PRIORITY = 1
 AUDIT_CAROUSEL_REPROCESS = "carousel.reprocess.requested"
 AGGREGATE_CAROUSEL = "carousel"
 AGGREGATE_GENERATION_RUN = "generation_run"
+AUDIT_CAROUSEL_RETRY = "carousel.retry.requested"
+AUTOPILOT_STATE_ESCALATED = "escalated"
+AUTOPILOT_DEAD_LETTER_PREFIX = "queue_dead_letter:"
+REASON_OWNER_CAROUSEL_RETRY = "owner_carousel_retry"
+RETRY_PROMPT_DOMAIN = "owner_retry"
+RETRY_PROMPT_FEEDBACK = "retry_feedback"
+RETRY_PROMPT_VERSION = "v1"
+RETRY_REASON_PHASE_FAILED = "phase_failed"
+RETRY_REASON_REJECTED = "carousel_rejected"
+RETRY_REASON_GATE_BLOCKED = "gate_blocked"
+RETRY_DETAIL_SCORE = "persona score {score:.0f}, threshold {threshold:.0f}"
+RETRY_VAR_PHASE = "phase"
+RETRY_VAR_REASON = "reason"
+RETRY_VAR_DETAIL = "detail"
+LOG_RETRY_REFUSED = "carousel_retry_refused"
+LOG_RETRY_ACCEPTED = "carousel_retry_accepted"
+LOG_RETRY_ANNOUNCE_FAILED = "carousel_retry_announce_failed"
+RETRY_LOCK_LOST_SQLSTATES = frozenset({"40P01", "40001", "55P03"})
 RECOVERABLE_ERROR_CODES = (
     ERROR_TRANSIENT,
     ERROR_PHASE_BUDGET,
