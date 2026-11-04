@@ -5,7 +5,7 @@
  * and Gherkin references through.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -55,6 +55,14 @@ const CLEAN = [
   "// Scenario: A long scenario title that wraps over",
   "//   two comment lines",
   "export const ONE = 1;",
+  "",
+].join("\n");
+
+const NOT_COMMENTS = [
+  'export const url = "https://example.com/*not-a-comment";',
+  "export const tpl = `// ${url} /* still a string */`;",
+  "export const re = /\\/\\/ not a comment/;",
+  "export const C = () => <a href={url}>// plain /* text */</a>;",
   "",
 ].join("\n");
 
@@ -125,6 +133,22 @@ describe("comment policy check", () => {
       "// Scenario: GLM requests carry the session header (AE-0330)\nexport const a = 1;\n",
     );
     expect(run(dir).status).toBe(0);
+  });
+
+  it("does not read strings, templates, regexes or JSX text as comments", () => {
+    writeFileSync(join(dir, "literals.tsx"), NOT_COMMENTS);
+    const { status, output } = run(dir);
+    expect(status, output).toBe(0);
+  });
+
+  it("never parses a file that has no comment marker", () => {
+    writeFileSync(join(dir, "unparsable.ts"), "export const = ;\n");
+    const { status, output } = run(dir);
+    expect(status, output).toBe(0);
+  });
+
+  it("stays off the ESLint parser stack that made it slow", () => {
+    expect(readFileSync(SCRIPT, "utf8")).not.toContain('"typescript-eslint"');
   });
 
   it.each(SEEDED)("FAILS on a seeded %s", (_name, source, reason) => {
