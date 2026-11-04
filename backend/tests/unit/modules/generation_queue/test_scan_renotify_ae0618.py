@@ -10,6 +10,8 @@ from types import SimpleNamespace
 from typing import cast
 from uuid import uuid4
 
+from asyncpg import UniqueViolationError
+from sqlalchemy.exc import DBAPIError
 from structlog.testing import capture_logs
 
 from rag_backend.modules.generation_queue.application.recovery_scan import (
@@ -29,6 +31,7 @@ from rag_backend.modules.generation_queue.domain.recovery import (
 from rag_backend.modules.generation_queue.infrastructure.escalation_renotifier import (
     SqlEscalationRenotifier,
 )
+from rag_backend.worker.recovery import run_daily_scan
 from tests.unit.modules.generation_queue.test_recovery_scan_ae0524 import (
     _Autopilot,
     _Clock,
@@ -42,6 +45,7 @@ _SECRET = "prompt and payload"
 class _Renotifier:
     runs: list[str] = field(default_factory=list)
     broken: set[str] = field(default_factory=set)
+    error: Exception = field(default_factory=lambda: ValueError(_SECRET))
     moved_on: set[str] = field(default_factory=set)
     list_error: Exception | None = None
     tried: list[str] = field(default_factory=list)
@@ -56,7 +60,7 @@ class _Renotifier:
     async def renotify(self, run_id: str) -> bool:
         self.tried.append(run_id)
         if run_id in self.broken:
-            raise ValueError(_SECRET)
+            raise self.error
         return run_id not in self.moved_on
 
 
@@ -192,3 +196,38 @@ def test_with_driving_off_the_no_op_is_wired() -> None:
     """Scenario: With autopilot driving off the step does nothing"""
     parts = SimpleNamespace(drive_autopilot=False, sessions=None)
     assert isinstance(_renotifier(cast(HandlerParts, parts)), _NoEscalationRenotifier)
+
+
+async def test_a_sql_failure_logs_its_metadata_only() -> None:
+    """Scenario: A failing item does not stop the others"""
+    run_id = str(uuid4())
+    error = DBAPIError("UPDATE x", {"p": _SECRET}, UniqueViolationError(_SECRET))
+    renotifier = _Renotifier(runs=[run_id], broken={run_id}, error=error)
+    with capture_logs() as logs:
+        report = await _scan(renotifier).run_once()
+    failed = next(log for log in logs if log["event"] == "scan_renotify_item_failed")
+    assert failed["log_level"] == "warning"
+    assert failed["error_type"] == "DBAPIError"
+    assert failed["dbapi_type"] == "UniqueViolationError"
+    assert failed["sqlstate"] == "23505"
+    assert report.renotify_failures[0].reason == (
+        "DBAPIError: UniqueViolationError: 23505"
+    )
+    assert _SECRET not in repr(logs)
+
+
+async def test_the_worker_sends_the_count_and_logs_it() -> None:
+    """Scenario: The summary carries the count"""
+    sent: list[str] = []
+    renotifier = _Renotifier(runs=[str(uuid4()), str(uuid4())])
+    with capture_logs() as logs:
+        report = await run_daily_scan(_scan(renotifier), sent.append)
+    assert report is not None
+    assert "reenviado a 2 execução(ões)" in sent[0]
+    done = next(log for log in logs if log["event"] == "generation_daily_scan_done")
+    assert done["renotified"] == 2
+
+
+def test_a_scan_without_a_renotified_run_has_no_count_line() -> None:
+    """Scenario: A quiet day's summary does not change"""
+    assert "reenviado" not in summary_text(ScanReport(renotified=0))

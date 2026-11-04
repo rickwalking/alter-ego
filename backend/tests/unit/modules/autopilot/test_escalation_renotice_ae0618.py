@@ -5,6 +5,7 @@ Feature: tests/features/scan_escalation_renotice_ae0618.feature
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -23,6 +24,9 @@ from rag_backend.modules.autopilot.domain.messages import notice_kind
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, record_status
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
+from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
+    _is_escalation,
+)
 from rag_backend.modules.autopilot.notify_constants import (
     EVENT_TYPE_ESCALATION_RENOTICE,
     KIND_ESCALATED,
@@ -121,8 +125,6 @@ def test_any_other_status_leaves_a_run_due() -> None:
 
 
 def _with_log(run: AutopilotRun, log: NoticeLog) -> AutopilotRun:
-    from dataclasses import replace
-
     return replace(run, notice_log=log)
 
 
@@ -156,3 +158,18 @@ def test_a_parked_run_keeps_its_own_buttons() -> None:
     run = _run(reason="queue_dead_letter:run_budget_exhausted")
     keyboard = status_keyboard(KIND_ESCALATED, run.run_id, renotice_payload(run))
     assert keyboard == dead_letter_keyboard(run.run_id)
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"state": "escalated"}, True),
+        ({"state": "failed"}, False),
+        ({}, False),
+        (["escalated"], False),
+        (None, False),
+    ],
+)
+def test_only_an_escalation_payload_counts(payload: object, expected: bool) -> None:
+    """Scenario: A run already notified with Retry is skipped"""
+    assert _is_escalation(payload) is expected

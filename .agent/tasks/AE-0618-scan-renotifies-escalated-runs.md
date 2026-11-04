@@ -108,15 +108,30 @@ See `backend/tests/features/scan_escalation_renotice_ae0618.feature`.
 
 ### 2026-11-04
 
-Ticket created. `.feature` and failing tests first, then the code.
+Ticket created. `.feature` and failing tests first, then the code. Implementation and cheap gates done.
 
 ## Files Touched
 
-Pending.
+- Autopilot: `domain/escalation_renotice.py`, `infrastructure/escalation_renotice.py`,
+  `infrastructure/renotice_record.py`, `renotice_bridge.py`, `renotice_constants.py`; `notify_constants.py` and
+  `domain/messages.py` (event type and its kind).
+- Generation queue: `application/recovery_scan.py`, `domain/recovery.py`, `bootstrap.py`,
+  `infrastructure/escalation_renotifier.py`, `renotify_constants.py`.
+- Worker: `worker/recovery.py` (the count in the done log).
+- Tests: the new feature, unit and integration files; `DailyScanDependencies` gained a required field, so four
+  existing test files pass it; `tests/integration/queue_flow_db_support.py` adds the notifier's cursor table.
+
+`notifications.py`, `status_keyboard.py`, `queue_bridge.py`, `dispatcher.py`, `infrastructure/repository.py`,
+`generation_queue/constants.py` and `frontend/` are unchanged.
 
 ## Test Evidence
 
-Pending.
+- Failing first: the three new test files failed at collection on the commit that holds only the tests.
+- 81 passed on Postgres across the three new files; 1,393 passed across `tests/unit/modules/autopilot`,
+  `tests/unit/modules/generation_queue` and the daily-scan integration files.
+- Branch coverage on the new code: 100% after the last tests.
+- Without Postgres the concurrent-scans test is skipped through `requires_postgres`: it needs real row locks.
+- Cheap gates green (see the dev summary). Full gate: lead's heavy slot.
 
 ## QA Report
 
@@ -150,6 +165,8 @@ Pending.
    `archived_at`. A running carousel is skipped without a marker, so a later scan can still pick it up.
 8. **Summary.** The line appears only when N > 0 or an item failed, so a quiet day's summary stays byte-identical.
 9. **No repeat cadence** was built, and none is proposed.
+10. **`notice_kind`.** Adding a branch would pass the return-count limit, so the three fixed event types moved into a
+    lookup table. Behaviour for the existing types is unchanged.
 
 ## Blockers
 
@@ -157,4 +174,6 @@ None.
 
 ## Final Summary
 
-Pending.
+The daily scan now emits one `content.autopilot.escalation_renotice` event, with its ledger marker, for each stuck run
+that never got the Retry, and reports the count. The first scan after the deploy should pick runs b5f5ff39, a8a3b196,
+66873e0d and 92bdb9d9 and skip the two failed runs of 2026-10-18, whose carousels were auto-rejected.
