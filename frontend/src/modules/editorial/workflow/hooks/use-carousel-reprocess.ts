@@ -40,7 +40,7 @@ const ACTIVE_STATUSES: ReadonlySet<string> = new Set([
   QUEUE_STATUS.RETRY_WAIT,
 ]);
 const MIN_LOCK_VERSION = 1;
-const carouselReprocessKeys = {
+export const carouselReprocessKeys = {
   detail: (projectId: string) => ["carousel-reprocess", projectId] as const,
 };
 

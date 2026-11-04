@@ -216,6 +216,7 @@ export { useWorkflowKanban } from "./workflow/hooks/use-workflow-kanban";
 export { useWorkflowPostAction } from "./workflow/hooks/use-workflow-post-action";
 export { useGenerationQueue } from "./workflow/hooks/use-generation-queue";
 export { useCarouselReprocess } from "./workflow/hooks/use-carousel-reprocess";
+export { useCarouselRetry } from "./workflow/hooks/use-carousel-retry";
 export type {
   CarouselReprocessState,
   GenerationQueueReprocessTarget,
@@ -234,6 +235,7 @@ export { useCollaborativeEdit } from "./workflow/hooks/use-collaborative-edit";
 
 export { NotificationCenter } from "./workflow/components/notification-center";
 export { CarouselReprocess } from "./workflow/components/carousel-reprocess";
+export { CarouselRetryAction } from "./workflow/components/carousel-retry-action";
 export { ReviewAssignmentPanel } from "./workflow/components/review-assignment-panel";
 export { ScheduledPublishPicker } from "./workflow/components/scheduled-publish-picker";
 export { VersionDiffView } from "./workflow/components/version-diff-view";

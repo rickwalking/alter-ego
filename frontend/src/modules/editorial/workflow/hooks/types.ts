@@ -6,6 +6,8 @@ import type {
   CarouselReprocessCapability,
   ManualReprocessResponse,
 } from "@/schemas/carousel-reprocess";
+import type { CarouselRetryCapability } from "@/schemas/carousel-retry";
+import type { NeonToastVariant } from "@/components/molecules/neon-toast";
 /**
  * Editorial workflow hook data-shape types (colocated `types.ts`).
  *
@@ -167,4 +169,59 @@ export interface CarouselReprocessState {
   error: string | null;
   progressVisible: boolean;
   reprocess: () => Promise<void>;
+}
+
+/** The workflow fields the Retry reads; any change re-reads the capability. */
+export interface CarouselRetryWorkflowState {
+  current_phase: string;
+  phase_status: string;
+  lock_version?: number;
+}
+
+export interface UseCarouselRetryOptions {
+  projectId: string;
+  enabled: boolean;
+  workflowState: CarouselRetryWorkflowState | null;
+  refreshWorkflow: () => Promise<unknown>;
+}
+
+export interface CarouselRetryToast {
+  id: number;
+  message: string;
+  variant: NeonToastVariant;
+}
+
+export interface CarouselRetryState {
+  capability: CarouselRetryCapability | null;
+  pending: boolean;
+  canSubmit: boolean;
+  error: string | null;
+  /** The capability offers Retry, or a request is pending or just failed. */
+  visible: boolean;
+  toast: CarouselRetryToast | null;
+  dismissToast: () => void;
+  retry: () => Promise<void>;
+}
+
+export type ShowCarouselRetryToast = (
+  message: string,
+  variant: CarouselRetryToast["variant"],
+) => void;
+
+/** A refusal's text, valid for the workflow state it answered. */
+export interface CarouselRetryRefusal {
+  message: string;
+  stateKey: string;
+}
+
+export interface CarouselRetryRunDeps extends UseCarouselRetryOptions {
+  capability: CarouselRetryCapability | null;
+  queryClient: QueryClient;
+  stateKey: string;
+  inFlightRef: RefObject<boolean>;
+  runWatchRef: RefObject<number | null>;
+  translate: (key: string) => string;
+  showToast: ShowCarouselRetryToast;
+  setPending: (pending: boolean) => void;
+  setRefusal: (refusal: CarouselRetryRefusal | null) => void;
 }
