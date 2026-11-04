@@ -21,6 +21,9 @@ from rag_backend.modules.autopilot.infrastructure import cover_autostart
 from rag_backend.modules.autopilot.infrastructure.cover_autostart import (
     EditorialAutoCoverScheduler,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
+    SessionFactory,
+)
 from rag_backend.modules.editorial.public import REVIEW_ACTION_APPROVE
 from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import (
@@ -115,7 +118,7 @@ class TestRunnerCoverAtGate:
         assert len(applier.editorial.resumes or []) == 1
 
 
-async def _selected(project_id: str) -> bool:
+async def _selected(_sessions: SessionFactory, project_id: str) -> bool:
     return project_id == _PROJECT
 
 
@@ -128,7 +131,7 @@ class TestSchedulerApplyCover:
     ) -> None:
         called: list[str] = []
 
-        async def _select(project_id: str) -> bool:
+        async def _select(_sessions: SessionFactory, project_id: str) -> bool:
             called.append(project_id)
             return True
 
@@ -154,7 +157,7 @@ class TestSchedulerApplyCover:
     async def test_crash_is_logged_and_reports_nothing_stored(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        async def _crash(_project_id: str) -> bool:
+        async def _crash(_sessions: SessionFactory, _project_id: str) -> bool:
             raise RuntimeError("db down")
 
         monkeypatch.setattr(cover_autostart, "select_cover_at_gate", _crash)

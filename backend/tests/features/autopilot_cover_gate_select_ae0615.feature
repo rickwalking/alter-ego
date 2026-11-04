@@ -70,3 +70,8 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
     Given the cover store raises at a gate
     When the drive stands at that gate
     Then the crash is logged and the drive resumes as before
+
+  Scenario: A failed baseline write leaves no stuck generation
+    Given the baseline row cannot be written when the autopilot starts its cover
+    When the autopilot schedules the generation
+    Then no generation row is left pending and no job is scheduled

@@ -48,11 +48,11 @@ async def _autopilot_selection(
         )
 
 
-async def select_cover_at_gate(project_id: str) -> bool:
-    """True when slide 1 just took the carousel's succeeded autopilot cover."""
-    from rag_backend.infrastructure.database.config import get_session_maker
+async def select_cover_at_gate(sessions: SessionFactory, project_id: str) -> bool:
+    """True when slide 1 just took the carousel's succeeded autopilot cover.
 
-    sessions = get_session_maker()
+    ``sessions`` opens a fresh session per read and for the write.
+    """
     selection = await _autopilot_selection(sessions, project_id)
     if selection is None:
         return False

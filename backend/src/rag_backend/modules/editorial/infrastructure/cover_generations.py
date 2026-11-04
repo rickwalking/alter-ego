@@ -198,6 +198,21 @@ class SqlCoverGenerationRepository:
         await self._session.rollback()
 
 
+class AutopilotCoverGenerationRepository(SqlCoverGenerationRepository):
+    """The generation rows, with the autopilot's baseline row added to the very
+    flush that creates the generation: the service's one commit stores both, and
+    a failed baseline write rolls the generation back with it."""
+
+    def __init__(self, session: AsyncSession, baseline: CoverBaseline) -> None:
+        super().__init__(session)
+        self._baseline = baseline
+
+    async def create(self, generation: CoverGeneration) -> None:
+        """Insert the generation and its baseline (flushed, not committed)."""
+        await super().create(generation)
+        await self.record_autopilot_baseline(generation.id, self._baseline)
+
+
 def _id_or_none(value: UUID | None) -> str | None:
     return str(value) if value is not None else None
 
@@ -206,4 +221,4 @@ def _uuid_or_none(value: str | None) -> UUID | None:
     return UUID(value) if value else None
 
 
-__all__ = ["SqlCoverGenerationRepository"]
+__all__ = ["AutopilotCoverGenerationRepository", "SqlCoverGenerationRepository"]

@@ -112,7 +112,6 @@ async def _start_cover(
     run = await _record_generation(session, project, photos)
     if isinstance(run, str):
         return _skip(run)
-    await _record_baseline(session, run, project)
     _schedule(wiring, run, project)
     return AutoCoverOutcome(scheduled=True, generation_id=str(run.generation.id))
 
@@ -125,9 +124,13 @@ async def _record_generation(
         CoverGenerationError,
         StartCoverGeneration,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_generations import (
+        AutopilotCoverGenerationRepository,
+    )
 
+    store = AutopilotCoverGenerationRepository(session, cover_baseline(project))
     try:
-        return await cover_generation_service(session).start(
+        return await cover_generation_service(session, store).start(
             StartCoverGeneration(
                 project=project,
                 user_id=project.owner_id or "",
@@ -138,21 +141,6 @@ async def _record_generation(
         )
     except CoverGenerationError as exc:
         return f"{REASON_AUTO_COVER_REFUSED}:{exc.code}"
-
-
-async def _record_baseline(
-    session: AsyncSession, run: CoverGenerationRun, project: CarouselProject
-) -> None:
-    """Mark the row as the autopilot's, with slide 1's cover fields now."""
-    from rag_backend.modules.editorial.infrastructure.cover_generations import (
-        SqlCoverGenerationRepository,
-    )
-
-    repository = SqlCoverGenerationRepository(session)
-    await repository.record_autopilot_baseline(
-        run.generation.id, cover_baseline(project)
-    )
-    await repository.commit()
 
 
 def _schedule(

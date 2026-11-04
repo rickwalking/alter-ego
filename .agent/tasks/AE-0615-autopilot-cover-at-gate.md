@@ -83,7 +83,10 @@ approval), so the first final review shows the cover with no re-render and no se
 nothing without `AUTOPILOT_COVER_CONSENT`.
 
 Everything the gate needs is durable. When the autopilot schedules its generation, it writes one row in the
-new table `carousel_cover_autopilot_baselines`, in its own commit before the background task is scheduled.
+new table `carousel_cover_autopilot_baselines`, in the same transaction as the generation row
+(`AutopilotCoverGenerationRepository.create` adds it to the service's one flush and commit). So either both
+rows exist or neither does. A failed baseline write therefore leaves no generation stuck in `pending`, which
+would count against the caps and block the one-per-carousel retry.
 The row holds the generation id (FK, cascade), plus slide 1's `slide_cover` asset id and `hook_asset_id` at
 that moment. Asset ids are plain columns with no FK, so a deleted asset does not erase the record. At each
 gate, `select_cover_at_gate` reads the carousel's newest generation that is succeeded, has a result asset
@@ -116,8 +119,9 @@ already shows the cover.
 
 - `carousel_cover_autopilot_baselines` table (model, constant, Alembic revision `b2c3d4e5f6a8`).
 - `SqlCoverGenerationRepository.record_autopilot_baseline` / `autopilot_selection`.
-- `carousel_cover_autostart._start_cover` records the baseline before it schedules the run. The background
-  task and the manual website path are unchanged.
+- `AutopilotCoverGenerationRepository` (the generation rows plus the baseline row in one transaction).
+  `cover_generation_service` takes an optional store. The background task and the manual website path are
+  unchanged.
 - `carousel_cover_gate_select.select_cover_at_gate` (editorial infrastructure): one selection without
   waiting, from the database.
 - `AutoCoverApplier` port and `cover_at_gate` (autopilot domain). `RunnerDependencies.cover_apply`.
@@ -157,6 +161,7 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
   Scenario: A drive straight through to the final review shows the cover
   Scenario: A restart before the next gate still shows the cover
   Scenario: An owner's pick made after scheduling is kept across a restart
+  Scenario: A failed baseline write leaves no stuck generation
   Scenario: The drive stores the cover at a gate before it resumes
   Scenario: The owner's photo chosen before the gate is kept
   Scenario: A cover the owner chose before the job is kept
@@ -180,7 +185,9 @@ Feature: The autopilot puts its succeeded cover on slide 1 at the next gate (AE-
 
 ### MODIFIED
 
-- `carousel_cover_autostart._start_cover`: records the baseline row before it schedules the run.
+- `carousel_cover_autostart._record_generation`: starts the generation through
+  `AutopilotCoverGenerationRepository`, so the baseline row lands in the same commit.
+- `select_cover_at_gate` takes the scheduler's injected session factory.
 - `AutopilotRunner._resume`: asks for the cover before it resumes a gate.
 - `autopilot/bootstrap.runner_dependencies`: one scheduler for both ports.
 - `editorial/public.py` docstring: shortened two lines so the file stays at 400.
@@ -237,6 +244,12 @@ without a read and the gate module is loaded afresh. Red on the PR head `f8fe92a
 
 Green after the durable baseline. Touched and related tests plus every migration test: 392 passed.
 
+Review follow-up. The baseline row moved into the generation's own transaction. Red first: a failed baseline
+write left one pending generation (`assert (CoverGeneration(...),) == ()`). The Postgres tests were split
+into `test_autopilot_cover_gate_select_pg_ae0615.py`, `test_autopilot_cover_gate_restart_pg_ae0615.py` and
+the shared `cover_gate_pg_support.py`, with no test removed. The `object` annotations in the new tests are
+gone. The gate uses the injected session factory. Result: 393 passed.
+
 ## Files Touched
 
 See `.agent/reports/AE-0615.dev-summary.md`.
@@ -255,6 +268,8 @@ Pending.
 - 2026-11-04: the selection and the owner-choice baseline move from process memory to the database (new
   table `carousel_cover_autopilot_baselines`), because a deploy between the cover's success and the next
   gate lost them in prod (`d418daf9`). A new table, not new columns, so no deploy one-shot is needed.
+- 2026-11-04 (review): the baseline row is written in the generation's transaction, not in a second commit.
+  A failed write must not leave a pending generation that blocks the carousel's cover.
 
 ## Blockers
 

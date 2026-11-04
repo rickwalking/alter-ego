@@ -8,6 +8,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverSelection,
@@ -19,8 +20,10 @@ from rag_backend.domain.constants.cover_autoselect import (
     OUTCOME_AUTO_SELECT_SELECTED,
     REASON_AUTO_SELECT_CONFLICT,
 )
-from rag_backend.infrastructure.database import config as db_config
 from rag_backend.modules.editorial.infrastructure import carousel_cover_gate_select
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
+    SessionFactory,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_gate_select import (
     select_cover_at_gate,
 )
@@ -35,10 +38,11 @@ _SELECTION = AutoCoverSelection(
 def _found(
     selection: AutoCoverSelection | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def _lookup(_sessions: object, _project_id: str) -> AutoCoverSelection | None:
+    async def _lookup(
+        _sessions: SessionFactory, _project_id: str
+    ) -> AutoCoverSelection | None:
         return selection
 
-    monkeypatch.setattr(db_config, "get_session_maker", lambda: object())
     monkeypatch.setattr(carousel_cover_gate_select, "_autopilot_selection", _lookup)
 
 
@@ -63,7 +67,7 @@ class TestSelectCoverAtGate:
         _found(None, monkeypatch)
         waits = _outcome(OUTCOME_AUTO_SELECT_SELECTED, monkeypatch)
 
-        assert await select_cover_at_gate("p-1") is False
+        assert await select_cover_at_gate(_no_sessions, "p-1") is False
         assert waits == []
 
     # Scenario: The drive stores the cover at a gate before it resumes
@@ -74,7 +78,7 @@ class TestSelectCoverAtGate:
         _found(_SELECTION, monkeypatch)
         waits = _outcome(OUTCOME_AUTO_SELECT_SELECTED, monkeypatch)
 
-        assert await select_cover_at_gate("p-1") is True
+        assert await select_cover_at_gate(_no_sessions, "p-1") is True
         assert waits == [0.0]
 
     # Scenario: A conflict at the gate is tried again at the next gate
@@ -88,4 +92,8 @@ class TestSelectCoverAtGate:
         _found(_SELECTION, monkeypatch)
         _outcome(outcome, monkeypatch)
 
-        assert await select_cover_at_gate("p-1") is False
+        assert await select_cover_at_gate(_no_sessions, "p-1") is False
+
+
+def _no_sessions() -> AsyncSession:
+    raise AssertionError("the lookup and the selector are faked")

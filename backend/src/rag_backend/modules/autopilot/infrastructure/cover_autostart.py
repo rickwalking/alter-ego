@@ -64,7 +64,7 @@ class EditorialAutoCoverScheduler:
         if not self._consent:
             return False
         try:
-            return await select_cover_at_gate(project_id)
+            return await select_cover_at_gate(self._sessions, project_id)
         except Exception:
             logger.exception(
                 LOG_COVER, action=ACTION_APPLY_COVER, project_id=project_id

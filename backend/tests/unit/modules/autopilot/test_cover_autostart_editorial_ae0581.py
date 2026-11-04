@@ -115,14 +115,6 @@ def _helper(
         async def for_project(self, project_id: str) -> tuple[object, ...]:
             return self.rows
 
-        async def record_autopilot_baseline(
-            self, generation_id: object, baseline: object
-        ) -> None:
-            del generation_id, baseline
-
-        async def commit(self) -> None:
-            return None
-
     monkeypatch.setattr(
         cover_generations, "SqlCoverGenerationRepository", lambda _s: _Generations()
     )
@@ -134,7 +126,9 @@ def _helper(
 
     monkeypatch.setattr(carousel_cover_autostart, "cover_run_wiring", _wiring)
     monkeypatch.setattr(
-        carousel_cover_autostart, "cover_generation_service", lambda _s: service
+        carousel_cover_autostart,
+        "cover_generation_service",
+        lambda _s, _store=None: service,
     )
     monkeypatch.setattr(
         carousel_cover_autoselect, "cover_generation_task", lambda _w, run: run
