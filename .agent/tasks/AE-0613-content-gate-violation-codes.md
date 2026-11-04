@@ -104,6 +104,10 @@ because the event stores only `violation_count` and `blocking_count`.
 Ticket and Gherkin written first. With the allowlist key and the wiring removed, 18 of the 34 new tests failed; with both
 in place all 34 pass, plus the existing AE-0556 unit and integration tests.
 
+Review round 1: a test with the review's exact example failed on the old code, along with four cases of a blocker dropped
+for an unknown code or a malformed entry. A warning is now stored only when no blocker was dropped. The new tests cover
+that rule, the known set against the sanitizer, and the `truncated` key against the sanitizer's literal.
+
 ## Files Touched
 
 - `backend/src/rag_backend/domain/constants/violation_codes.py` (new)
@@ -123,6 +127,11 @@ in place all 34 pass, plus the existing AE-0556 unit and integration tests.
 - Single backend gates PASS: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
   docstrings, dead-code, inline-prompts, gherkin-refs, comments, blog-v1-dead-code, redis-factory, autopilot-env,
   healthcheck-loopback, openapi-fresh, bandit, pip-audit, integrity, duplication, migrations, schema-drift.
+- Review round 1 red: 5 of the new tests failed on the old builder (the review's example and 4 dropped-blocker cases).
+- Review round 1 green: 92 passed across the AE-0613 and AE-0556 unit and integration tests (Postgres `DATABASE_URL`).
+  `diff-cover` on those tests: 100% (61 lines, 0 missing).
+- Review round 1 single gates PASS: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
+  comments, gherkin-refs, dead-code, docstrings, diff-cover.
 - Full gate: lead's heavy slot. Mutation: CI only (AE-0448).
 
 ## QA Report
