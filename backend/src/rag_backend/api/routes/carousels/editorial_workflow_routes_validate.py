@@ -33,6 +33,7 @@ from rag_backend.application.services.notification_service import NotificationSe
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.carousel_conflicts import (
     CONFLICT_CODE_BUILD_IN_PROGRESS,
+    CONFLICT_CODE_CAROUSEL_REJECTED,
     CONFLICT_CODE_MUTATION_IN_PROGRESS,
     CONFLICT_CODE_REVISION_CAP_EXCEEDED,
     CONFLICT_CODE_RUN_IN_PROGRESS,
@@ -52,6 +53,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_DESIGN,
     PHASE_FINAL_REVIEW,
     PHASE_STATUS_IN_PROGRESS,
+    PHASE_STATUS_REJECTED,
     RESUME_ROUTE_SUPPORTED_ACTIONS,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
@@ -140,9 +142,8 @@ def ensure_resume_not_in_progress(
 ) -> None:
     """Reject resume when workflow is already running.
 
-    the run-in-progress detail carries ``run_started_at`` (stamped
-    by the ORM listener when the run flipped to in_progress) so the client
-    can render the live in-progress banner instead of a generic error.
+    The conflict carries ``run_started_at`` (stamped by the ORM listener on the
+    in_progress flip) so the client renders the live in-progress banner.
     """
     if project.phase_status == PHASE_STATUS_IN_PROGRESS:
         raise CarouselConflictError(
@@ -163,17 +164,32 @@ def ensure_resume_not_in_progress(
     )
 
 
-async def ensure_rendered_before_approve(db: AsyncSession, project_id: str) -> None:
-    """Refuse a final-review approve while a re-render is still pending."""
+async def ensure_rendered_before_approve(
+    db: AsyncSession, project_id: str, expected_version: int
+) -> None:
+    """Refuse an approve on a rejected carousel, or one owing a re-render.
+
+    Only Retry brings a rejected carousel back (Pedro's decision, 2026-11-03):
+    an approve at its version is ``carousel_rejected``; a stale one is left to
+    the lock CAS. A pending final-review re-render is ``build_in_progress``.
+    """
     found = (
         await db.execute(
             select(
                 CarouselProjectModel.needs_republish_since,
                 CarouselProjectModel.current_phase,
+                CarouselProjectModel.phase_status,
+                CarouselProjectModel.lock_version,
             ).where(CarouselProjectModel.id == project_id)
         )
     ).one_or_none()
-    if found is None or found[0] is None or found[1] != PHASE_FINAL_REVIEW:
+    if found is None:
+        return
+    if found[2] == PHASE_STATUS_REJECTED and found[3] == expected_version:
+        raise CarouselConflictError(
+            CarouselConflict.for_code(CONFLICT_CODE_CAROUSEL_REJECTED)
+        )
+    if found[0] is None or found[1] != PHASE_FINAL_REVIEW:
         return
     raise CarouselConflictError(
         CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
@@ -186,10 +202,9 @@ async def ensure_no_artifact_mutation_in_progress(
 ) -> None:
     """Reject resume while an artifact mutator holds the project lock.
 
-    Closes the two-commit seam: a repair/republish/edit
-    holds the session-scoped advisory lock across its full write sequence;
-    a resume must not start inside that window. The resume runner never
-    acquires the lock itself — it only refuses to start while one is held.
+    A repair/republish/edit holds the session-scoped advisory lock across its
+    full write sequence; a resume must not start inside that window. The resume
+    runner never acquires the lock itself, it only refuses while one is held.
     """
     if not await is_carousel_project_lock_held_session(db, project_id):
         return
@@ -215,15 +230,15 @@ async def validate_resume_workflow_gates(
 ) -> None:
     """Validate revision cap and persona score before accepting resume.
 
-    The revision-cap conflict names the charged phase (the target on a send-back), which
-    the typed 409 client copy reads. A final-review approve while the carousel's
-    slides wait for a re-render (the needs-republish marker: a slide-1 cover switch
-    or a slide edit not rendered yet) is refused as ``build_in_progress``: it would
-    approve artifacts that do not show the carousel's content. Approves at earlier
-    gates are unaffected.
+    The revision-cap conflict names the charged phase (the target on a
+    send-back), which the typed 409 client copy reads. An approve is refused on a
+    rejected carousel, or at final review while the slides wait for a re-render
+    (the needs-republish marker of a cover switch or a slide edit).
     """
     if body.action == REVIEW_ACTION_APPROVE:
-        await ensure_rendered_before_approve(ctx.db, ctx.project_id)
+        await ensure_rendered_before_approve(
+            ctx.db, ctx.project_id, body.expected_version
+        )
     if workflow_state is None:
         return
     if body.action == REVIEW_ACTION_REVISE:
@@ -348,10 +363,9 @@ async def ensure_structured_feedback_allowed(
 ) -> None:
     """Reject structured feedback fields submitted outside their allowed phase.
 
-    widened the allowlists: ``edited_localized_slides`` is accepted at
-    {content, design, final_review} (uniform apply + re-validate semantics) and
-    ``target_phase`` is accepted at design (content only) besides final_review.
-    ``edited_text`` stays final-review-only.
+    ``edited_localized_slides`` is accepted at content, design and final_review;
+    ``target_phase`` at design (content only) and final_review; ``edited_text``
+    at final_review only.
     """
     feedback = body.structured_feedback
     if feedback is None:

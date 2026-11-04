@@ -16,6 +16,9 @@ from rag_backend.modules.autopilot.domain.backlog import (
     backlog_room,
     expiry_cutoff,
 )
+from rag_backend.modules.autopilot.domain.carousel_retry import (
+    carousel_retry_keyboard,
+)
 from rag_backend.modules.autopilot.domain.dead_letter import (
     dead_letter_keyboard,
     is_parked_notice,
@@ -122,7 +125,8 @@ def test_other_notices_keep_their_text_and_buttons() -> None:
     run_id = uuid4()
     assert not is_parked_notice(KIND_ESCALATED, "engine_error:RuntimeError")
     assert not is_parked_notice(KIND_PUBLISH_FAILED, _DEAD)
-    assert status_keyboard(KIND_ESCALATED, run_id, {"reason": "engine_error:X"}) is None
+    keyboard = status_keyboard(KIND_ESCALATED, run_id, {"reason": "engine_error:X"})
+    assert keyboard == carousel_retry_keyboard(run_id)
     assert status_body(KIND_ESCALATED, _copy("engine_error:X")).startswith("Escalated")
 
 
