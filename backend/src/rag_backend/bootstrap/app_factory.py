@@ -41,6 +41,7 @@ from rag_backend.api.routes import (
     blog_post_sections,
     blog_post_versions,
     blog_post_workflow,
+    carousel_retry,
     carousels,
     chat_stream,
     content_calendar,
@@ -299,6 +300,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(queue_board_router, prefix="/api")
     app.include_router(manual_reprocess.router, prefix="/api")
+    app.include_router(carousel_retry.router, prefix="/api")
     app.include_router(telegram_webhook_router, prefix="/api")
     app.include_router(image_bridge_router, prefix="/api")
     app.include_router(image_bridge_inputs.router, prefix="/api")

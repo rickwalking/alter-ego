@@ -26,6 +26,7 @@ import rag_backend.infrastructure.database.config as db_config
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_CAROUSEL_REJECTED,
     CONFLICT_CODE_VERSION_CONFLICT,
 )
 from rag_backend.domain.constants.carousel_workflow import (
@@ -220,10 +221,11 @@ async def test_a_stale_approve_after_the_escalation_settle_is_refused() -> None:
         await _assert_refused_and_rejected(rig, project_id, read_at)
 
 
-# Scenario: An approve at the post-reject version is handled as before
+# Scenario: An approve at the post-reject version is refused as carousel_rejected
+# Scenario: A website approve on a rejected carousel is refused
 @requires_postgres
 @pytest.mark.asyncio
-async def test_an_approve_at_the_post_reject_version_is_handled_as_before() -> None:
+async def test_an_approve_at_the_post_reject_version_is_refused() -> None:
     async with _app() as rig:
         project_id = await _waiting_carousel(rig)
         read_at = await _owner_reads(rig, project_id)
@@ -233,7 +235,11 @@ async def test_an_approve_at_the_post_reject_version_is_handled_as_before() -> N
         status_code, body = await _approve(rig, project_id, current)
 
         assert current == read_at + 1
-        assert status_code == 202, body
+        assert status_code == 409, body
+        assert CONFLICT_CODE_CAROUSEL_REJECTED in body
+        after = await _row(rig, project_id)
+        assert after.phase_status == PHASE_STATUS_REJECTED
+        assert after.lock_version == current
 
 
 # Scenario: An owner action at the current version on a waiting carousel still works

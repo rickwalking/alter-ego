@@ -21,11 +21,11 @@ Feature: A carousel reject bumps lock_version so a stale owner review is refused
     Then the resume is refused with 409 version_conflict
     And the carousel stays rejected
 
-  Scenario: An approve at the post-reject version is handled as before
+  Scenario: An approve at the post-reject version is refused as carousel_rejected
     Given a carousel the stuck-workflow sweep rejected
     When the owner approves with the carousel's current lock version
-    Then the route answers as it did before this change for a rejected carousel
-    And no stale version is accepted
+    Then the resume is refused with 409 carousel_rejected (AE-0606: Retry is the only way back)
+    And the carousel stays rejected at the same lock version
 
   Scenario: An owner action at the current version on a waiting carousel still works
     Given a carousel waiting for a human at the research gate at lock version N

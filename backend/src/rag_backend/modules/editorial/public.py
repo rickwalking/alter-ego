@@ -130,7 +130,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     slides_in_config,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_automation_run import (
+    AutomationClaim,
     AutomationRun,
+    claim_automation_phase,
     redrive_automation_phase,
     run_automation_phase,
 )
@@ -183,6 +185,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
 )
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
+    RetryRow,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_queue_metadata import (
     project_queue_metadata,
@@ -285,6 +288,7 @@ __all__ = [
     "ApprovalReopen",
     "ApprovalState",
     "AutoCoverOutcome",
+    "AutomationClaim",
     "AutomationResume",
     "AutomationResumeInput",
     "AutomationRun",
@@ -328,6 +332,7 @@ __all__ = [
     "PublicReleaseState",
     "ResearchSource",
     "ResearchSourceType",
+    "RetryRow",
     "ReviewDecisionPort",
     "ReviewWorkflowEngine",
     "ReviewerAssignmentPort",
@@ -351,6 +356,7 @@ __all__ = [
     "build_start_input",
     "carousel_project_lock",
     "carousel_project_lock_key",
+    "claim_automation_phase",
     "content_approve_blocker",
     "cover_generation_input",
     "cover_generation_runner",

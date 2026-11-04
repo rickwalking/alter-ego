@@ -17,7 +17,10 @@ A carousel rejected since the review was sent (the stuck-workflow sweep or the
 abandoned-escalation settle; both bump the lock version, so every older tap is
 outdated) has nothing left to review: the run closes ``awaiting_owner ->
 rejected`` with the recovery's own ``carousel_rejected`` reason, instead of
-going to ``reworking``, where nothing would ever close it (``rejected``).
+going to ``reworking``, where nothing would ever close it (``rejected``). The
+rejected check comes before the revision check, so even a tap at the current
+revision never approves a rejected carousel (Pedro's decision, 2026-11-03: the
+owner's Retry is the only way back).
 """
 
 from __future__ import annotations
@@ -92,14 +95,14 @@ class RevisionGuard:
         run = tapped.run
         if run is None or run.state is not _S.AWAITING_OWNER:
             return OutdatedTap.CURRENT
-        current = await self.approval.current_revision(run)
-        if current is None or current == tapped.revision:
-            return OutdatedTap.CURRENT
         if await self.approval.carousel_rejected(run):
             await self.runs.transition(
                 TransitionCommand.moving(run, _S.REJECTED, REASON_CAROUSEL_REJECTED)
             )
             return OutdatedTap.REJECTED
+        current = await self.approval.current_revision(run)
+        if current is None or current == tapped.revision:
+            return OutdatedTap.CURRENT
         return await self._outdated(run, current)
 
     async def _outdated(self, run: AutopilotRun, current: int) -> OutdatedTap:

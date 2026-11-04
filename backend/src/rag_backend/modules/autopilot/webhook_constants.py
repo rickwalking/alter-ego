@@ -53,6 +53,9 @@ TEXT_REWORKING = "Reworking {phase}."
 TEXT_REVISION_CAP = "Revision cap reached."
 TEXT_APPROVE_FAILED = "Could not approve."
 TEXT_APPROVE_REFUSED = "Could not approve. The review is still open."
+TEXT_APPROVE_CAROUSEL_REJECTED = (
+    "Could not approve: the carousel was rejected. Retry it on the website first."
+)
 TEXT_APPROVE_RENDER_PENDING = (
     "Os slides ainda estão sendo renderizados. A revisão continua aberta; "
     "tente aprovar de novo em alguns minutos."
