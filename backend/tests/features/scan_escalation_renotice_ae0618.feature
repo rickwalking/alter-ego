@@ -98,11 +98,46 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     When the daily scan runs
     Then no event is written for the run
 
-  Scenario: A run the queue parked keeps its own buttons
-    Given a run parked by the queue before Retry shipped with a live carousel
+  Scenario Outline: A run the queue parked is skipped
+    Given a <state> run with a queue_dead_letter reason and a live carousel
+    When the daily scan runs
+    Then no event is written for the run
+    And the run carries no re-notify marker
+
+    Examples:
+      | state     |
+      | escalated |
+      | failed    |
+
+  Scenario Outline: A run parked earlier is skipped whatever its reason is now
+    Given a run whose current reason is phase_failed
+    And an earlier <state> event with a queue_dead_letter reason, from before Retry shipped
+    When the daily scan runs
+    Then no event is written for the run
+
+    Examples:
+      | state     |
+      | escalated |
+      | failed    |
+
+  Scenario: A failed publish notice that offered Retry counts
+    Given a failed run with a live carousel
+    And an earlier publish failure notice that offered Retry
+    When the daily scan runs
+    Then no event is written for the run
+
+  Scenario: A failed publish notice with no Retry does not count
+    Given a failed run with a live carousel
+    And an earlier publish failure notice that offered no Retry
+    When the daily scan runs
+    Then the outbox holds exactly one escalation_renotice event for the run
+
+  Scenario: The first scan after the deploy picks exactly the three approved runs
+    Given runs shaped like the seven production rows of Pedro's decision (2026-11-04)
     When the daily scan runs
     And the worker's notifier ticks
-    Then the notifier sends the parked notice with "Tentar de novo" and "Descartar"
+    Then only the persona, content quality and phase failed escalations are re-notified
+    And each notice carries the carousel Retry keyboard
 
   Scenario: A failing item does not stop the others
     Given three eligible runs
@@ -150,6 +185,32 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     Given an eligible run that the owner retried after the listing
     When the scan tries to re-notify it
     Then no event is written and the run is not counted
+
+  Scenario Outline: A run that changed between the listing and the stage gets no notice
+    Given an eligible run the listing returned
+    When <change> before its notice is staged
+    Then no event is written and the run is not counted
+    And the run carries no re-notify marker
+
+    Examples:
+      | change                         |
+      | the run escalates              |
+      | the queue parks the run        |
+      | the owner retries the run      |
+      | the owner cancels the run      |
+      | the carousel is rejected       |
+      | the carousel is approved       |
+      | the carousel is approved to go |
+      | the carousel is published      |
+      | the carousel is archived       |
+      | the carousel starts running    |
+
+  Scenario: The stage waits for a carousel write in flight
+    Given an eligible run the listing returned
+    And a transaction that rejects its carousel is still open
+    When the scan tries to re-notify the run
+    Then the scan waits for that transaction
+    And no event is written once it commits
 
   Scenario: With autopilot driving off the step does nothing
     Given autopilot driving is off

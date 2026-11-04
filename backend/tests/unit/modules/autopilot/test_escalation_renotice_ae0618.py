@@ -14,8 +14,9 @@ import pytest
 from rag_backend.modules.autopilot.domain.carousel_retry import (
     carousel_retry_keyboard,
 )
-from rag_backend.modules.autopilot.domain.dead_letter import dead_letter_keyboard
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
+    PastNotice,
+    carried_retry,
     mark_renoticed,
     renotice_due,
     renotice_payload,
@@ -24,9 +25,6 @@ from rag_backend.modules.autopilot.domain.messages import notice_kind
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, record_status
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
-from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
-    _is_escalation,
-)
 from rag_backend.modules.autopilot.notify_constants import (
     EVENT_TYPE_ESCALATION_RENOTICE,
     KIND_ESCALATED,
@@ -109,6 +107,12 @@ def test_a_run_closed_by_the_owner_or_a_retry_is_not_due(reason: str) -> None:
     assert not renotice_due(_run(_S.FAILED, reason))
 
 
+@pytest.mark.parametrize("state", [_S.ESCALATED, _S.FAILED])
+def test_a_parked_run_is_not_due(state: _S) -> None:
+    """Scenario Outline: A run the queue parked is skipped"""
+    assert not renotice_due(_run(state, "queue_dead_letter:run_budget_exhausted"))
+
+
 def test_the_marker_makes_a_run_not_due_and_keeps_the_ledger() -> None:
     """Scenario: A second scan sends nothing"""
     log = record_status(NoticeLog(), "earlier", 7)
@@ -153,23 +157,69 @@ def test_a_failed_run_also_gets_the_carousel_retry() -> None:
     assert keyboard == carousel_retry_keyboard(run.run_id)
 
 
-def test_a_parked_run_keeps_its_own_buttons() -> None:
-    """Scenario: A run the queue parked keeps its own buttons"""
-    run = _run(reason="queue_dead_letter:run_budget_exhausted")
-    keyboard = status_keyboard(KIND_ESCALATED, run.run_id, renotice_payload(run))
-    assert keyboard == dead_letter_keyboard(run.run_id)
+_PARKED = "queue_dead_letter:run_budget_exhausted"
+_STATE_CHANGED = "content.autopilot.state_changed"
+_PUBLISH = "content.autopilot.publish_notice"
+_FAILED_PUBLISH = {"outcome": "failed", "error_code": "ig_error"}
+
+
+def _past(
+    event_type: str, payload: dict[str, object], *, since_retry: bool = False
+) -> PastNotice:
+    return PastNotice(
+        run_id=uuid4(),
+        event_type=event_type,
+        payload=payload,
+        since_retry=since_retry,
+    )
+
+
+@pytest.mark.parametrize("state", ["escalated", "failed"])
+@pytest.mark.parametrize("since_retry", [False, True])
+def test_a_parked_notice_carried_retry_at_any_date(
+    state: str, *, since_retry: bool
+) -> None:
+    """Scenario Outline: A run parked earlier is skipped whatever its reason is now"""
+    payload: dict[str, object] = {"state": state, "reason": _PARKED}
+    assert carried_retry(_past(_STATE_CHANGED, payload, since_retry=since_retry))
+
+
+def test_an_escalation_carried_retry_only_since_retry_shipped() -> None:
+    """Scenario: A run already notified with Retry is skipped"""
+    payload: dict[str, object] = {"state": "escalated", "reason": "phase_failed"}
+    assert carried_retry(_past(_STATE_CHANGED, payload, since_retry=True))
+    assert not carried_retry(_past(_STATE_CHANGED, payload))
+
+
+@pytest.mark.parametrize("since_retry", [False, True])
+def test_a_failed_notice_carried_no_retry(*, since_retry: bool) -> None:
+    """Scenario: A failed run with a live carousel gets the same notice"""
+    payload: dict[str, object] = {"state": "failed", "reason": "phase_failed"}
+    assert not carried_retry(_past(_STATE_CHANGED, payload, since_retry=since_retry))
+
+
+def test_a_publish_failure_that_offered_retry_counts_at_any_date() -> None:
+    """Scenario: A failed publish notice that offered Retry counts"""
+    assert carried_retry(_past(_PUBLISH, _FAILED_PUBLISH))
+
+
+def test_a_publish_failure_with_no_retry_does_not_count() -> None:
+    """Scenario: A failed publish notice with no Retry does not count"""
+    payload: dict[str, object] = {**_FAILED_PUBLISH, "offer_retry": False}
+    assert not carried_retry(_past(_PUBLISH, payload))
 
 
 @pytest.mark.parametrize(
-    ("payload", "expected"),
+    ("event_type", "payload"),
     [
-        ({"state": "escalated"}, True),
-        ({"state": "failed"}, False),
-        ({}, False),
-        (["escalated"], False),
-        (None, False),
+        (_STATE_CHANGED, {}),
+        (_STATE_CHANGED, {"state": "awaiting_owner", "reason": "rework_retry"}),
+        (_PUBLISH, {"outcome": "published"}),
+        ("content.autopilot.other", {"state": "escalated"}),
     ],
 )
-def test_only_an_escalation_payload_counts(payload: object, expected: bool) -> None:
-    """Scenario: A run already notified with Retry is skipped"""
-    assert _is_escalation(payload) is expected
+def test_any_other_notice_carried_no_retry(
+    event_type: str, payload: dict[str, object]
+) -> None:
+    """Scenario: A failed run with a live carousel gets the same notice"""
+    assert not carried_retry(_past(event_type, payload, since_retry=True))

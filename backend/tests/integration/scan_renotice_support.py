@@ -163,22 +163,42 @@ async def stuck(
     return run_id
 
 
-async def escalation_event(
-    engine: AsyncEngine, run_id: str, at: datetime, state: str = "escalated"
+async def past_notice(
+    engine: AsyncEngine,
+    run_id: str,
+    event: tuple[str, dict[str, object]],
+    at: datetime,
 ) -> None:
     async with _sessions(engine)() as session:
         session.add(
             EventOutboxModel(
                 event_id=str(uuid4()),
-                event_type=STATE_CHANGED,
+                event_type=event[0],
                 aggregate_id=run_id,
                 aggregate_type="autopilot_run",
                 version=1,
-                payload={"state": state, "reason": REASON},
+                payload=event[1],
                 metadata_json={},
                 event_timestamp=at.isoformat(),
                 created_at=at,
             )
+        )
+        await session.commit()
+
+
+async def escalation_event(
+    engine: AsyncEngine, run_id: str, at: datetime, state: str = "escalated"
+) -> None:
+    payload: dict[str, object] = {"state": state, "reason": REASON}
+    await past_notice(engine, run_id, (STATE_CHANGED, payload), at)
+
+
+async def move_run(engine: AsyncEngine, run_id: str, **values: object) -> None:
+    async with _sessions(engine)() as session:
+        await session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.id == UUID(run_id))
+            .values(**values)
         )
         await session.commit()
 

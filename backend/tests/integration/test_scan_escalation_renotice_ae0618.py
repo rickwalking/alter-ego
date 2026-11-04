@@ -17,7 +17,6 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.modules.autopilot.domain.carousel_retry import (
     carousel_retry_keyboard,
 )
-from rag_backend.modules.autopilot.domain.dead_letter import dead_letter_keyboard
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.infrastructure import escalation_renotice
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
@@ -26,7 +25,6 @@ from rag_backend.modules.generation_queue.application.recovery_scan import summa
 from rag_backend.modules.generation_queue.domain.recovery import ScanReport
 from tests.integration.pg_schema_support import requires_postgres
 from tests.integration.scan_renotice_support import (
-    DEAD,
     MARKER,
     REASON,
     RETRY_DEPLOYED,
@@ -239,17 +237,6 @@ async def test_a_run_with_no_carousel_is_skipped(engine: AsyncEngine) -> None:
 async def test_a_run_in_any_other_state_is_skipped(engine: AsyncEngine) -> None:
     """Scenario: A run in any other state is skipped"""
     await assert_skipped(engine, await stuck(engine, (_S.AWAITING_OWNER, None)))
-
-
-async def test_a_run_the_queue_parked_keeps_its_own_buttons(
-    engine: AsyncEngine,
-) -> None:
-    """Scenario: A run the queue parked keeps its own buttons"""
-    run_id = await stuck(engine, (_S.ESCALATED, DEAD))
-    await daily_scan(engine).run_once()
-    telegram = FakeTelegram()
-    await tick(engine, telegram)
-    assert telegram.sent[0].keyboard == dead_letter_keyboard(UUID(run_id))
 
 
 async def test_a_failed_item_writes_nothing_and_stays_eligible(
