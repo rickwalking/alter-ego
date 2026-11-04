@@ -131,14 +131,20 @@ class TestArchivedCarouselsRaiseNoAlerts:
         assert count == 0
         assert await _notifications(session) == 0
 
+    @pytest.mark.parametrize("run_age", [timedelta(0), timedelta(hours=6)])
     async def test_the_same_carousels_alert_when_not_archived(
-        self, session: AsyncSession
+        self,
+        session: AsyncSession,
+        monkeypatch: pytest.MonkeyPatch,
+        run_age: timedelta,
     ) -> None:
         """Scenario: An archived carousel raises no alerts
 
         The alert service reads the real clock, so its failed row is dated when the
         test runs: a time fixed at import falls out of the failure window on a long run.
+        ``run_age`` moves that import-time clock back as such a run does.
         """
+        monkeypatch.setitem(globals(), "_NOW", _NOW - run_age)
         session.add(_project(_IDLE))
         session.add(
             _project(
