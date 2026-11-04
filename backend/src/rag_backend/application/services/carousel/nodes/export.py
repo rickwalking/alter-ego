@@ -19,6 +19,9 @@ from rag_backend.application.services.carousel.carousel_export_assets import (
     prepare_carousel_export_assets,
 )
 from rag_backend.application.services.carousel.nodes.design import run_design
+from rag_backend.application.services.carousel.presentation_policy import (
+    load_presentation_policy,
+)
 from rag_backend.application.services.carousel.types import (
     SlideData,
     slides_data_for_language,
@@ -35,6 +38,9 @@ from rag_backend.domain.constants import (
     SHARED_IMAGES_DIR_NAME,
 )
 from rag_backend.domain.constants.creator_asset import ARTIFACT_ASSETS_DIR
+from rag_backend.domain.constants.presentation_policy import (
+    DEFAULT_PRESENTATION_POLICY_VERSION,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.logging import get_logger
@@ -222,7 +228,13 @@ async def run_bilingual_export(
     if not en_available:
         return
 
-    en_slides = slides_data_for_language(config.slides_data, LANGUAGE_EN)
+    policy = load_presentation_policy(
+        config.project.presentation_policy_version
+        or DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+    en_slides = slides_data_for_language(
+        config.slides_data, LANGUAGE_EN, policy.intentional_lowercase_allowlist
+    )
     en_html = run_design(
         config.project,
         en_slides,
