@@ -47,6 +47,11 @@ model fix (same commit as the CAS). Empty item lists are dropped on both sides
 (`_symmetric_translation`), so a PT without `features` and an EN `features: []` no longer raise
 `translation_shape_mismatch`.
 
+The translation is made once, and the fail-closed retry can replace a draft after it: a re-drafted
+`pov_news` slide shows no quote card, so the stored translation keeps a card PT lost (prod 41c4f437).
+`localized_slide_builder` drops an EN `insight` its PT slide does not have, and EN takes PT's
+`content_kind`. The validator still blocks any other drift.
+
 Other fixes from the same run:
 
 - The proper-noun vocabulary learns multi-word names whole ("Claude Code", "Grok Bot"), so

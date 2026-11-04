@@ -23,6 +23,7 @@ from rag_backend.application.services.carousel.outline_normalize import (
     canonical_slide_type,
 )
 from rag_backend.application.services.carousel.slide_parse_failures import (
+    CANONICAL_KEY_CONTENT_KIND,
     PARSE_FAILURE_MISSING_CANONICAL_KEYS,
     PARSE_FAILURE_RAW_DRAFT_FALLBACK,
     SlideParseFailure,
@@ -30,6 +31,7 @@ from rag_backend.application.services.carousel.slide_parse_failures import (
     missing_canonical_keys,
 )
 from rag_backend.domain.constants.carousel import LANGUAGE_EN, LANGUAGE_PT
+from rag_backend.domain.constants.news_quotes import INSIGHT_KEY
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
@@ -168,6 +170,30 @@ def _build_locale_payload(
     return _LocalePayloadBuild(payload=payload, failure_reason=failure_reason)
 
 
+def _without_en_only_card(
+    en_payload: Mapping[str, object],
+    pt_payload: Mapping[str, object],
+) -> dict[str, object]:
+    """The EN payload without a quote card its PT slide no longer has.
+
+    The translation is made once, from the drafts as they were then, and the
+    fail-closed retry can replace a draft after that: a re-drafted ``pov_news``
+    slide shows no card, so the stored translation keeps one PT lost (prod
+    41c4f437). PT is the source, so EN follows it, content kind included. The
+    deterministic recovery and the gate repair then give EN the rest of PT's shape.
+    """
+    if INSIGHT_KEY in pt_payload or INSIGHT_KEY not in en_payload:
+        return dict(en_payload)
+    kept = {
+        key: value
+        for key, value in en_payload.items()
+        if key not in {INSIGHT_KEY, CANONICAL_KEY_CONTENT_KIND}
+    }
+    if CANONICAL_KEY_CONTENT_KIND in pt_payload:
+        kept[CANONICAL_KEY_CONTENT_KIND] = pt_payload[CANONICAL_KEY_CONTENT_KIND]
+    return kept
+
+
 _LOCALE_PAYLOAD_PAIRS: tuple[tuple[str, str], ...] = (
     (PRESENTATION_PT_KEY, LANGUAGE_PT),
     (PRESENTATION_EN_KEY, LANGUAGE_EN),
@@ -255,7 +281,7 @@ def build_localized_slide_with_failures(
         SLIDE_INDEX_KEY: slide_index,
         "slide_type": slide_type,
         PRESENTATION_PT_KEY: pt_build.payload,
-        PRESENTATION_EN_KEY: en_build.payload,
+        PRESENTATION_EN_KEY: _without_en_only_card(en_build.payload, pt_build.payload),
     }
     failures = _fallback_failures(record, (pt_build, en_build), raw_draft)
     failed_locales = {failure.locale for failure in failures}
