@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 
 import pytest
+from structlog.testing import capture_logs
 
 from rag_backend.modules.generation_queue.application.owner_retry import (
     OwnerRetryDependencies,
@@ -66,6 +67,8 @@ class _Store:
     commits: int = 0
     rollbacks: int = 0
     lost_lock: bool = False
+    commit_error: Exception | None = None
+    announce_error: Exception | None = None
 
     async def read(self, command: OwnerRetryCommand) -> RetryFacts | None:
         del command
@@ -74,6 +77,8 @@ class _Store:
         return self.facts
 
     async def announce(self, project_id: str, phase: str) -> None:
+        if self.announce_error is not None:
+            raise self.announce_error
         self.events.append(f"announce:{project_id}:{phase}")
 
     async def apply(self, plan: RetryPlan) -> RetryWrite:
@@ -81,6 +86,8 @@ class _Store:
         return self.write
 
     async def commit(self) -> None:
+        if self.commit_error is not None:
+            raise self.commit_error
         self.commits += 1
         self.events.append("commit")
 
@@ -91,8 +98,11 @@ class _Store:
 @dataclass
 class _Audit:
     records: list[RetryAuditCommand] = field(default_factory=list)
+    error: Exception | None = None
 
     async def record(self, command: RetryAuditCommand) -> None:
+        if self.error is not None:
+            raise self.error
         self.records.append(command)
 
 
@@ -186,6 +196,41 @@ class TestOwnerRetryService:
         await service.announce(accepted, "p-1")
         await service.announce(refused, "p-1")
         assert store.events == ["announce:p-1:content"]
+
+    # Scenario: A lost autopilot run compare-and-set rolls back the stage and the audit
+    async def test_a_failed_audit_announces_nothing_and_raises(self) -> None:
+        store, audit = _Store(), _Audit(error=RuntimeError("audit down"))
+
+        with pytest.raises(RuntimeError, match="audit down"):
+            await _service(store, audit).retry(_COMMAND)
+
+        assert store.events == []
+        assert store.commits == 0
+
+    async def test_a_failed_commit_announces_nothing_and_raises(self) -> None:
+        store = _Store(commit_error=RuntimeError("commit lost"))
+
+        with pytest.raises(RuntimeError, match="commit lost"):
+            await _service(store, _Audit()).retry(_COMMAND)
+
+        assert store.events == []
+
+    async def test_a_failed_announce_is_logged_and_the_retry_stands(self) -> None:
+        store = _Store(announce_error=OSError("bus down"))
+
+        with capture_logs() as logs:
+            result = await _service(store, _Audit()).retry(_COMMAND)
+            await _service(store, _Audit(), owns_transaction=False).announce(
+                result, "p-1"
+            )
+
+        assert result.accepted is True
+        assert store.events == ["commit"]
+        failed = [e for e in logs if e["event"] == "carousel_retry_announce_failed"]
+        assert [(e["project_id"], e["error"]) for e in failed] == [
+            ("p-1", "OSError"),
+            ("p-1", "OSError"),
+        ]
 
     # Scenario: A lost lock is refused as concurrent_update
     async def test_a_lost_lock_on_read_is_refused(self) -> None:

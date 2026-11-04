@@ -18,7 +18,6 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
-    DEFAULT_REVISION_CAP_PER_PHASE,
     PHASE_STATUS_AWAITING_HUMAN,
 )
 from rag_backend.domain.persona_score import lowest_overall
@@ -143,12 +142,7 @@ def _revise_capped(state: CarouselWorkflowState) -> bool:
         editorial_workflow_service_helpers as engine_checks,
     )
 
-    phase = engine_checks.resolve_revision_cap_phase(state, None)
-    if phase is None:
-        return False
-    counts = state.get("revision_count") or {}
-    used = int(counts.get(phase, 0)) if isinstance(counts, dict) else 0
-    return used >= DEFAULT_REVISION_CAP_PER_PHASE
+    return engine_checks.revision_cap_reached(state, None) is not None
 
 
 def _carousel(row: RetryRow) -> CarouselRetryState:

@@ -161,6 +161,23 @@ def resolve_revision_cap_phase(
     return current
 
 
+def revision_cap_reached(
+    prior: CarouselWorkflowState,
+    structured_feedback: dict[str, object] | None,
+) -> str | None:
+    """The charged phase when its revision cap is used up, else None."""
+    phase = resolve_revision_cap_phase(prior, structured_feedback)
+    if phase is None:
+        return None
+    revision_counts = prior.get("revision_count") or {}
+    current_count = (
+        int(revision_counts.get(phase, 0)) if isinstance(revision_counts, dict) else 0
+    )
+    if current_count < DEFAULT_REVISION_CAP_PER_PHASE:
+        return None
+    return phase
+
+
 async def validate_revision_cap(
     prior: CarouselWorkflowState,
     ctx: RevisionCapValidationContext,
@@ -170,14 +187,8 @@ async def validate_revision_cap(
     Target-aware: send-backs evaluate the TARGET phase's counter,
     plain revises the current phase's; uncapped submissions skip the check.
     """
-    phase = resolve_revision_cap_phase(prior, ctx.structured_feedback)
+    phase = revision_cap_reached(prior, ctx.structured_feedback)
     if phase is None:
-        return
-    revision_counts = prior.get("revision_count") or {}
-    current_count = (
-        int(revision_counts.get(phase, 0)) if isinstance(revision_counts, dict) else 0
-    )
-    if current_count < DEFAULT_REVISION_CAP_PER_PHASE:
         return
     if ctx.db is not None and ctx.notifications is not None:
         await ctx.notifications.create_revision_cap_escalation(
@@ -353,6 +364,7 @@ __all__ = [
     "prepare_resume_workflow",
     "record_feedback_correction",
     "resolve_revision_cap_phase",
+    "revision_cap_reached",
     "stream_workflow_phase_updates",
     "validate_content_approve_persona_score",
     "validate_content_approve_presentation",

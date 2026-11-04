@@ -13,6 +13,9 @@ import pytest
 from rag_backend.modules.autopilot.application.owner_actions import (
     OwnerActionService,
 )
+from rag_backend.modules.autopilot.application.owner_approval import (
+    FinalReviewApproval,
+)
 from rag_backend.modules.autopilot.application.schedule_steps import refusal_text
 from rag_backend.modules.autopilot.cover_constants import ANSWER_REVIEW_REPLACED
 from rag_backend.modules.autopilot.domain.carousel_retry import (
@@ -23,6 +26,7 @@ from rag_backend.modules.autopilot.domain.carousel_retry import (
 )
 from rag_backend.modules.autopilot.domain.gate import GateSnapshot, ResumeStatus
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.ports import CarouselPublishSnapshot
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     _resume_status,
 )
@@ -32,7 +36,10 @@ from rag_backend.modules.autopilot.webhook_constants import (
     TEXT_APPROVE_CAROUSEL_REJECTED,
     TEXT_REJECTED,
 )
-from rag_backend.modules.editorial.public import PHASE_STATUS_REJECTED
+from rag_backend.modules.editorial.public import (
+    PHASE_STATUS_REJECTED,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
 from tests.unit.modules.autopilot.test_owner_actions import (
     _action,
     _handle,
@@ -55,8 +62,13 @@ class _Retrier:
         self.requests.append(request)
         return self.outcome
 
+    edits_seen: list[int] = field(default_factory=list)
+    world: _World | None = None
+
     async def deliver(self) -> None:
         self.events.append("deliver")
+        if self.world is not None:
+            self.edits_seen.append(len(self.world.messenger.edits))
 
     def discard(self) -> None:
         self.events.append("discard")
@@ -66,7 +78,10 @@ def _with_retrier(world: _World, retrier: _Retrier | None) -> _World:
     deps = replace(
         world.service._deps, carousel_retrier=retrier, owner_user_id=_OWNER_USER
     )
-    return replace(world, service=OwnerActionService(deps))
+    built = replace(world, service=OwnerActionService(deps))
+    if retrier is not None:
+        retrier.world = built
+    return built
 
 
 def _retry_tap(world: _World) -> str:
@@ -91,6 +106,7 @@ class TestCarouselRetryTap:
         assert world.messenger.answers[-1].text == "Refazendo"
         assert world.messenger.edits[-1].text == "🔁 Refazendo a fase content…"
         assert retrier.events == ["deliver"]
+        assert retrier.edits_seen == [1]
 
     async def test_a_rolled_back_webhook_discards_the_run_starts(self) -> None:
         retrier = _Retrier(CarouselRetryOutcome(accepted=True, phase="content"))
@@ -170,8 +186,37 @@ def _rejected_at_tapped_revision(
     monkeypatch.setattr(world.editorial, "read_gate", _read_gate)
 
 
+@dataclass
+class _Approved:
+    async def load(self, project_id: str) -> CarouselPublishSnapshot:
+        del project_id
+        return CarouselPublishSnapshot(
+            workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+            status="completed",
+            is_public=False,
+            caption="",
+            image_urls=(),
+            base_url_configured=True,
+        )
+
+
 @pytest.mark.unit
 class TestApproveOnRejected:
+    # Scenario: A Telegram approve on a rejected carousel is refused
+    async def test_the_rejected_check_also_runs_for_an_approved_carousel(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        world = _world()
+        _rejected_at_tapped_revision(monkeypatch, world)
+        approval = FinalReviewApproval(
+            editorial=world.editorial, release_port=world.release, carousels=_Approved()
+        )
+
+        gate = await approval.review_gate(world.runs.run)
+
+        assert gate.revision is None
+        assert gate.rejected is True
+
     # Scenario: A Telegram approve on a rejected carousel is refused
     @pytest.mark.parametrize("kind", ["approve", "pubnow", "sched"])
     async def test_a_current_revision_tap_never_approves(

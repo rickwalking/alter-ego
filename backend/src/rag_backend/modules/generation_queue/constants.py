@@ -166,6 +166,7 @@ RETRY_VAR_REASON = "reason"
 RETRY_VAR_DETAIL = "detail"
 LOG_RETRY_REFUSED = "carousel_retry_refused"
 LOG_RETRY_ACCEPTED = "carousel_retry_accepted"
+LOG_RETRY_ANNOUNCE_FAILED = "carousel_retry_announce_failed"
 RETRY_LOCK_LOST_SQLSTATES = frozenset({"40P01", "40001", "55P03"})
 RECOVERABLE_ERROR_CODES = (
     ERROR_TRANSIENT,

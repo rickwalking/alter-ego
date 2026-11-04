@@ -19,6 +19,7 @@ from rag_backend.modules.generation_queue.application.owner_retry_feedback impor
 )
 from rag_backend.modules.generation_queue.constants import (
     LOG_RETRY_ACCEPTED,
+    LOG_RETRY_ANNOUNCE_FAILED,
     LOG_RETRY_REFUSED,
 )
 from rag_backend.modules.generation_queue.domain.owner_retry import (
@@ -97,9 +98,22 @@ class OwnerRetryService:
         )
 
     async def announce(self, result: RetryResult, project_id: str) -> None:
-        """Push the run start to the browser; call only after the commit."""
-        if result.starts_run:
+        """Push the run start to the browser; call only after the commit.
+
+        Best effort: the Retry already committed, so a failure here (the row
+        re-read, the event bus) is logged with its error class and swallowed;
+        it never blocks the caller's replies.
+        """
+        if not result.starts_run:
+            return
+        try:
             await self._deps.store.announce(project_id, result.phase)
+        except Exception as exc:
+            logger.warning(
+                LOG_RETRY_ANNOUNCE_FAILED,
+                project_id=project_id,
+                error=type(exc).__name__,
+            )
 
     async def _accept(self, plan: RetryPlan, write: RetryWrite) -> RetryResult:
         """Commit when the transaction is ours, then announce the run start."""
