@@ -1,4 +1,4 @@
-"""The daily scan's one re-sent escalation notice (AE-0618).
+"""The daily scan's one re-sent escalation notice.
 
 ``CAROUSEL_RETRY_SHIPPED_AT`` is the end of the deploy of AE-0606: an escalation
 event from then on is a notice that carried the Retry. ``RENOTICE_KEY`` is the

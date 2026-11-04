@@ -50,9 +50,6 @@ from rag_backend.modules.generation_queue.domain.recovery import (
 from rag_backend.modules.generation_queue.infrastructure.completion import (
     SseGenerationRunCompletion,
 )
-from rag_backend.modules.generation_queue.infrastructure.escalation_renotifier import (
-    SqlEscalationRenotifier,
-)
 from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
     AutopilotStepperAdapter,
     EngineFactory,
@@ -62,6 +59,9 @@ from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
 )
 from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
     PostgresDriveLock,
+)
+from rag_backend.modules.generation_queue.infrastructure.escalation_renotifier import (
+    SqlEscalationRenotifier,
 )
 from rag_backend.modules.generation_queue.infrastructure.generation_events import (
     SqlGenerationEventRecorder,

@@ -17,6 +17,7 @@ from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyScanDependencies,
     summary_text,
 )
+from rag_backend.modules.generation_queue.bootstrap import _NoEscalationRenotifier
 from rag_backend.modules.generation_queue.constants import (
     SCAN_CRON_UTC,
     SCAN_ENTRYPOINT,
@@ -25,7 +26,6 @@ from rag_backend.modules.generation_queue.domain.maintenance import (
     MaintenanceEnqueue,
     MaintenanceMode,
 )
-from rag_backend.modules.generation_queue.bootstrap import _NoEscalationRenotifier
 from rag_backend.modules.generation_queue.domain.recovery import (
     ParkedDrive,
     ScanReport,

@@ -458,7 +458,8 @@ async def test_nothing_else_changes(engine: AsyncEngine) -> None:
 
     def columns(row: AutopilotRunModel | CarouselProjectModel | None) -> _Columns:
         assert row is not None
-        return {key: getattr(row, key) for key in inspect(row).mapper.columns.keys()}
+        attrs = inspect(row).mapper.column_attrs
+        return {attr.key: getattr(row, attr.key) for attr in attrs}
 
     async def snapshot(run_id: str) -> tuple[_Columns, _Columns]:
         async with _sessions(engine)() as session:

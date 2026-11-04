@@ -2,8 +2,9 @@
 
 The scan retries once the autopilot runs the queue parked for a transient-class
 reason in the last 7 days, resumes autopilot runs escalated as stale in the last
-72 hours, re-sends once the escalation notice with Retry to stuck runs, lists the dashboard projects left in progress with nothing queued (they
-stay parked: Pedro resumes them from the editor), purges old succeeded runs and
+72 hours, re-sends once the escalation notice with Retry to stuck runs, lists the
+dashboard projects left in progress with nothing queued (they stay parked: Pedro
+resumes them from the editor), purges old succeeded runs and
 PgQueuer log rows, and sends Pedro one summary.
 """
 

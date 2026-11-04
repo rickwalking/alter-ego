@@ -7,39 +7,31 @@ notifier delivers the event. Neither the run's state nor ``updated_at`` moves.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
-from rag_backend.infrastructure.events.outbox_dispatch import (
-    EventRecord,
-    build_event_records,
-)
+from rag_backend.infrastructure.events.outbox_dispatch import build_event_records
 from rag_backend.modules.autopilot.constants import (
     AGGREGATE_TYPE_AUTOPILOT_RUN,
     EVENT_TYPE_STATE_CHANGED,
-    EVENT_VERSION,
-    METADATA_MODULE,
-    MODULE_NAME,
     PAYLOAD_STATE,
 )
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
     mark_renoticed,
     renotice_due,
-    renotice_payload,
 )
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
-from rag_backend.modules.autopilot.infrastructure.run_mapping import run_from_row
-from rag_backend.modules.autopilot.notify_constants import (
-    EVENT_TYPE_ESCALATION_RENOTICE,
+from rag_backend.modules.autopilot.infrastructure.renotice_record import (
+    renotice_record,
 )
+from rag_backend.modules.autopilot.infrastructure.run_mapping import run_from_row
 from rag_backend.modules.autopilot.renotice_constants import (
     CAROUSEL_RETRY_SHIPPED_AT,
     RENOTICE_STATES,
@@ -84,7 +76,7 @@ class SqlEscalationRenotices:
         run = run_from_row(row)
         if not renotice_due(run):
             return False
-        audit, outbox = build_event_records(_record(run))
+        audit, outbox = build_event_records(renotice_record(run))
         self._session.add(audit)
         self._session.add(outbox)
         await self._session.flush()
@@ -118,19 +110,6 @@ def _is_escalation(payload: object) -> bool:
     if not isinstance(payload, dict):
         return False
     return payload.get(PAYLOAD_STATE) == AutopilotRunState.ESCALATED.value
-
-
-def _record(run: AutopilotRun) -> EventRecord:
-    return EventRecord(
-        event_id=str(uuid4()),
-        event_type=EVENT_TYPE_ESCALATION_RENOTICE,
-        aggregate_id=str(run.run_id),
-        aggregate_type=AGGREGATE_TYPE_AUTOPILOT_RUN,
-        version=EVENT_VERSION,
-        payload=renotice_payload(run),
-        metadata={METADATA_MODULE: MODULE_NAME},
-        emitted_at=datetime.now(UTC),
-    )
 
 
 __all__ = ["SqlEscalationRenotices"]

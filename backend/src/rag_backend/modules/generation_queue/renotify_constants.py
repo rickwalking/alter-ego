@@ -1,4 +1,4 @@
-"""The daily scan's re-notify step (AE-0618)."""
+"""The daily scan's re-notify step."""
 
 SUMMARY_RENOTIFIED = "🔁 Aviso de escalada reenviado a {count} execução(ões) parada(s)."
 SUMMARY_RENOTIFY_FAILURES = "Falhas ao reenviar aviso: {items}"
