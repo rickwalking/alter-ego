@@ -1,6 +1,6 @@
 # AE-0602 — The EN translation keeps a quote card that the PT draft lost
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
