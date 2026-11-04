@@ -30,6 +30,8 @@ import type {
 } from "./types";
 
 const MIN_LOCK_VERSION = 1;
+/** Reads of the workflow state after an accepted Retry: the first, plus one retry. */
+const ACCEPTED_READ_ATTEMPTS = 2;
 const RETRY_QUERY_KEY = "carousel-retry";
 const FINISHED_OK_KEY = "finishedOk";
 const FINISHED_FAILED_KEY = "finishedFailed";
@@ -112,6 +114,33 @@ async function handleRefused(
   await readAgain(deps);
 }
 
+async function refreshed(refresh: () => Promise<unknown>): Promise<boolean> {
+  try {
+    await refresh();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The stream carries no lock version, so only a read moves the state past the
+ * watched one. Without a read the watch could only end on a later run's state:
+ * it is dropped instead, and a missing toast is the safe side of a wrong one.
+ */
+async function readAfterAccept(
+  version: number,
+  deps: CarouselRetryRunDeps,
+): Promise<void> {
+  await deps.queryClient.invalidateQueries({
+    queryKey: [RETRY_QUERY_KEY, deps.projectId],
+  });
+  for (let attempt = 0; attempt < ACCEPTED_READ_ATTEMPTS; attempt += 1) {
+    if (await refreshed(deps.refreshWorkflow)) return;
+  }
+  if (deps.runWatchRef.current === version) deps.runWatchRef.current = null;
+}
+
 async function submitRetry(
   version: number,
   deps: CarouselRetryRunDeps,
@@ -121,7 +150,7 @@ async function submitRetry(
     deps.runWatchRef.current = version;
   }
   deps.showToast(deps.translate("accepted"), RETRY_TOAST_VARIANT.SUCCESS);
-  await readAgain(deps);
+  await readAfterAccept(version, deps);
 }
 
 async function runCarouselRetry(deps: CarouselRetryRunDeps): Promise<void> {

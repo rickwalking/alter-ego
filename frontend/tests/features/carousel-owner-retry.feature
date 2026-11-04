@@ -110,6 +110,18 @@ Feature: Owner Retry on the workflow phase card (AE-0606)
     When that run finishes at a gate
     Then no finish toast is shown
 
+  Scenario: A retry whose state cannot be read again watches no run
+    Given the owner's Retry was accepted
+    And reading the workflow state again fails twice
+    When a later run finishes at a gate
+    Then no finish toast is shown
+
+  Scenario: A retry whose first state read fails still says how it ended
+    Given the owner's Retry was accepted
+    And the first read of the workflow state fails and the second succeeds
+    When the run stops at a gate
+    Then the owner sees that the retry finished
+
   Scenario: A reopened final review needs no finish toast
     Given the owner's Retry reopened the final review, so no run was staged
     When the workflow state refreshes

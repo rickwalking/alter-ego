@@ -569,6 +569,34 @@ describe("useCarouselRetry run watch", () => {
     rerender(options({ workflowState: atGate }));
     expect(result.current.toast).toEqual(refused);
   });
+
+  // Scenario: A retry whose state cannot be read again watches no run
+  it("watches nothing when the state cannot be read again", async () => {
+    answer(capability());
+    refreshWorkflow.mockRejectedValue(new Error("offline"));
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    expect(refreshWorkflow).toHaveBeenCalledTimes(2);
+    rerender(options({ workflowState: { ...running, lock_version: 9 } }));
+    rerender(options({ workflowState: { ...atGate, lock_version: 9 } }));
+    expect(result.current.toast?.message).toBe(labels.accepted);
+  });
+
+  // Scenario: A retry whose first state read fails still says how it ended
+  it("follows the run when the second read succeeds", async () => {
+    answer(capability());
+    refreshWorkflow
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(null);
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    expect(refreshWorkflow).toHaveBeenCalledTimes(2);
+    rerender(options({ workflowState: running }));
+    rerender(options({ workflowState: atGate }));
+    await waitFor(() =>
+      expect(result.current.toast?.message).toBe(labels.finishedOk),
+    );
+  });
 });
 
 describe("useCarouselRetry refusals", () => {
