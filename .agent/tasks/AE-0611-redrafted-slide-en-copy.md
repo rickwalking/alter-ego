@@ -105,7 +105,10 @@ See `backend/tests/features/redrafted_slide_en_copy_ae0611.feature`.
   `translate_slides` on the command.
 - `application/services/carousel/phase_artifact_runner.py`: calls `review_content`; the review step it held moved to
   `content_review_step.py`, so the file is 842 lines (880 on main).
-- `application/services/carousel/provider_errors.py`: the provider error tuple is public (`PROVIDER_ERRORS`).
+- `application/services/carousel/provider_errors.py`: the provider error tuple is public (`PROVIDER_ERRORS`), and
+  `LLM_CALL_FAILED_ERRORS` names what a failed LLM call raises.
+- `domain/llm_errors.py` (new): `AllModelsUnavailableError`, moved from `infrastructure/external/
+  model_queue_chat_model.py`, which imports and re-exports it.
 - `backend/tests/unit/application/test_content_budget_step_ae0588.py`: its review spy patches
   `build_fail_closed_review_updates` where the call now lives (`content_review_step`). Same spy, same assertions.
 - `application/services/carousel/editorial_distribution_persist.py`: `_symmetric_translation` drops the stale
@@ -166,6 +169,11 @@ EN were filled from the stale translation. The review step left the runner (909 
 catch is narrowed to the errors of a failed call. Two tests added (provider failure, bug propagates). The count of
 tests that failed before the fix is stated precisely.
 
+### 2026-11-04 17:00
+
+Re-review fix: the narrowed catch missed the model queue's `AllModelsUnavailableError`. It is in the shared
+`LLM_CALL_FAILED_ERRORS` now, with a test that fails without it (the error escapes the content phase).
+
 ## Files Touched
 
 See Delta.
@@ -186,6 +194,9 @@ See Delta.
   does not tell the defect apart: the deck's fixtures block slide 3 on `translation_shape_mismatch` either way. With
   the missing EN filled from the stale translation, slide 3 blocks only on `translation_shape_mismatch`, so the
   assertion fails.
+- `test_a_model_queue_outage_drops_the_old_en`: with `AllModelsUnavailableError` left out of
+  `LLM_CALL_FAILED_ERRORS` it fails (the error escapes the phase); with it, the slide loses its stored translation,
+  blocks on `translation_not_english` and the failure is logged.
 - Catch narrowing: with `except Exception` back, `test_a_bug_in_the_call_propagates` fails; with the provider errors
   left out of the tuple, `test_a_provider_failure_drops_the_old_en` fails.
 - The 300 existing tests that import the touched modules pass. Run as that subset, one test fails on an unclosed event
@@ -212,9 +223,15 @@ Pending.
   phase for one slide. The same goes for a slide the answer skips. Both log `carousel_redraft_translation_missing`.
 - **Only a failed call is caught.** The translation path signals one as `ValueError` or `TypeError` (the answer does
   not parse after the retries and the fallback model; the `JsonAnswers` contract), the provider SDK's `APIError`
-  (`openai`, `anthropic`: connection, timeout, status; the shared `PROVIDER_ERRORS`) or a `TimeoutError`. Anything
-  else is a bug and propagates. The distribution's own translation call catches nothing, so there is no broader catch
-  to keep parity with.
+  (`openai`, `anthropic`: connection, timeout, status; the shared `PROVIDER_ERRORS`), a `TimeoutError`, or
+  `AllModelsUnavailableError` when the model queue has no model left. Anything else is a bug and propagates. The
+  distribution's own translation call catches nothing, so there is no broader catch to keep parity with.
+- **A full model-queue outage is a failed call.** Prod runs the fast role, and with it the translation, through the
+  model queue, which raises `AllModelsUnavailableError` (a `RuntimeError`) when every model fails or every breaker is
+  open. `ainvoke_json` does not catch it, so leaving it out of the narrowed catch made such an outage during a
+  re-draft crash the content phase. The tuple is one shared `LLM_CALL_FAILED_ERRORS` next to `PROVIDER_ERRORS`. The
+  error class moved to `domain/llm_errors.py` (the queue re-exports it), because the application layer may not
+  import infrastructure.
 - **The review step leaves the runner.** The file was over the 400-line rule on main (880) and the fix grew it to 909.
   The review step the fix changed (its context, the fail-closed call, the scope, the row sync and the translator)
   moved as one unit to `content_review_step.py`, unchanged in behaviour. The rest of the runner is not split here.

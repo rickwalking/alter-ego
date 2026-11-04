@@ -25,6 +25,7 @@ from rag_backend.application.services.carousel.redrafted_translation import (
 from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_TRANSLATION_NOT_ENGLISH,
 )
+from rag_backend.domain.llm_errors import AllModelsUnavailableError
 from tests.unit.application.content_quality_fixtures_ae0366 import clean_drafts
 from tests.unit.application.owner_autofix_fixtures_ae0367 import V3
 
@@ -274,6 +275,24 @@ class TestRedraftedSlideEn:
         missing = [e for e in logs if e["event"] == LOG_REDRAFT_TRANSLATION_MISSING]
         assert [entry["slides"] for entry in missing] == [[_SLIDE]]
         assert _SLIDE in _blocking_slides(updates)
+        assert VIOLATION_TRANSLATION_NOT_ENGLISH in _blocking_codes(updates, _SLIDE)
+
+    async def test_a_model_queue_outage_drops_the_old_en(self) -> None:
+        """Scenario: A model queue with no model left never keeps the old EN copy."""
+        drafts, translations = _deck(_SLIDE)
+        translate = _Translator(error=AllModelsUnavailableError("fast: all open"))
+
+        with capture_logs() as logs:
+            updates = await _run(
+                drafts, translations, (_retry(s3=_plain(_SLIDE)), translate)
+            )
+
+        assert _OLD_HEADING not in str(_en(updates, _SLIDE))
+        assert _OLD_BODY not in str(_en(updates, _SLIDE))
+        missing = [e for e in logs if e["event"] == LOG_REDRAFT_TRANSLATION_MISSING]
+        assert [entry["slides"] for entry in missing] == [[_SLIDE]]
+        assert missing[0]["error"] == "fast: all open"
+        assert str(_SLIDE) not in updates["translations_en"]
         assert VIOLATION_TRANSLATION_NOT_ENGLISH in _blocking_codes(updates, _SLIDE)
 
     async def test_a_bug_in_the_call_propagates(self) -> None:

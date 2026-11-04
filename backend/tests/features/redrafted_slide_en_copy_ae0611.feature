@@ -49,6 +49,14 @@ Feature: A re-drafted slide stays in step with its EN copy and its slide row
     Then the old EN copy is not shown
     And the failure is logged with the slide numbers
 
+  Scenario: A model queue with no model left never keeps the old EN copy
+    Given every model of the translation queue is unavailable
+    When the content phase builds both locales
+    Then the content phase does not raise
+    And the old EN copy is not shown
+    And the failure is logged with the slide numbers
+    And the slide stays blocked for the gate repair or the reviewer
+
   Scenario: A bug in the translation call is not taken for a failed call
     Given the translation call of the re-drafted slide raises an unexpected error
     When the content phase builds both locales
