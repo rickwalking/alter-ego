@@ -7,7 +7,11 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { proxyWorkflowAction, WORKFLOW_ACTIONS } from "./proxy-workflow-action";
+import {
+  proxyWorkflowAction,
+  proxyWorkflowRead,
+  WORKFLOW_ACTIONS,
+} from "./proxy-workflow-action";
 
 const BACKEND_BASE = "http://backend.test";
 
@@ -96,5 +100,53 @@ describe("proxyWorkflowAction", () => {
     );
 
     expect(response.headers.get("content-type")).toBe("application/json");
+  });
+
+  // Scenario: The proxy forwards the retry to the backend
+  it("reads a workflow action with the cookie and mirrors the answer", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"can_retry":false}', {
+        status: 403,
+        headers: { "content-type": "application/problem+json" },
+      }),
+    );
+    const request = new NextRequest(
+      "http://app.test/api/carousels/c3/workflow/retry",
+      { headers: { cookie: "session=abc" } },
+    );
+
+    const response = await proxyWorkflowRead(
+      request,
+      ctx("c3"),
+      WORKFLOW_ACTIONS.RETRY,
+    );
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(`${BACKEND_BASE}/api/carousels/c3/workflow/retry`);
+    expect(init?.method).toBe("GET");
+    expect((init?.headers as Record<string, string>).Cookie).toBe(
+      "session=abc",
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("content-type")).toBe(
+      "application/problem+json",
+    );
+    expect(await response.text()).toBe('{"can_retry":false}');
+  });
+
+  // Scenario: The proxy forwards the retry to the backend
+  it("reads without a cookie", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    await proxyWorkflowRead(
+      new NextRequest("http://app.test/api/carousels/c4/workflow/retry"),
+      ctx("c4"),
+      WORKFLOW_ACTIONS.RETRY,
+    );
+
+    const init = fetchMock.mock.calls[0]![1];
+    expect((init?.headers as Record<string, string>).Cookie).toBe("");
   });
 });
