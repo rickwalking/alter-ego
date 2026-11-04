@@ -22,7 +22,6 @@ import { carouselReprocessKeys } from "./use-carousel-reprocess";
 import type {
   CarouselRetryRefusal,
   CarouselRetryRunDeps,
-  CarouselRetryRunWatch,
   CarouselRetryState,
   CarouselRetryToast,
   CarouselRetryWorkflowState,
@@ -119,7 +118,7 @@ async function submitRetry(
 ): Promise<void> {
   const response = await postCarouselRetry(deps.projectId, version);
   if (response.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS) {
-    deps.runWatchRef.current = "accepted";
+    deps.runWatchRef.current = version;
   }
   deps.showToast(deps.translate("accepted"), RETRY_TOAST_VARIANT.SUCCESS);
   await readAgain(deps);
@@ -157,28 +156,42 @@ function useRetryToast(): {
   return { toast, showToast, dismissToast };
 }
 
-/** Says how the accepted run ended, once, when the workflow state shows it. */
+/**
+ * Says how the accepted run ended, once. The watch holds the version the Retry
+ * moved past, so only a state past it belongs to this run or a later one, and
+ * the stream and the 202 can arrive in either order. The first stop ends the
+ * watch, with or without a toast, so a later run never reaches it.
+ */
 function useRunOutcomeToast(
-  phaseStatus: string | undefined,
-  runWatchRef: React.RefObject<CarouselRetryRunWatch>,
+  workflowState: CarouselRetryWorkflowState | null,
+  runWatchRef: React.RefObject<number | null>,
   showToast: ShowCarouselRetryToast,
 ): void {
   const t = useTranslations("workflow.retry");
+  const phaseStatus = workflowState?.phase_status;
+  const lockVersion = workflowState?.lock_version;
   useEffect(() => {
-    if (runWatchRef.current === "idle") return;
-    if (phaseStatus === WORKFLOW_PHASE_STATUS.IN_PROGRESS) {
-      runWatchRef.current = "running";
-      return;
-    }
+    const watched = runWatchRef.current;
+    if (watched === null || lockVersion === undefined) return;
+    if (lockVersion <= watched) return;
+    if (phaseStatus === WORKFLOW_PHASE_STATUS.IN_PROGRESS) return;
+    runWatchRef.current = null;
     const outcome = OUTCOME_BY_STATUS[phaseStatus ?? ""];
-    if (runWatchRef.current !== "running" || !outcome) return;
-    runWatchRef.current = "idle";
-    showToast(t(outcome.key), outcome.variant);
-  }, [phaseStatus, runWatchRef, showToast, t]);
+    if (outcome) showToast(t(outcome.key), outcome.variant);
+  }, [phaseStatus, lockVersion, runWatchRef, showToast, t]);
+}
+
+/** A temporary refusal is polled, unless the running phase's end re-keys it. */
+function shouldPollCapability(
+  refusalCode: string | null | undefined,
+  phaseStatus: string | undefined,
+): boolean {
+  if (phaseStatus === WORKFLOW_PHASE_STATUS.IN_PROGRESS) return false;
+  return RETRY_TEMPORARY_REFUSALS.has(refusalCode ?? "");
 }
 
 function useRetryCapability(
-  { projectId, enabled }: UseCarouselRetryOptions,
+  { projectId, enabled, workflowState }: UseCarouselRetryOptions,
   stateKey: string,
 ): CarouselRetryCapability | null {
   const query = useQuery({
@@ -188,7 +201,10 @@ function useRetryCapability(
     enabled,
     retry: false,
     refetchInterval: (current): number | false =>
-      RETRY_TEMPORARY_REFUSALS.has(current.state.data?.refusal_code ?? "")
+      shouldPollCapability(
+        current.state.data?.refusal_code,
+        workflowState?.phase_status,
+      )
         ? WORKFLOW_BOARD_POLL_INTERVAL_MS
         : false,
   });
@@ -215,7 +231,7 @@ export function useCarouselRetry(
   const t = useTranslations("workflow.retry");
   const queryClient = useQueryClient();
   const inFlightRef = useRef(false);
-  const runWatchRef = useRef<CarouselRetryRunWatch>("idle");
+  const runWatchRef = useRef<number | null>(null);
   const [pending, setPending] = useState(false);
   const { toast, showToast, dismissToast } = useRetryToast();
   const stateKey = workflowStateKey(options.workflowState);
@@ -225,11 +241,7 @@ export function useCarouselRetry(
     capability,
     stateKey,
   );
-  useRunOutcomeToast(
-    options.workflowState?.phase_status,
-    runWatchRef,
-    showToast,
-  );
+  useRunOutcomeToast(options.workflowState, runWatchRef, showToast);
   const retry = (): Promise<void> =>
     runCarouselRetry({
       ...options,

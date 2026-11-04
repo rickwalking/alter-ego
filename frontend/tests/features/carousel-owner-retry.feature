@@ -50,6 +50,11 @@ Feature: Owner Retry on the workflow phase card (AE-0606)
     When the poll interval passes and the autopilot run has escalated
     Then the Retry button appears without a page reload
 
+  Scenario: The capability is not polled while the phase runs
+    Given the capability answers a temporary refusal and the phase is in progress
+    When the poll interval passes
+    Then the capability is not read again until the workflow state changes
+
   Scenario: A 202 shows the accepted toast
     Given the Retry button is shown at lock version 7
     When the owner clicks Retry
@@ -82,6 +87,28 @@ Feature: Owner Retry on the workflow phase card (AE-0606)
     Given the owner's Retry was accepted and the phase is running
     When the run ends failed or rejected
     Then a finished-failed toast is shown
+
+  Scenario: A retry whose run started before the 202 says how it ended
+    Given the stream shows the phase running before the Retry's 202 arrives
+    When the run finishes at a gate
+    Then a finished-ok toast is shown
+
+  Scenario: A retry whose run started after the 202 says how it ended
+    Given the Retry's 202 arrives before the stream shows the phase running
+    When the run ends failed
+    Then a finished-failed toast is shown
+    And the failed state from before the Retry shows no toast
+
+  Scenario: A later run never shows the retry toast
+    Given the owner's Retry was accepted
+    And its run stopped at a gate or at a status that is not an outcome
+    When the owner approves and an unrelated run finishes
+    Then no retry toast is shown for that run
+
+  Scenario: A refused Retry watches no run
+    Given a run is already in progress and the backend refuses the Retry
+    When that run finishes at a gate
+    Then no finish toast is shown
 
   Scenario: A reopened final review needs no finish toast
     Given the owner's Retry reopened the final review, so no run was staged
@@ -125,6 +152,11 @@ Feature: Owner Retry on the workflow phase card (AE-0606)
     Given a failed card
     When the owner clicks Start over
     Then the whole workflow restarts as before
+
+  Scenario: Start over is the primary action when Retry is not offered
+    Given a failed card and the capability refuses or Retry is hidden
+    When the workspace renders
+    Then Start over is the primary button
 
   Scenario: The proxy forwards the retry to the backend
     Given a browser request to the retry route

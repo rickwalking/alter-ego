@@ -218,6 +218,47 @@ describe("useCarouselRetry capability", () => {
   });
 });
 
+describe("useCarouselRetry polling", () => {
+  // Scenario: The capability is not polled while the phase runs
+  it("does not poll a temporary refusal while the phase runs", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const running = {
+      ...FAILED_STATE,
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    };
+    answer(
+      capability({
+        can_retry: false,
+        refusal_code: RETRY_REFUSAL.RUN_IN_PROGRESS,
+      }),
+    );
+    const { result, rerender } = setup({ workflowState: running });
+    await vi.waitFor(() => expect(result.current.capability).not.toBeNull());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WORKFLOW_BOARD_POLL_INTERVAL_MS * 2);
+    });
+    expect(reads(RETRY_URL)).toBe(1);
+    rerender(options({ workflowState: FAILED_STATE }));
+    await vi.waitFor(() => expect(reads(RETRY_URL)).toBe(2));
+  });
+
+  // Scenario: The capability is polled while its refusal is temporary
+  it.each([
+    RETRY_REFUSAL.RUN_IN_PROGRESS,
+    RETRY_REFUSAL.MUTATION_IN_PROGRESS,
+    RETRY_REFUSAL.AUTOPILOT_ACTIVE,
+  ])("keeps polling %s while the phase is not running", async (code) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    answer(capability({ can_retry: false, refusal_code: code }));
+    const { result } = setup();
+    await vi.waitFor(() => expect(result.current.capability).not.toBeNull());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WORKFLOW_BOARD_POLL_INTERVAL_MS);
+    });
+    await vi.waitFor(() => expect(reads(RETRY_URL)).toBe(2));
+  });
+});
+
 describe("useCarouselRetry action", () => {
   // Scenario: A 202 shows the accepted toast
   it("sends one POST at the capability's version and toasts", async () => {
@@ -421,6 +462,112 @@ describe("useCarouselRetry outcome", () => {
     rerender(options({ workflowState: running }));
     rerender(options({ workflowState: gate }));
     expect(result.current.toast?.message).toBe(labels.accepted);
+  });
+});
+
+describe("useCarouselRetry run watch", () => {
+  const streamed = {
+    ...FAILED_STATE,
+    phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+  };
+  const running = { ...streamed, lock_version: 8 };
+  const atGate = {
+    ...running,
+    phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+  };
+
+  // Scenario: A retry whose run started before the 202 says how it ended
+  it("follows a run the stream showed before the 202", async () => {
+    const held = Promise.withResolvers<Response>();
+    answer(capability(), () => held.promise);
+    const { result, rerender } = await ready();
+    let posted: Promise<void> = Promise.resolve();
+    act(() => {
+      posted = result.current.retry();
+    });
+    rerender(options({ workflowState: streamed }));
+    await act(async () => {
+      held.resolve(json(accepted(), 202));
+      await posted;
+    });
+    expect(result.current.toast?.message).toBe(labels.accepted);
+    rerender(options({ workflowState: running }));
+    expect(result.current.toast?.message).toBe(labels.accepted);
+    rerender(options({ workflowState: atGate }));
+    await waitFor(() =>
+      expect(result.current.toast?.message).toBe(labels.finishedOk),
+    );
+  });
+
+  // Scenario: A retry whose run started after the 202 says how it ended
+  it("follows a run the stream shows after the 202", async () => {
+    answer(capability());
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    rerender(options({ workflowState: { ...FAILED_STATE } }));
+    expect(result.current.toast?.message).toBe(labels.accepted);
+    rerender(options({ workflowState: streamed }));
+    rerender(options({ workflowState: running }));
+    expect(result.current.toast?.message).toBe(labels.accepted);
+    rerender(
+      options({
+        workflowState: {
+          ...running,
+          phase_status: WORKFLOW_PHASE_STATUS.FAILED,
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.toast?.message).toBe(labels.finishedFailed),
+    );
+  });
+
+  // Scenario: A later run never shows the retry toast
+  it("stays quiet for the run after the retry's own", async () => {
+    answer(capability());
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    rerender(options({ workflowState: running }));
+    rerender(options({ workflowState: atGate }));
+    await waitFor(() =>
+      expect(result.current.toast?.message).toBe(labels.finishedOk),
+    );
+    act(() => result.current.dismissToast());
+    rerender(options({ workflowState: { ...running, lock_version: 9 } }));
+    rerender(options({ workflowState: { ...atGate, lock_version: 9 } }));
+    expect(result.current.toast).toBeNull();
+  });
+
+  // Scenario: A later run never shows the retry toast
+  it("stops watching when the run ends without an outcome", async () => {
+    answer(capability());
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    rerender(options({ workflowState: running }));
+    rerender(
+      options({
+        workflowState: {
+          ...running,
+          phase_status: WORKFLOW_PHASE_STATUS.APPROVED,
+        },
+      }),
+    );
+    rerender(options({ workflowState: { ...running, lock_version: 9 } }));
+    rerender(options({ workflowState: { ...atGate, lock_version: 9 } }));
+    expect(result.current.toast?.message).toBe(labels.accepted);
+  });
+
+  // Scenario: A refused Retry watches no run
+  it("watches nothing after a refusal", async () => {
+    answer(capability(), () =>
+      json({ detail: RETRY_REFUSAL.RUN_IN_PROGRESS }, 409),
+    );
+    const { result, rerender } = await ready();
+    await act(() => result.current.retry());
+    const refused = result.current.toast;
+    rerender(options({ workflowState: running }));
+    rerender(options({ workflowState: atGate }));
+    expect(result.current.toast).toEqual(refused);
   });
 });
 

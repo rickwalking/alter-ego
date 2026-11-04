@@ -203,9 +203,6 @@ export interface CarouselRetryState {
   retry: () => Promise<void>;
 }
 
-/** An accepted retry: waiting to see its run, then watching it finish. */
-export type CarouselRetryRunWatch = "idle" | "accepted" | "running";
-
 export type ShowCarouselRetryToast = (
   message: string,
   variant: CarouselRetryToast["variant"],
@@ -222,7 +219,7 @@ export interface CarouselRetryRunDeps extends UseCarouselRetryOptions {
   queryClient: QueryClient;
   stateKey: string;
   inFlightRef: RefObject<boolean>;
-  runWatchRef: RefObject<CarouselRetryRunWatch>;
+  runWatchRef: RefObject<number | null>;
   translate: (key: string) => string;
   showToast: ShowCarouselRetryToast;
   setPending: (pending: boolean) => void;
