@@ -60,6 +60,12 @@ def _allowlisted_at(text: str, index: int, allowlist: Iterable[str]) -> bool:
     return False
 
 
+def opens_with_allowlisted(text: str, allowlist: Iterable[str]) -> bool:
+    """Return True when the first visible word is an allowlisted token."""
+    index = _first_significant_index(text, 0)
+    return index is not None and _allowlisted_at(text, index, allowlist)
+
+
 def _handle_or_url_at(text: str, index: int) -> bool:
     """True when an ``@handle`` or a URL starts at ``index``."""
     after_mark = index > 0 and text[index - 1] == _HANDLE_MARK
@@ -135,6 +141,7 @@ __all__ = [
     "capitalize_first_letter",
     "capitalize_sentence_starts",
     "has_lowercase_sentence",
+    "opens_with_allowlisted",
     "starts_lowercase",
     "strip_html_tags",
 ]
