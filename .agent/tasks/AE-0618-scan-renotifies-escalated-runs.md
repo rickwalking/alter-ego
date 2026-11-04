@@ -131,6 +131,9 @@ Ticket created. `.feature` and failing tests first, then the code. Implementatio
   `tests/unit/modules/generation_queue` and the daily-scan integration files.
 - Line and branch coverage: 100% on the new files and `recovery_scan.py` (targeted run, 99 passed).
 - PR #360 CI at `8ade4019`: all checks passed, mutation included.
+- PR #360 CI at `7011e232`: all checks passed, `backend-gate` on its second attempt. The first failed on
+  `test_cancelled_event_writes_leave_the_workflow_intact` (`assert events == []`), a timing test this change does not
+  touch; `Test & Coverage` passed at the same head and the one rerun passed (run 41872220335).
 - Without Postgres the concurrent-scans test is skipped through `requires_postgres`: it needs real row locks.
 - Cheap gates green (see the dev summary). Full gate: lead's heavy slot.
 
