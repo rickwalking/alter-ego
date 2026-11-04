@@ -1,6 +1,6 @@
 # AE-0613 — Content gate records its violation codes in the event details
 
-Status: In Progress
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -37,12 +37,12 @@ because the event stores only `violation_count` and `blocking_count`.
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given a blocked gate, When its artifacts are recorded, Then the event stores the codes of the rules that fired.
-- [ ] AC2 Given a passing gate, When its artifacts are recorded, Then the event has no `violation_codes` key and is not marked truncated.
-- [ ] AC3 Given a violation with a message and slide text, When stored and read, Then the row and the API response hold the code only.
-- [ ] AC4 Given an unknown or free-text code, When recorded, Then it is dropped and the event is marked truncated.
-- [ ] AC5 Given many codes, When sanitized, Then the value survives within the bounds, blockers first, and the event is marked truncated.
-- [ ] AC6 Given a non-allowlisted key or an oversized or unsafe `violation_codes` value, When sanitized, Then it is dropped and marked truncated.
+- [x] AC1 Given a blocked gate, When its artifacts are recorded, Then the event stores the codes of the rules that fired.
+- [x] AC2 Given a passing gate, When its artifacts are recorded, Then the event has no `violation_codes` key and is not marked truncated.
+- [x] AC3 Given a violation with a message and slide text, When stored and read, Then the row and the API response hold the code only.
+- [x] AC4 Given an unknown or free-text code, When recorded, Then it is dropped and the event is marked truncated.
+- [x] AC5 Given many codes, When sanitized, Then the value survives within the bounds, blockers first, and the event is marked truncated.
+- [x] AC6 Given a non-allowlisted key or an oversized or unsafe `violation_codes` value, When sanitized, Then it is dropped and marked truncated.
 
 ## Gherkin Scenarios
 
@@ -116,7 +116,13 @@ in place all 34 pass, plus the existing AE-0556 unit and integration tests.
 
 ## Test Evidence
 
-Pending.
+- Red: with the allowlist key and the `_record_gate` wiring removed, 18 of the 34 new tests failed.
+- Green: 60 passed across the new unit and integration tests and the AE-0556 unit and integration tests.
+- `diff-cover` on the touched tests: 100% (54 lines, 0 missing).
+- Single backend gates PASS: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
+  docstrings, dead-code, inline-prompts, gherkin-refs, comments, blog-v1-dead-code, redis-factory, autopilot-env,
+  healthcheck-loopback, openapi-fresh, bandit, pip-audit, integrity, duplication, migrations, schema-drift.
+- Full gate: lead's heavy slot. Mutation: CI only (AE-0448).
 
 ## QA Report
 
