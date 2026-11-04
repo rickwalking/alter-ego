@@ -77,9 +77,9 @@ async def _add_project(
 @pytest.mark.asyncio
 class TestWorkflowTimeoutRepository:
     # Scenario: Workflow past the timeout is auto-rejected
-    async def test_past_timeout_pending_is_auto_rejected(self, test_engine) -> None:
+    async def test_past_timeout_pending_is_auto_rejected(self, sweep_engine) -> None:
         factory = async_sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
+            sweep_engine, class_=AsyncSession, expire_on_commit=False
         )
         stale = datetime.now(UTC) - timedelta(hours=_TIMEOUT_HOURS + 1)
         async with factory() as db:
@@ -111,9 +111,9 @@ class TestWorkflowTimeoutRepository:
             assert audit.scalars().first() is not None
 
     # Scenario: Workflow within the timeout window is left untouched
-    async def test_within_window_is_untouched(self, test_engine) -> None:
+    async def test_within_window_is_untouched(self, sweep_engine) -> None:
         factory = async_sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
+            sweep_engine, class_=AsyncSession, expire_on_commit=False
         )
         recent = datetime.now(UTC) - timedelta(hours=_TIMEOUT_HOURS - 1)
         async with factory() as db:
@@ -133,9 +133,9 @@ class TestWorkflowTimeoutRepository:
             assert project.phase_status == PHASE_STATUS_PENDING
 
     # Scenario: In-progress workflow is not auto-rejected
-    async def test_in_progress_is_not_rejected(self, test_engine) -> None:
+    async def test_in_progress_is_not_rejected(self, sweep_engine) -> None:
         factory = async_sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
+            sweep_engine, class_=AsyncSession, expire_on_commit=False
         )
         stale = datetime.now(UTC) - timedelta(hours=_TIMEOUT_HOURS + 5)
         async with factory() as db:
@@ -154,9 +154,9 @@ class TestWorkflowTimeoutRepository:
             assert project is not None
             assert project.phase_status == PHASE_STATUS_IN_PROGRESS
 
-    async def test_awaiting_human_past_timeout_is_rejected(self, test_engine) -> None:
+    async def test_awaiting_human_past_timeout_is_rejected(self, sweep_engine) -> None:
         factory = async_sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
+            sweep_engine, class_=AsyncSession, expire_on_commit=False
         )
         stale = datetime.now(UTC) - timedelta(hours=_TIMEOUT_HOURS + 1)
         async with factory() as db:
@@ -175,9 +175,9 @@ class TestWorkflowTimeoutRepository:
             assert project is not None
             assert project.phase_status == PHASE_STATUS_REJECTED
 
-    async def test_published_workflow_is_not_rejected(self, test_engine) -> None:
+    async def test_published_workflow_is_not_rejected(self, sweep_engine) -> None:
         factory = async_sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
+            sweep_engine, class_=AsyncSession, expire_on_commit=False
         )
         stale = datetime.now(UTC) - timedelta(hours=_TIMEOUT_HOURS + 1)
         async with factory() as db:

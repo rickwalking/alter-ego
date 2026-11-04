@@ -12,17 +12,14 @@ outbox relay on a foreign engine.
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import pytest
-import pytest_asyncio
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
-    create_async_engine,
 )
 
 from rag_backend.application.services.phase5_migration_service import (
@@ -44,7 +41,6 @@ from rag_backend.domain.models.carousel_run import (
     StaleRunEpochError,
     carousel_run_epoch_var,
 )
-from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import (
     CarouselProjectModel,
     CarouselSlideModel,
@@ -57,23 +53,6 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
 )
 
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
-
-_EMPTY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-
-@pytest_asyncio.fixture
-async def sweep_engine() -> AsyncIterator[AsyncEngine]:
-    """An empty database of its own for a test that counts a table-wide sweep.
-
-    ``auto_reject_stuck`` rejects every stale row, so on the session-wide engine its
-    count also holds whatever rows earlier test files left there.
-    """
-    engine = create_async_engine(_EMPTY_DATABASE_URL)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    yield engine
-    await engine.dispose()
-
 
 _NON_IN_PROGRESS_STATUSES = [
     PHASE_STATUS_PENDING,
