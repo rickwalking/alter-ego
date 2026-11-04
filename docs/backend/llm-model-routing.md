@@ -28,9 +28,21 @@ budget on reasoning before they write the answer. A `max_tokens` bound on a call
 replaces the model's 32000 default. On 2026-11-03 the copy-budget fit (v1, 4096) spent exactly 4096
 reasoning tokens and answered nothing on every call: 3 × `deepseek-v4.1-flash` (35-38 s each, ~117
 tok/s), then `qwen3.8-flash` (63 s, ~65 tok/s), until the step's 180 s deadline. The fit prompt v3 uses
-32000. Still bound under 4096 on the fast role: cover prompt ideas (`IDEAS_MAX_TOKENS` 1500) and
-palette generation (`GENERATION_MAX_TOKENS` 2000). The content-gate repair YAML says 4096 but the
-repairer does not bind it, so it runs at 32000.
+32000.
+
+Only four calls bind a cap (AE-0609), and all four now send 32000: slide drafting and the copy-budget
+fit (prompt YAML), cover prompt ideas (`IDEAS_MAX_TOKENS`) and palette generation
+(`GENERATION_MAX_TOKENS`). Every other `max_tokens` in a prompt YAML is never sent: the caller drops
+the model block, so outline 2048, hook 1024, caption 512, slide fix 2048, refinement 512-1024 and gate
+repair 4096 all run at 32000. A caller that starts binding one of those brings the AE-0607 failure
+back. `LLMService.generate(max_tokens=...)` does not reach the provider either: `with_config` puts it
+(and `temperature`) in the run config, not in the request.
+
+With 32000 the call's deadline is the real bound. At the measured ~117 tok/s, palette generation's
+90 s fits ~10k tokens. Cover ideas' 12 s fits only ~1.4k, about the size of the visible answer on its
+own, so a call that reasons for long ends in `cover_prompt_ideas_call_failed error=TimeoutError`, not
+in a cap hit. Cover ideas and palette generation are Langfuse generations since AE-0609. They were not
+before, so no prod reasoning figure exists for them yet.
 
 ## Model queue and circuit breaker (AE-0399)
 
