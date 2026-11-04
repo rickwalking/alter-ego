@@ -97,10 +97,13 @@ class BlogTranslationService:
         self._limit = asyncio.Semaphore(TRANSLATION_CONCURRENCY)
 
     async def translate(
-        self, post_id: str, source: BlogLanguageDocument
+        self, post_id: str, source: BlogLanguageDocument, user_id: str = ""
     ) -> BlogLanguageDocument:
-        """The EN document; raises :class:`BlogTranslationError` on any failure."""
-        with blog_ai_propagate(post_id, PHASE_BLOG_TRANSLATION):
+        """The EN document; raises :class:`BlogTranslationError` on any failure.
+
+        Background repairs have no user, so ``user_id`` is optional.
+        """
+        with blog_ai_propagate(post_id, PHASE_BLOG_TRANSLATION, user_id):
             sections = await asyncio.gather(
                 *(self._section(section) for section in source.sections)
             )

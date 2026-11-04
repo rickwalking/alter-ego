@@ -118,13 +118,17 @@ def _render_design_prompt(instruction: str, current_css: str) -> str:
         return prompt_text
 
 
-def _refinement_trace(project_id: UUID, phase: str) -> LlmCallTrace:
-    """The Langfuse phase of one owner-requested refinement of ``project_id``."""
+def _refinement_trace(project: CarouselProject, phase: str) -> LlmCallTrace:
+    """The Langfuse phase of one refinement of ``project``.
+
+    The user is the project owner: the agent tools only refine for the owner.
+    """
     return LlmCallTrace(
         phase=phase,
         agent_name=TRACE_AGENT_CAROUSEL_REFINEMENT,
         content_type=TRACE_CONTENT_TYPE_CAROUSEL,
-        project_id=str(project_id),
+        project_id=str(project.id),
+        user_id=project.owner_id or "",
     )
 
 
@@ -174,7 +178,7 @@ class CarouselRefinementMixin:
         new_prompt = await self._llm.generate(
             [{"role": "user", "content": rewrite_prompt}],
             temperature=0.7,
-            trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_IMAGE),
+            trace=_refinement_trace(project, TRACE_PHASE_REFINE_IMAGE),
         )
         new_prompt = new_prompt.strip()
 
@@ -251,7 +255,7 @@ class CarouselRefinementMixin:
         override_css = await self._llm.generate(
             [{"role": "user", "content": design_prompt}],
             temperature=0.3,
-            trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_DESIGN),
+            trace=_refinement_trace(project, TRACE_PHASE_REFINE_DESIGN),
         )
         override_css = override_css.strip()
 

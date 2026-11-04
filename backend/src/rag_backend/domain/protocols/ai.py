@@ -13,13 +13,15 @@ from rag_backend.domain.types import ChatEvent
 class LlmCallTrace:
     """Who an LLM call belongs to, for a caller with no workflow phase around it.
 
-    The LLM adapter opens the trace, so the caller needs no tracing dependency.
+    The LLM adapter opens the trace, so the caller needs no tracing dependency. An
+    empty ``project_id`` or ``user_id`` is recorded as ``unknown``.
     """
 
     phase: str
     agent_name: str
     content_type: str
     project_id: str = ""
+    user_id: str = ""
 
 
 class LLMService(Protocol):

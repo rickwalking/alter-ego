@@ -25,6 +25,7 @@ from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_CONTENT_TYPE,
     TRACE_FIELD_PHASE,
     TRACE_FIELD_PROJECT_ID,
+    TRACE_FIELD_USER_ID,
 )
 from rag_backend.domain.protocols import LlmCallTrace
 from rag_backend.infrastructure.config.settings import Settings
@@ -55,6 +56,7 @@ def _call_scope(trace: LlmCallTrace | None) -> AbstractContextManager[object]:
     return propagate_attributes(
         metadata={
             TRACE_FIELD_PROJECT_ID: trace.project_id,
+            TRACE_FIELD_USER_ID: trace.user_id,
             TRACE_FIELD_PHASE: trace.phase,
             TRACE_FIELD_AGENT_NAME: trace.agent_name,
             TRACE_FIELD_CONTENT_TYPE: trace.content_type,

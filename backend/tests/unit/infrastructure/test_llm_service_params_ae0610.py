@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 import httpx
@@ -45,6 +45,7 @@ _TRACE = LlmCallTrace(
     agent_name="carousel_refinement",
     content_type="carousel",
     project_id="p-1",
+    user_id="u-1",
 )
 
 Respond = Callable[[str], str]
@@ -308,6 +309,22 @@ async def test_the_service_opens_the_phase_the_call_names(
     assert metadata["agent_name"] == "carousel_refinement"
     assert metadata["content_type"] == "carousel"
     assert metadata["project_id"] == "p-1"
+    assert metadata["user_id"] == "u-1"
+    assert collector.traces[0].user_id == "u-1"
+
+
+# Scenario: A call that names no user keeps the unknown fallback
+@respx.mock
+async def test_a_call_that_names_no_user_keeps_the_unknown_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collector = install_trace_collector(monkeypatch)
+    _mount(respx.mock, _always(_ANSWER))
+
+    await _role_less().generate(_MESSAGES, trace=replace(_TRACE, user_id=""))
+
+    assert collector.traces[0].span_metadata["user_id"] == "unknown"
+    assert collector.traces[0].user_id is None
 
 
 # Scenario: A failing call closes the phase it named

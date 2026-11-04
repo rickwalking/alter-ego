@@ -113,7 +113,7 @@ class TestBlogPostAIServiceMutationKillers:
         ) as mock_propagate:
             await service.suggest(_SuggestInput("text", action="improve", trace=trace))
 
-        mock_propagate.assert_called_once_with("post-1", "ai_suggest")
+        mock_propagate.assert_called_once_with("post-1", "ai_suggest", "u1")
 
     @pytest.mark.asyncio
     async def test_suggest_exact_prompt(
@@ -385,7 +385,7 @@ class TestBlogPostAIServiceMutationKillers:
                 )
             )
 
-        mock_propagate.assert_called_once_with("post-1", "ai_improve")
+        mock_propagate.assert_called_once_with("post-1", "ai_improve", "u1")
 
     @pytest.mark.asyncio
     async def test_improve_exact_prompt_without_persona(

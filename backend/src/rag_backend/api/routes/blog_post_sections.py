@@ -197,7 +197,7 @@ async def generate_en_translation(request: Request, target: Post) -> LockedBlogP
     await target.db.rollback()
     try:
         english = await build_blog_translation_service().translate(
-            str(target.post_id), document
+            str(target.post_id), document, user_id
         )
     except BlogTranslationError as exc:
         raise HTTPException(

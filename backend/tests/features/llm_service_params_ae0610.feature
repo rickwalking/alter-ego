@@ -83,25 +83,51 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
       | suggest | ai_suggest |
       | improve | ai_improve |
 
+  Scenario Outline: A blog AI call records the user who asked for it
+    When the blog <call> runs for user u-1
+    Then the LLM call ran in a trace with user u-1
+
+    Examples:
+      | call        |
+      | suggest     |
+      | improve     |
+      | translation |
+
+  Scenario: A blog translation with no user keeps the unknown fallback
+    When a background job translates a blog post
+    Then the LLM call ran in a trace with user unknown
+
   Scenario Outline: A refinement names its own phase
     When a <refinement> is refined
     Then the LLM call names phase <phase>, agent carousel_refinement and content type carousel
     And it names the project id
+    And it names the project owner as the user
 
     Examples:
       | refinement      | phase         |
       | slide image     | refine_image  |
       | carousel design | refine_design |
 
+  Scenario: A refinement of a project with no owner names no user
+    When a slide image of a project with no owner is refined
+    Then the LLM call names no user
+
   Scenario: A conversation title names its own phase
     When a conversation title is generated
     Then the LLM call names phase conversation_title, agent conversation_title and content type chat
+    And it names the conversation id as the project id
+    And it names the signed-in user
 
   Scenario: The service opens the phase the call names
     Given a Langfuse handler is configured
     When a caller names phase refine_design for project p-1
     Then the generation is named "carousel.refine_design"
-    And its trace carries the phase, agent, content type and project id
+    And its trace carries the phase, agent, content type, project id and user id
+
+  Scenario: A call that names no user keeps the unknown fallback
+    Given a Langfuse handler is configured
+    When a caller names a phase and no user
+    Then its trace records the user as unknown
 
   Scenario: A failing call closes the phase it named
     Given the role-less chat model answers nothing

@@ -133,7 +133,9 @@ class BlogPostAIService:
         trace_context = _start_action_trace(input_data.action, input_data.trace)
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
-        with blog_ai_propagate(trace_context.post_id or "unknown", "ai_suggest"):
+        with blog_ai_propagate(
+            trace_context.post_id or "unknown", "ai_suggest", trace_context.user_id
+        ):
             prompt = PROMPT_AI_SUGGEST.format(
                 action=input_data.action,
                 context=safe_context,
@@ -164,7 +166,9 @@ class BlogPostAIService:
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
 
-        with blog_ai_propagate(trace_context.post_id or "unknown", "ai_improve"):
+        with blog_ai_propagate(
+            trace_context.post_id or "unknown", "ai_improve", trace_context.user_id
+        ):
             persona = await self._load_persona(input_data.db, input_data.persona_id)
             if persona is not None:
                 agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
@@ -210,10 +214,13 @@ class BlogPostAIService:
         persona = await self._resolve_persona(input_data)
         if persona is None:
             raise ValueError(ERR_BLOG_PERSONA_REQUIRED)
-        post_id = (input_data.trace or BlogAiTraceContext()).post_id or "unknown"
+        trace_context = input_data.trace or BlogAiTraceContext()
+        post_id = trace_context.post_id or "unknown"
         agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
         context = _rewrite_context(input_data.heading)
-        with blog_ai_propagate(post_id, PHASE_BLOG_SECTION_REWRITE):
+        with blog_ai_propagate(
+            post_id, PHASE_BLOG_SECTION_REWRITE, trace_context.user_id
+        ):
             rewritten = await agent.enforce(input_data.body_md, context=context)
         return _checked_rewrite(strip_heading_echo(rewritten, input_data.heading))
 

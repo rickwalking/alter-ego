@@ -66,12 +66,18 @@ def start_blog_workflow_trace(params: StartupParams) -> object:
     )
 
 
-def blog_ai_propagate(post_id: str, phase: str) -> AbstractContextManager[PhaseTrace]:
-    """Context manager for grouped blog AI calls; nested phases reuse the span."""
+def blog_ai_propagate(
+    post_id: str, phase: str, user_id: str = ""
+) -> AbstractContextManager[PhaseTrace]:
+    """Context manager for grouped blog AI calls; nested phases reuse the span.
+
+    An empty ``user_id`` is recorded as ``unknown``.
+    """
     return propagate_attributes(
         metadata={
             "post_id": post_id,
             "phase": phase,
+            TRACE_FIELD_USER_ID: user_id,
             TRACE_FIELD_AGENT_NAME: TRACE_AGENT_BLOG_AI,
             "content_type": "blog_post",
         },
