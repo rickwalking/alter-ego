@@ -13,6 +13,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     TextBudget,
 )
+from rag_backend.application.services.carousel.sentence_case import strip_html_tags
 from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_BODY_TOO_LONG,
     VIOLATION_COPY_TOO_MANY_LINES,
@@ -73,8 +74,11 @@ def contains_drafting_scaffold(text: str) -> bool:
 
 
 def first_cased_alpha(text: str) -> str | None:
-    """Return the first cased alphabetic character in text."""
-    for char in text.strip():
+    """Return the first alphabetic character a reader sees in text.
+
+    HTML tags are not copy, so the letters of ``<strong>`` never count.
+    """
+    for char in strip_html_tags(text):
         if char.isalpha():
             return char
     return None

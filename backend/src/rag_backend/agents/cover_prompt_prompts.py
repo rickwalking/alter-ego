@@ -36,7 +36,10 @@ from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_PHASE,
     TRACE_FIELD_USER_ID,
 )
-from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
+from rag_backend.infrastructure.monitoring_langfuse import (
+    get_langfuse_runnable_config,
+    propagate_attributes,
+)
 
 
 def cover_ideas_prompt(topic: str, palette: str, locale: IdeaLocale) -> str:
@@ -68,6 +71,10 @@ def cover_ideas_trace(user_id: str) -> AbstractContextManager[object]:
     )
 
 
+class EmptyIdeasAnswerError(ValueError):
+    """The model answered no content (e.g. its whole token budget went to reasoning)."""
+
+
 class CoverIdeasCompletion:
     """The fast chat model with the ideas' token cap and temperature bound."""
 
@@ -77,9 +84,23 @@ class CoverIdeasCompletion:
         )
 
     async def complete(self, prompt: str) -> str:
-        """The model's text answer to ``prompt``."""
-        message = await self._bound.ainvoke([HumanMessage(content=prompt)])
-        return str(message.content)
+        """The model's text answer to ``prompt``, as a Langfuse generation.
+
+        An answer with no content raises ``EmptyIdeasAnswerError``, a model failure
+        the service logs.
+        """
+        message = await self._bound.ainvoke(
+            [HumanMessage(content=prompt)], get_langfuse_runnable_config()
+        )
+        answer = str(message.content)
+        if not answer.strip():
+            raise EmptyIdeasAnswerError
+        return answer
 
 
-__all__ = ["CoverIdeasCompletion", "cover_ideas_prompt", "cover_ideas_trace"]
+__all__ = [
+    "CoverIdeasCompletion",
+    "EmptyIdeasAnswerError",
+    "cover_ideas_prompt",
+    "cover_ideas_trace",
+]

@@ -10,6 +10,9 @@ The v2 prompt answers ideas as objects (``location``, ``pose``, ...,
 ``prompt``): one repeating another's location and pose, or with a hex code, is
 dropped.
 Each call gets ``IDEAS_TIMEOUT_SECONDS``, so the two attempts stay under half a minute.
+``IDEAS_MAX_TOKENS`` matches the chat models' 32000 default: the fast models spend
+this budget on reasoning before they answer, up to about 6k tokens in prod, so the
+timeout is the real bound.
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ TOPIC_MIN_LEN: int = 3
 TOPIC_MAX_LEN: int = 500
 
 IDEAS_TEMPERATURE: float = 0.9
-IDEAS_MAX_TOKENS: int = 1500
+IDEAS_MAX_TOKENS: int = 32000
 IDEAS_TIMEOUT_SECONDS: float = 12.0
 
 KEY_IDEAS: str = "ideas"
