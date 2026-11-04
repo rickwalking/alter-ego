@@ -103,6 +103,7 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
 
 from .carousel_rubric_step import CarouselRubricStep, RubricScoreInput
 from .content_mode_brief import ContentModeBrief, load_content_mode_brief
+from .editorial_distribution_generation import _generate_en_translations
 from .editorial_distribution_pack import (
     DistributionBuildContext,
     build_editorial_distribution_updates,
@@ -124,6 +125,7 @@ from .localized_rows_sync import sync_rows_to_localized
 from .outline_by_mode import ModeOutlineRequest
 from .outline_normalize import normalize_editorial_outline
 from .recent_hooks import load_recent_hooks
+from .redrafted_translation import SlideTranslateFn
 
 
 @dataclass
@@ -218,6 +220,8 @@ class ContentReviewContext:
     translations_en: object
     retry_draft: SlideDraftRetryFn | None
     policy_version: str | None = None
+    translate_slides: SlideTranslateFn | None = None
+    scope: frozenset[int] | None = None
 
 
 class DistributionCheckParams(TypedDict):
@@ -530,25 +534,49 @@ class PhaseArtifactRunner:
                 scorer=partial(self._score_content_drafts, resolved),
             ),
         )
-        updates.update(
-            await self._build_presentation_review_updates(
-                ContentReviewContext(
-                    project_id=str(state.get("project_id", "")),
-                    slide_drafts=fit.slide_drafts,
-                    translations_en=fit.translations_en,
-                    retry_draft=self._resolve_slide_draft_retry(
-                        resolved, outline, regen
-                    ),
-                    policy_version=_state_policy_version(state),
-                )
-            )
+        await self._review_content(
+            state,
+            updates,
+            ContentReviewContext(
+                project_id=str(state.get("project_id", "")),
+                slide_drafts=fit.slide_drafts,
+                translations_en=fit.translations_en,
+                retry_draft=self._resolve_slide_draft_retry(resolved, outline, regen),
+                policy_version=_state_policy_version(state),
+                translate_slides=self._translate_slides,
+                scope=regen.scope if regenerated else None,
+            ),
         )
-        if regenerated and regen.scope is not None:
-            updates.update(keep_unscoped_slides(state, updates, regen.scope))
         await self._repair_content_gate(state, updates, resolved)
         if regenerated:
             updates.update(_settle_used_notes(state, updates))
         return updates
+
+    async def _review_content(
+        self,
+        state: CarouselWorkflowState,
+        updates: dict[str, object],
+        context: ContentReviewContext,
+    ) -> None:
+        """Build the content review into ``updates`` (in place).
+
+        A retry changes slides after the distribution wrote the rows, so its slides
+        reach the rows here, before the slower gate repair and the end of the phase.
+        """
+        review = await self._build_presentation_review_updates(context)
+        updates.update(review)
+        if context.scope is not None:
+            updates.update(keep_unscoped_slides(state, updates, context.scope))
+        if STATE_FIELD_SLIDE_DRAFTS in review:
+            await sync_rows_to_localized(self._db, context.project_id, updates)
+
+    async def _translate_slides(
+        self, slide_drafts: list[dict[str, object]]
+    ) -> dict[int, dict[str, object]]:
+        """The EN translation of re-drafted slides, as the distribution makes it."""
+        return await _generate_en_translations(
+            self._llm, slide_drafts, self._translation_answers
+        )
 
     def _style_guide(self, resolved: EditorialWorkflowStartInput) -> str:
         """The author's style guide for the field rewrites ("" without a persona)."""
@@ -632,6 +660,7 @@ class PhaseArtifactRunner:
                 translations_en=translations,
                 policy_version=context.policy_version,
                 retry_draft=context.retry_draft,
+                translate_slides=context.translate_slides,
             )
         )
 

@@ -3,7 +3,8 @@
 the content phase validates every localized slide payload it builds.
 Parse failures are first repaired deterministically (scaffold extraction,
 shape normalization, bounded copy repair); slides that stay blocking get ONE
-injectable LLM re-draft; anything still blocking is attached to the content
+injectable LLM re-draft, and a re-drafted slide gets its EN copy from the new PT;
+anything still blocking is attached to the content
 interrupt payload as a blocking per-slide validation report so the reviewer
 sees the violations at the content step.
 
@@ -18,7 +19,7 @@ the repair outcome, so parse incidents are observable at write time.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import structlog
 
@@ -29,6 +30,11 @@ from rag_backend.application.services.carousel.presentation_review_pipeline impo
     WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY,
     PresentationReviewBuildResult,
     build_presentation_review_result_async,
+)
+from rag_backend.application.services.carousel.redrafted_translation import (
+    RedraftedTranslationRequest,
+    SlideTranslateFn,
+    refresh_redrafted_translations,
 )
 from rag_backend.application.services.carousel.slide_parse_failures import (
     SlideParseFailure,
@@ -60,6 +66,7 @@ class FailClosedReviewCommand:
     translations_en: Mapping[int, dict[str, object]] | None = None
     policy_version: str | None = None
     retry_draft: SlideDraftRetryFn | None = None
+    translate_slides: SlideTranslateFn | None = None
 
 
 def _report_dict(updates: Mapping[str, object]) -> dict[str, object]:
@@ -145,13 +152,13 @@ def _finalize(
 async def _replace_failing_drafts(
     command: FailClosedReviewCommand,
     failing: set[int],
-) -> tuple[list[dict[str, object]], bool]:
-    """Re-draft each failing slide at most once via the injectable retry."""
+) -> tuple[list[dict[str, object]], frozenset[int]]:
+    """Re-draft each failing slide at most once; the drafts and the re-drafted slides."""
     retry = command.retry_draft
     drafts = [dict(draft) for draft in command.slide_drafts]
     if retry is None:
-        return drafts, False
-    replaced = False
+        return drafts, frozenset()
+    replaced: set[int] = set()
     for position, draft in enumerate(drafts):
         slide_index = resolve_slide_index(draft, position + 1)
         if slide_index not in failing:
@@ -159,8 +166,31 @@ async def _replace_failing_drafts(
         fresh = await retry(slide_index)
         if isinstance(fresh, dict):
             drafts[position] = dict(fresh)
-            replaced = True
-    return drafts, replaced
+            replaced.add(slide_index)
+    return drafts, frozenset(replaced)
+
+
+async def _with_fresh_translations(
+    command: FailClosedReviewCommand,
+    drafts: list[dict[str, object]],
+    redrafted: frozenset[int],
+) -> FailClosedReviewCommand:
+    """The command whose translations follow the re-drafted slides.
+
+    A deck without stored translations has nothing stale, so it costs no call.
+    """
+    if command.translate_slides is None or not command.translations_en:
+        return command
+    translations = await refresh_redrafted_translations(
+        RedraftedTranslationRequest(
+            project_id=command.project_id,
+            slide_drafts=drafts,
+            redrafted=redrafted,
+            translations_en=command.translations_en,
+            translate=command.translate_slides,
+        )
+    )
+    return replace(command, translations_en=translations)
 
 
 async def _build_review(
@@ -184,10 +214,11 @@ async def _retry_blocking_slides(
     failing = _blocking_slide_indices(updates)
     if not failing:
         return None
-    drafts, replaced = await _replace_failing_drafts(command, failing)
-    if not replaced:
+    drafts, redrafted = await _replace_failing_drafts(command, failing)
+    if not redrafted:
         return None
-    return drafts, await _build_review(command, drafts)
+    refreshed = await _with_fresh_translations(command, drafts, redrafted)
+    return drafts, await _build_review(refreshed, drafts)
 
 
 async def build_fail_closed_review_updates(

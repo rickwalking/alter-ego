@@ -52,6 +52,13 @@ The translation is made once, and the fail-closed retry can replace a draft afte
 `localized_slide_builder` drops an EN `insight` its PT slide does not have, and EN takes PT's
 `content_kind`. The validator still blocks any other drift.
 
+A slide the fail-closed retry re-drafts gets its EN copy from the new PT (AE-0611): only the re-drafted slides are
+translated, in one fast-model call per retry pass, from the PT the review will show. A re-draft that carries its own
+`presentation_en` needs no call. If the translation fails or skips a slide, that slide loses its stored translation, so
+its EN falls back to the draft and the gate blocks it, instead of EN describing the old slide. The slide rows take the
+retry's copy right away, before the gate repair, and a row's `translation_en` keeps no `content_kind` from the old
+translation.
+
 Other fixes from the same run:
 
 - The proper-noun vocabulary learns multi-word names whole ("Claude Code", "Grok Bot"), so
