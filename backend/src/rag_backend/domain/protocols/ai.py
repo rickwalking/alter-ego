@@ -1,11 +1,25 @@
 """Protocols for AI service interfaces."""
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import Document, DocumentChunk, SearchResult
 from rag_backend.domain.types import ChatEvent
+
+
+@dataclass(frozen=True)
+class LlmCallTrace:
+    """Who an LLM call belongs to, for a caller with no workflow phase around it.
+
+    The LLM adapter opens the trace, so the caller needs no tracing dependency.
+    """
+
+    phase: str
+    agent_name: str
+    content_type: str
+    project_id: str = ""
 
 
 class LLMService(Protocol):
@@ -15,6 +29,7 @@ class LLMService(Protocol):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
+        trace: LlmCallTrace | None = None,
     ) -> str: ...
 
     def generate_stream(

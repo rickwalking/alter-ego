@@ -83,21 +83,28 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
       | suggest | ai_suggest |
       | improve | ai_improve |
 
-  Scenario: A refined slide image prompt is traced
-    When a slide image is refined
-    Then the LLM call ran in a trace with phase refine_image, agent carousel_refinement and content type carousel
-    And the trace carries the project id
+  Scenario Outline: A refinement names its own phase
+    When a <refinement> is refined
+    Then the LLM call names phase <phase>, agent carousel_refinement and content type carousel
+    And it names the project id
 
-  Scenario: A refined carousel design is traced
-    When a carousel design is refined
-    Then the LLM call ran in a trace with phase refine_design, agent carousel_refinement and content type carousel
-    And the trace carries the project id
+    Examples:
+      | refinement      | phase         |
+      | slide image     | refine_image  |
+      | carousel design | refine_design |
 
-  Scenario: A LinkedIn post is a named generation of the running phase
-    Given the content phase is running
-    When a LinkedIn post is generated in Portuguese
-    Then the generation is named "carousel.content linkedin pt"
-
-  Scenario: A conversation title is traced
+  Scenario: A conversation title names its own phase
     When a conversation title is generated
-    Then the LLM call ran in a trace with phase conversation_title, agent conversation_title and content type chat
+    Then the LLM call names phase conversation_title, agent conversation_title and content type chat
+
+  Scenario: The service opens the phase the call names
+    Given a Langfuse handler is configured
+    When a caller names phase refine_design for project p-1
+    Then the generation is named "carousel.refine_design"
+    And its trace carries the phase, agent, content type and project id
+
+  Scenario: A failing call closes the phase it named
+    Given the role-less chat model answers nothing
+    When a caller names a phase
+    Then the call fails with an empty answer error
+    And the trace records the error

@@ -81,8 +81,9 @@ The 500 is what those two routes already return for any other model failure: the
 - `max_tokens` removed from `LLMService` and the two protocols that restate it.
 - `generate` raises `EmptyLLMResponseError` on an answer with no visible text.
 - Both methods pass `get_langfuse_runnable_config()`.
-- Trace context for the callers that had none: refine image and design, the conversation title, the LinkedIn
-  generation name, and the agent name on `blog_ai_propagate`.
+- `LlmCallTrace`, a domain value on the `LLMService.generate` port: a caller with no phase around it names its phase,
+  agent and content type, and the adapter opens the trace. Refine image and design and the conversation title use it.
+- `blog_ai_propagate` names the `blog_ai` agent.
 
 ## Non-Goals
 
@@ -118,23 +119,24 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
   Scenario: The call reaches Langfuse as a generation
   Scenario: Without Langfuse the call runs with no callbacks
   Scenario Outline: A blog AI call is traced with its phase, agent and content type
-  Scenario: A refined slide image prompt is traced
-  Scenario: A refined carousel design is traced
-  Scenario: A LinkedIn post is a named generation of the running phase
-  Scenario: A conversation title is traced
+  Scenario Outline: A refinement names its own phase
+  Scenario: A conversation title names its own phase
+  Scenario: The service opens the phase the call names
+  Scenario: A failing call closes the phase it named
 ```
 
 ## Delta
 
 ### ADDED
 
-- Trace constants in `domain/constants/langfuse_tracing.py`; `_refinement_trace` in `carousel_refinement.py`.
+- `LlmCallTrace` in `domain/protocols/ai.py`; the `trace` argument of `LLMService.generate`.
+- Trace constants in `domain/constants/langfuse_tracing.py`.
 
 ### MODIFIED
 
 - `AnthropicLLMService.generate` and `generate_stream`: temperature bound, traced; `generate` raises on empty.
 - `blog_ai_propagate`: names the `blog_ai` agent (it defaulted to `editorial_workflow`).
-- `LinkedInPostGenerator.generate`, `get_conversation_title_generator`: trace context.
+- `regenerate_slide_image`, `refine_carousel_design`, `get_conversation_title_generator`: pass an `LlmCallTrace`.
 
 ### REMOVED
 
@@ -144,8 +146,9 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 ## Affected Areas
 
 - Backend: `infrastructure/external/anthropic_llm.py`, `domain/protocols/ai.py`, `domain/constants/langfuse_tracing.py`,
-  `blog_post_ai_service.py`, `blog_translation_service.py`, `blog_workflow_observability.py`,
-  `carousel_refinement.py`, `linkedin_post_generator.py`, `api/dependencies/conversation.py`
+  `domain/protocols/__init__.py`, `blog_post_ai_service.py`, `blog_translation_service.py`,
+  `blog_workflow_observability.py`,
+  `carousel_refinement.py`, `api/dependencies/conversation.py`
 - Tests: new feature and two unit test files
 - Observability: new generations for every `LLMService` call
 - Frontend / Database / Deployment: none
@@ -173,9 +176,14 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 
 ### 2026-11-04
 
-Audit done. Red before the fix: 15 of 19 new tests failed on the behaviour (`0.7 == 0.2`, `DID NOT RAISE`, no
-generation, no trace), and 2 more failed on a bad test action, which was corrected. The other 2 pass by design: the
-default temperature and the no-Langfuse path. Green after the fix.
+Audit done. Red before the fix: 15 of the first 19 new tests failed on the behaviour (`0.7 == 0.2`, `DID NOT RAISE`,
+no generation, no trace), and 2 more failed on a bad test action, which was corrected. The other 2 pass by design:
+the default temperature and the no-Langfuse path.
+
+The first version opened the phases in the callers. `backend:imports`, `backend:arch-ratchet` and `backend:integrity`
+failed on it: three new application/API imports of infrastructure. Those are real layering violations, and the
+baseline is not grown for them, so the trace moved onto the port as a domain value and the imports went away. The
+LinkedIn scenario went with them (see Decision Log). The tests were rewritten to match, then green.
 
 ## Files Touched
 
@@ -211,10 +219,15 @@ Pending.
 - **The empty check is in `generate`, not `generate_stream`.** The stream has no caller and yields chunks as they
   arrive.
 - **`generate_stream` fixed, not deleted.** It had the same two lines. Deleting a protocol method is a separate change.
-- **Title tracing at the DI edge.** `ConversationService` receives a plain callable and has no Langfuse dependency,
-  so that stays the same.
-- **LinkedIn uses `generation_run_name`, not a phase.** It runs inside the content phase, and a nested
-  `propagate_attributes` would overwrite the phase metadata on the outer trace.
+- **`LlmCallTrace` on the port, not `propagate_attributes` in the callers.** The application layer and the API may not
+  import Langfuse, and new import pairs would grow the baseline. A domain value keeps them clean, and it follows the
+  way the palette service gets its trace from outside. It replaces `max_tokens` in the argument list, so the
+  signature stays at the same size. `LLMServiceProtocol` and `TranslationLLM` keep their shorter shape, since their
+  callers trace through `blog_ai_propagate`.
+- **Title trace at the DI edge.** `ConversationService` receives a plain callable, and `partial` keeps it plain.
+- **LinkedIn is unchanged.** It runs inside the content phase, so its generation already gets that phase's metadata
+  from `generate`, the same as the caption. A nested phase would overwrite the phase on the outer trace. Its
+  generation is named `carousel.content`, like the caption.
 - **The temperature change is the visible effect.** Translation gets more literal (0.2), design more repeatable
   (0.3), LinkedIn looser (0.8). These are the values the code always asked for.
 

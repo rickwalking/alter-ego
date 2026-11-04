@@ -25,12 +25,8 @@ from rag_backend.application.services.writing_style_profile import (
     WritingStyleProfile,
     format_samples_for_prompt,
 )
-from rag_backend.domain.constants.langfuse_tracing import (
-    TRACE_DETAIL_LINKEDIN_TEMPLATE,
-)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import LLMService
-from rag_backend.infrastructure.langfuse_phase_trace import generation_run_name
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -120,12 +116,10 @@ class LinkedInPostGenerator:
                 voice_examples=format_samples_for_prompt(samples, language),
             ),
         )
-        detail = TRACE_DETAIL_LINKEDIN_TEMPLATE.format(language=language)
-        with generation_run_name(detail):
-            text = await self._llm.generate(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.8,
-            )
+        text = await self._llm.generate(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.8,
+        )
         cleaned = _strip_leading_label(text).strip()
         truncated = _truncate_on_boundary(cleaned, LINKEDIN_MAX_CHARS)
         return LinkedInPost(language=language, text=truncated)

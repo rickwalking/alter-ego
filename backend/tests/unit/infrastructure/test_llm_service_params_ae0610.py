@@ -20,6 +20,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import SecretStr
 
 from rag_backend import monitoring_langfuse
+from rag_backend.domain.protocols import LlmCallTrace
 from rag_backend.infrastructure.config.llm_routing_constants import LLM_ROLE_FAST
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.external import routed_chat_model
@@ -28,6 +29,7 @@ from rag_backend.infrastructure.external.routed_chat_model import (
     EmptyLLMResponseError,
 )
 from rag_backend.infrastructure.langfuse_phase_trace import phase_trace
+from tests.langfuse_trace_fakes import install_trace_collector
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -38,6 +40,12 @@ _QUEUE = f"go:{_MODEL_FIRST},go:{_MODEL_NEXT}"
 _FACTORY_MAX_TOKENS = 32000
 _ANSWER = "the answer"
 _MESSAGES = [{"role": "user", "content": "the prompt"}]
+_TRACE = LlmCallTrace(
+    phase="refine_design",
+    agent_name="carousel_refinement",
+    content_type="carousel",
+    project_id="p-1",
+)
 
 Respond = Callable[[str], str]
 
@@ -282,3 +290,38 @@ async def test_without_langfuse_the_call_runs_with_no_callbacks(
     _mount(respx.mock, _always(_ANSWER))
 
     assert await _role_less().generate(_MESSAGES) == _ANSWER
+
+
+# Scenario: The service opens the phase the call names
+@respx.mock
+async def test_the_service_opens_the_phase_the_call_names(
+    generations: _Generations, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    collector = install_trace_collector(monkeypatch)
+    _mount(respx.mock, _always(_ANSWER))
+
+    await _role_less().generate(_MESSAGES, trace=_TRACE)
+
+    assert generations.names == ["carousel.refine_design"]
+    metadata = collector.traces[0].span_metadata
+    assert metadata["phase"] == "refine_design"
+    assert metadata["agent_name"] == "carousel_refinement"
+    assert metadata["content_type"] == "carousel"
+    assert metadata["project_id"] == "p-1"
+
+
+# Scenario: A failing call closes the phase it named
+@respx.mock
+async def test_a_failing_call_closes_the_phase_it_named(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collector = install_trace_collector(monkeypatch)
+    _mount(respx.mock, _always(""))
+
+    with pytest.raises(EmptyLLMResponseError):
+        await _role_less().generate(_MESSAGES, trace=_TRACE)
+
+    output = collector.traces[0].output
+    assert isinstance(output, dict)
+    assert output["status"] == "error"
+    assert output["error_type"] == "EmptyLLMResponseError"

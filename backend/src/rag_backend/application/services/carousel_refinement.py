@@ -5,7 +5,6 @@ Extracted from the legacy monolith agent to keep the refinement module focused.
 
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
 from pathlib import Path
 from uuid import UUID
 
@@ -19,19 +18,12 @@ from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_AGENT_CAROUSEL_REFINEMENT,
     TRACE_CONTENT_TYPE_CAROUSEL,
-    TRACE_FIELD_AGENT_NAME,
-    TRACE_FIELD_CONTENT_TYPE,
-    TRACE_FIELD_PHASE,
-    TRACE_FIELD_PROJECT_ID,
     TRACE_PHASE_REFINE_DESIGN,
     TRACE_PHASE_REFINE_IMAGE,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols import LlmCallTrace
 from rag_backend.infrastructure.logging import get_logger
-from rag_backend.infrastructure.monitoring_langfuse import (
-    PhaseTrace,
-    propagate_attributes,
-)
 
 logger = get_logger()
 
@@ -128,17 +120,13 @@ def _render_design_prompt(instruction: str, current_css: str) -> str:
         return prompt_text
 
 
-def _refinement_trace(
-    project_id: UUID, phase: str
-) -> AbstractContextManager[PhaseTrace]:
+def _refinement_trace(project_id: UUID, phase: str) -> LlmCallTrace:
     """The Langfuse phase of one owner-requested refinement of ``project_id``."""
-    return propagate_attributes(
-        metadata={
-            TRACE_FIELD_PROJECT_ID: str(project_id),
-            TRACE_FIELD_PHASE: phase,
-            TRACE_FIELD_AGENT_NAME: TRACE_AGENT_CAROUSEL_REFINEMENT,
-            TRACE_FIELD_CONTENT_TYPE: TRACE_CONTENT_TYPE_CAROUSEL,
-        },
+    return LlmCallTrace(
+        phase=phase,
+        agent_name=TRACE_AGENT_CAROUSEL_REFINEMENT,
+        content_type=TRACE_CONTENT_TYPE_CAROUSEL,
+        project_id=str(project_id),
     )
 
 
@@ -185,11 +173,11 @@ class CarouselRefinementMixin:
             raise ValueError(_ERR_NO_IMAGE_PROMPT.format(slide_number))
 
         rewrite_prompt = _render_image_rewrite_prompt(instruction, current_prompt)
-        with _refinement_trace(project_id, TRACE_PHASE_REFINE_IMAGE):
-            new_prompt = await self._llm.generate(
-                [{"role": "user", "content": rewrite_prompt}],
-                temperature=0.7,
-            )
+        new_prompt = await self._llm.generate(
+            [{"role": "user", "content": rewrite_prompt}],
+            temperature=0.7,
+            trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_IMAGE),
+        )
         new_prompt = new_prompt.strip()
         if not new_prompt:
             raise ValueError(_ERR_EMPTY_IMAGE_PROMPT)
@@ -264,11 +252,11 @@ class CarouselRefinementMixin:
         )
 
         design_prompt = _render_design_prompt(instruction, current_css[:2000])
-        with _refinement_trace(project_id, TRACE_PHASE_REFINE_DESIGN):
-            override_css = await self._llm.generate(
-                [{"role": "user", "content": design_prompt}],
-                temperature=0.3,
-            )
+        override_css = await self._llm.generate(
+            [{"role": "user", "content": design_prompt}],
+            temperature=0.3,
+            trace=_refinement_trace(project_id, TRACE_PHASE_REFINE_DESIGN),
+        )
         override_css = override_css.strip()
         if not override_css:
             raise ValueError(_ERR_EMPTY_CSS)
