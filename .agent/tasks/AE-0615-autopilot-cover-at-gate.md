@@ -1,6 +1,6 @@
 # AE-0615 — Put a succeeded autopilot cover on slide 1 before the first final review
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bug
