@@ -24,6 +24,8 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Protocol
 
+import structlog
+
 from rag_backend.application.services.blog.ai_envelope import strip_code_fence
 from rag_backend.application.services.carousel.palette_contrast import (
     contrast_ratio,
@@ -53,9 +55,12 @@ from rag_backend.domain.constants.palette_generation import (
     KEY_KEYWORDS,
     KEY_NAME,
     KEY_PRIMARY,
+    LOG_PALETTE_CALL_FAILED,
     PALETTE_CANDIDATE_COUNT,
 )
 from rag_backend.domain.constants.palette_types import PaletteMode
+
+logger = structlog.get_logger(__name__)
 
 _BRAND_KEYWORDS: frozenset[str] = frozenset(
     keyword.lower() for keywords in BRAND_KEYWORDS.values() for keyword in keywords
@@ -254,6 +259,7 @@ class PaletteGenerationService:
                 self._ports.llm.complete(prompt), timeout=GENERATION_TIMEOUT_SECONDS
             )
         except Exception as exc:
+            logger.warning(LOG_PALETTE_CALL_FAILED, error=type(exc).__name__)
             raise PaletteGenerationError from exc
         return answer or ""
 
