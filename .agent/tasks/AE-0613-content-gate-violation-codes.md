@@ -108,6 +108,10 @@ Review round 1: a test with the review's exact example failed on the old code, a
 for an unknown code or a malformed entry. A warning is now stored only when no blocker was dropped. The new tests cover
 that rule, the known set against the sanitizer, and the `truncated` key against the sanitizer's literal.
 
+CI at `26d161a6` (run 41842517704) failed `backend / Test & Coverage` with 1 failed, 8870 passed, 2 skipped. The failing
+test is outside this change: see Test Evidence. This code was not changed for it and the run was not repeated. The fix is
+PR #359 (AE-0614); CI runs again once that is merged and `main` is merged here.
+
 ## Files Touched
 
 - `backend/src/rag_backend/domain/constants/violation_codes.py` (new)
@@ -132,6 +136,15 @@ that rule, the known set against the sanitizer, and the `truncated` key against 
   `diff-cover` on those tests: 100% (61 lines, 0 missing).
 - Review round 1 single gates PASS: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
   comments, gherkin-refs, dead-code, docstrings, diff-cover.
+- CI at `53c5d4f7` (fixes, before merging `main`): every check passed, Mutation and Test & Coverage included.
+- CI at `26d161a6` (the merge of `main`, which adds no `backend/` change), run 41842517704, job 126617509187:
+  `backend / Test & Coverage` FAILED, 1 failed, 8870 passed, 2 skipped. Mutation was skipped as a result.
+  - Test: `tests/integration/test_logout_other_sessions_pg_ae0593.py::test_the_locked_read_serialises_two_writers`
+  - Log line: `ResourceWarning: <aiosqlite.core.Connection object at 0x7f0e7b1d1b80> was deleted before being closed.`,
+    raised as `pytest.PytestUnraisableExceptionWarning: Exception ignored in: <function Connection.__del__ ...>`
+  - Cause: the known aiosqlite leak, where the post-commit outbox relay is left running across the fixture dispose.
+    Not caused by this change. Fix: PR #359 (AE-0614), open at the time of writing.
+  - Still needed: a green Test & Coverage and Mutation run on a head that includes #359.
 - Full gate: lead's heavy slot. Mutation: CI only (AE-0448).
 
 ## QA Report
