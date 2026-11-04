@@ -24,12 +24,10 @@ from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
 )
 from rag_backend.modules.autopilot.application.owner_action_helpers import (
+    choice_deps,
     delivery_of,
     pending_of,
     prompt_of,
-)
-from rag_backend.modules.autopilot.application.owner_approval import (
-    FinalReviewApproval,
 )
 from rag_backend.modules.autopilot.application.owner_replies import OwnerReplies
 from rag_backend.modules.autopilot.application.owner_steps import (
@@ -42,7 +40,6 @@ from rag_backend.modules.autopilot.application.owner_steps import (
 from rag_backend.modules.autopilot.application.publish_choice import (
     CHOICE_KINDS,
     PublishChoiceActions,
-    PublishChoiceDeps,
 )
 from rag_backend.modules.autopilot.application.queue_actions import QueueOwnerActions
 from rag_backend.modules.autopilot.application.schedule_steps import is_schedule_reply
@@ -185,14 +182,15 @@ class OwnerActionService(
         self._deps = deps
         self._replies = DeferredOwnerMessenger(deps.messenger)
         self._out = OwnerReplies(self._replies)
-        self._choice = PublishChoiceActions(_choice_deps(deps), self._out)
+        self._choice = PublishChoiceActions(choice_deps(deps), self._out)
 
     async def deliver(self) -> int:
         """Publish queue notices and replies after the commit."""
         if self._deps.queue is not None:
             await self._deps.queue.deliver_notifications()
+        delivered = await self._replies.deliver()
         await self._deliver_retries()
-        return await self._replies.deliver()
+        return delivered
 
     def discard(self) -> int:
         """Drop queue notices and replies after a rollback."""
@@ -369,22 +367,6 @@ class OwnerActionService(
 
     async def _tell(self, update: WebhookUpdate, text: str) -> None:
         await self._out.tell(update, text)
-
-
-def _choice_deps(deps: OwnerActionDeps) -> PublishChoiceDeps:
-    approval = FinalReviewApproval(
-        editorial=deps.editorial,
-        release_port=deps.release,
-        carousels=deps.carousels,
-    )
-    return PublishChoiceDeps(
-        runs=deps.runs,
-        pending=deps.pending,
-        approval=approval,
-        clock=deps.clock,
-        default_publish=deps.default_publish,
-        signals=deps.schedule_signals,
-    )
 
 
 def _handlers() -> dict[str, _Handler]:

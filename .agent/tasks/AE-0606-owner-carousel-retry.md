@@ -227,6 +227,12 @@ Pending.
     refused as `concurrent_update`; any other database error still raises.
   - The capability (`GET`) and the Retry both refuse a revise at the revision cap (`revision_cap_exceeded`) from
     the checkpoint's counters, through the editorial cap-phase rule; the editorial cap check stays as the backstop.
+- Review round 2 (2026-11-04): the post-commit announce is best effort (`carousel_retry_announce_failed` with
+  the error class only) and the Telegram replies are delivered before it; tests prove a failed audit or commit
+  announces nothing and propagates. The cap check is one shared helper (`revision_cap_reached`, used by
+  `validate_revision_cap` and the Retry facts). The Telegram rejected check now reads the gate for approved
+  carousels too (one read). `owner_actions.py` stays under 400 lines by moving `choice_deps` to
+  `owner_action_helpers.py`.
 
 ## Blockers
 

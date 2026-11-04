@@ -57,18 +57,17 @@ class FinalReviewApproval:
         """The revision an approve must answer now, and whether it was rejected.
 
         One gate read for both, so the revision the tap is compared with is the
-        one the rejected check saw. An already approved carousel needs no approve
-        (revision None, no read): a slide-1 change drops the approval in the same
-        commit, so its slide 1 is the approved one.
+        one the rejected check saw. The rejected check runs for every carousel. An
+        already approved carousel needs no approve (revision None): a slide-1
+        change drops the approval in the same commit, so its slide 1 is the
+        approved one.
         """
         project_id = run.carousel_project_id or ""
-        if await self._already_approved(project_id):
-            return ReviewGate(revision=None)
         snapshot = await self.editorial.read_gate(project_id)
-        return ReviewGate(
-            revision=snapshot.lock_version,
-            rejected=snapshot.phase_status == PHASE_STATUS_REJECTED,
-        )
+        rejected = snapshot.phase_status == PHASE_STATUS_REJECTED
+        if await self._already_approved(project_id):
+            return ReviewGate(revision=None, rejected=rejected)
+        return ReviewGate(revision=snapshot.lock_version, rejected=rejected)
 
     async def approve(
         self, run: AutopilotRun, revision: int | None = None
