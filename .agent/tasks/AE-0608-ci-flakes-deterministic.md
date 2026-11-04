@@ -184,7 +184,7 @@ None.
 - **Unclosed connection warning, not fixed.** `test_change_own_password_pg_ae0511.py` has failed on
   `PytestUnraisableExceptionWarning` from `Connection.__del__`, once for
   `test_admin_created_user_must_change_before_using_the_app` and once locally for
-  `test_a_wrong_current_password_leaves_the_store`. The local trace shows an `aiosqlite` connection, in a test that runs
+  `test_a_wrong_current_password_leaves_the_stored_user_unchanged`. The local trace shows an `aiosqlite` connection, in a test that runs
   on Postgres, so the test only hosts the garbage collection and the leak comes from an earlier test. A tracer naming
   the opener of every unclosed `aiosqlite` or `asyncpg` connection, proven on a seeded leak, found none in a zero-budget
   run (aiosqlite only), a +3h run (both drivers), or six runs of the two password files. Budget cancellation is ruled
