@@ -228,6 +228,22 @@ Pending.
   - The capability (`GET`) and the Retry both refuse a revise at the revision cap (`revision_cap_exceeded`) from
     the checkpoint's counters, through the editorial cap-phase rule; the editorial cap check stays as the backstop.
 
+- PR2, frontend (2026-11-04):
+  - The website button is on the phase card: inside the failed card next to "Start over", above the phase content
+    on a blocked or rejected carousel (Pedro's decision, 2026-11-03).
+  - A `reopen` runs nothing, so no `run.finished` arrives: every 202 re-reads the workflow state, and the
+    finished toasts follow only a retry accepted as `in_progress`.
+  - `finishedOk` / `finishedFailed` come from the workflow state the page already follows (SSE): `awaiting_human`
+    is ok; `failed` and `rejected` are failed. Tracking lives in the page, so a reload drops it.
+  - The capability is keyed by phase, status and lock version, so a state change re-reads it. It is polled at the
+    board interval while the refusal is temporary (`resume_already_in_progress`, `mutation_in_progress`,
+    `autopilot_active`): an escalation changes neither the phase nor the lock version.
+  - A refusal is shown in a toast and next to the button, and clears when the workflow state changes.
+  - A failed capability read hides the button without an error: Retry is an optional action on the card.
+  - The publish page's failed notice keeps its label: its button only links back to the workspace, so
+    "Start over" would be wrong there. `WorkflowFailedCard` takes `restartLabel`, passed by the workspace only.
+  - `url-inventory.snapshot.json` regenerated for the new proxy route; it records routes and allows nothing.
+
 ## Blockers
 
 None.
