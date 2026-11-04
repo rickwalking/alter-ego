@@ -7,6 +7,7 @@ Using Protocols instead of abstract classes allows for more flexible, decoupled 
 from rag_backend.domain.protocols.ai import (
     Agent,
     DocumentProcessor,
+    EmptyLLMResponseError,
     LlmCallTrace,
     LLMService,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "DocumentProcessor",
     "DocumentRepository",
     "EmbeddingService",
+    "EmptyLLMResponseError",
     "ExportConfig",
     "ImageGenerationService",
     "ImageStyleStrategy",

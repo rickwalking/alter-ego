@@ -9,6 +9,10 @@ from rag_backend.domain.models import Document, DocumentChunk, SearchResult
 from rag_backend.domain.types import ChatEvent
 
 
+class EmptyLLMResponseError(RuntimeError):
+    """The primary model returned no content and no tool call."""
+
+
 @dataclass(frozen=True)
 class LlmCallTrace:
     """Who an LLM call belongs to, for a caller with no workflow phase around it.

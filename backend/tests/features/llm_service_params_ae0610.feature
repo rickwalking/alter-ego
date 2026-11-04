@@ -134,3 +134,20 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
     When a caller names a phase
     Then the call fails with an empty answer error
     And the trace records the error
+
+  Scenario Outline: An empty answer on a blog AI route is a typed 503
+    Given the model answers nothing
+    When the editor POSTs /blog-posts/{id}/<route>
+    Then the response is 503 with code provider_unavailable and a safe message
+    And the body names no model
+    And the post records no AI action
+
+    Examples:
+      | route      |
+      | ai-suggest |
+      | ai-improve |
+
+  Scenario: An empty answer on ai-suggest stores no suggestion
+    Given the model answers nothing
+    When the editor POSTs /blog-posts/{id}/ai-suggest
+    Then the post has no stored suggestion
