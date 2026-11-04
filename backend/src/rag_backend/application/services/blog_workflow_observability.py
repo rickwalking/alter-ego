@@ -8,6 +8,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from rag_backend.domain.constants.blog_generation import TRACE_CONTENT_TYPE_BLOG_POST
 from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_AGENT_BLOG_AI,
     TRACE_FIELD_AGENT_NAME,
     TRACE_FIELD_CONTENT_TYPE,
     TRACE_FIELD_PHASE,
@@ -68,7 +69,12 @@ def start_blog_workflow_trace(params: StartupParams) -> object:
 def blog_ai_propagate(post_id: str, phase: str) -> AbstractContextManager[PhaseTrace]:
     """Context manager for grouped blog AI calls; nested phases reuse the span."""
     return propagate_attributes(
-        metadata={"post_id": post_id, "phase": phase, "content_type": "blog_post"},
+        metadata={
+            "post_id": post_id,
+            "phase": phase,
+            TRACE_FIELD_AGENT_NAME: TRACE_AGENT_BLOG_AI,
+            "content_type": "blog_post",
+        },
     )
 
 

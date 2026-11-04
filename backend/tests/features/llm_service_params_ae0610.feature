@@ -1,0 +1,103 @@
+Feature: LLMService sends the requested temperature and records its calls (AE-0610)
+
+  LLMService.generate passed temperature and max_tokens through with_config,
+  which puts them in the run config and not in the request, so every caller ran
+  at 0.7 and 32000. No caller passes max_tokens, and every model behind this
+  service spends its token budget on reasoning before it answers (AE-0607), so
+  the argument is gone and every call keeps the 32000 default. The calls also
+  recorded no Langfuse generation.
+
+  Scenario Outline: The provider receives the requested temperature
+    Given the LLM service runs on the <route> chat model
+    When a caller asks for temperature <temperature>
+    Then the request body says temperature <temperature>
+    And the request body asks for max_completion_tokens 32000
+
+    Examples:
+      | route     | temperature |
+      | role-less | 0.2         |
+      | role-less | 0.3         |
+      | fast      | 0.8         |
+
+  Scenario: A caller that names no temperature sends the default
+    Given the LLM service runs on the fast chat model
+    When a caller asks for no temperature
+    Then the request body says temperature 0.7
+
+  Scenario: A streamed call receives the requested temperature
+    Given the LLM service runs on the role-less chat model
+    When a caller streams with temperature 0.3
+    Then the request body says temperature 0.3
+    And the call reaches Langfuse as one generation
+
+  Scenario: A caller cannot set a token cap
+    Given the LLM service runs on the role-less chat model
+    When a caller asks for max_tokens 777
+    Then the call is refused before it reaches the provider
+
+  Scenario: An empty answer moves the call down the fast queue
+    Given the fast queue's first model answers nothing
+    And the next model answers
+    When a caller asks for temperature 0.2
+    Then the caller gets the next model's answer
+    And both models got temperature 0.2 and max_completion_tokens 32000
+
+  Scenario: An empty answer moves the routed call to its fallback
+    Given the routed fast model's primary answers nothing
+    And the fallback answers
+    When a caller asks for temperature 0.2
+    Then the caller gets the fallback's answer
+
+  Scenario: An empty answer from the last routed model is a model failure
+    Given the routed fast model and its fallback answer nothing
+    When a caller asks for an answer
+    Then the call fails with an empty answer error
+
+  Scenario Outline: An empty answer with no fallback is a model failure
+    Given the role-less chat model answers <answer>
+    When a caller asks for an answer
+    Then the call fails with an empty answer error
+
+    Examples:
+      | answer  |
+      | nothing |
+      | blank   |
+
+  Scenario: The call reaches Langfuse as a generation
+    Given a Langfuse handler is configured
+    When a caller asks for an answer on the fast queue
+    Then the handler sees one generation named after the active phase
+    And the generation is tagged with the actual model
+
+  Scenario: Without Langfuse the call runs with no callbacks
+    Given no Langfuse handler is configured
+    When a caller asks for an answer
+    Then the caller gets the answer
+
+  Scenario Outline: A blog AI call is traced with its phase, agent and content type
+    When the blog <call> runs
+    Then the LLM call ran in a trace with phase <phase>, agent blog_ai and content type blog_post
+
+    Examples:
+      | call    | phase      |
+      | suggest | ai_suggest |
+      | improve | ai_improve |
+
+  Scenario: A refined slide image prompt is traced
+    When a slide image is refined
+    Then the LLM call ran in a trace with phase refine_image, agent carousel_refinement and content type carousel
+    And the trace carries the project id
+
+  Scenario: A refined carousel design is traced
+    When a carousel design is refined
+    Then the LLM call ran in a trace with phase refine_design, agent carousel_refinement and content type carousel
+    And the trace carries the project id
+
+  Scenario: A LinkedIn post is a named generation of the running phase
+    Given the content phase is running
+    When a LinkedIn post is generated in Portuguese
+    Then the generation is named "carousel.content linkedin pt"
+
+  Scenario: A conversation title is traced
+    When a conversation title is generated
+    Then the LLM call ran in a trace with phase conversation_title, agent conversation_title and content type chat

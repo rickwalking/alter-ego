@@ -20,6 +20,15 @@ from typing import TYPE_CHECKING
 from fastapi import Depends
 
 from rag_backend.api.dependencies.knowledge import get_container, get_session
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_AGENT_CONVERSATION_TITLE,
+    TRACE_CONTENT_TYPE_CHAT,
+    TRACE_FIELD_AGENT_NAME,
+    TRACE_FIELD_CONTENT_TYPE,
+    TRACE_FIELD_PHASE,
+    TRACE_PHASE_CONVERSATION_TITLE,
+)
+from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.conversation import (
     ConversationAdapters,
     ConversationHandlers,
@@ -109,6 +118,19 @@ def get_conversation_title_generator() -> LlmGenerate:
 
     Kept at the edge so the route never reaches the global container itself;
     mirrors how ``get_knowledge_service`` resolves collaborators
-    via the container here in ``api/dependencies/``.
+    via the container here in ``api/dependencies/``. The call runs in its own
+    Langfuse phase, because the title has no workflow around it.
     """
-    return get_container().llm_service().generate
+    generate = get_container().llm_service().generate
+
+    async def traced_generate(messages: list[dict[str, str]]) -> str:
+        with propagate_attributes(
+            metadata={
+                TRACE_FIELD_PHASE: TRACE_PHASE_CONVERSATION_TITLE,
+                TRACE_FIELD_AGENT_NAME: TRACE_AGENT_CONVERSATION_TITLE,
+                TRACE_FIELD_CONTENT_TYPE: TRACE_CONTENT_TYPE_CHAT,
+            },
+        ):
+            return await generate(messages)
+
+    return traced_generate
