@@ -8,7 +8,6 @@ from __future__ import annotations
 import asyncio
 import time
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy import select
@@ -51,11 +50,6 @@ from tests.integration.carousel_consolidation.helpers import (
     get_lock_version,
     seed_workflow_phase,
 )
-
-
-@pytest.fixture(autouse=True)
-def _no_event_budget_on_the_shared_connection() -> None:
-    """This file tests the budget itself, so the real one stays in force."""
 
 
 async def test_recorder_timeout_preserves_authoritative_generation_state(
