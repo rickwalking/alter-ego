@@ -4,12 +4,24 @@
 test collection. The research SSRF guard resolves hostnames before scraping; tests must
 never touch real DNS, so every test sees a public answer unless it passes its own
 resolver (see tests/unit/domain/test_url_safety.py).
+
+Tracing is off for the whole run, before Settings can load, and these values are
+forced rather than defaulted so a developer's ``.env`` or shell cannot switch it back
+on: empty keys outrank ``.env`` and turn app startup's Langfuse init into a no-op.
+They also stop ``monitoring_langfuse.init_langfuse`` leaking a test's fake keys into
+``os.environ`` through ``setdefault``, which used to give every later app startup a
+real client exporting to Langfuse Cloud. ``LANGFUSE_TRACING_ENABLED`` covers a test
+that builds a client with explicit keys. See tests/unit/test_hermetic_tracing_ae0608.py.
 """
 
 import os
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-suite!!")
 os.environ.setdefault("ANON_SECRET_KEY", "test-anon-secret-for-pytest-suite!")
+os.environ["LANGFUSE_PUBLIC_KEY"] = ""
+os.environ["LANGFUSE_SECRET_KEY"] = ""
+os.environ["LANGFUSE_TRACING_ENABLED"] = "false"
+os.environ["OTEL_ENABLED"] = "false"
 
 import asyncio
 from collections.abc import AsyncGenerator
