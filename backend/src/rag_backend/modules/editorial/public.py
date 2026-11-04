@@ -190,6 +190,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner i
 from rag_backend.modules.editorial.infrastructure.carousel_queue_metadata import (
     project_queue_metadata,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_quiet_start import (
+    QuietRunStart,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_rubric_acl import (
     CarouselRubricAcl,
     RubricChoiceError,
@@ -330,6 +333,7 @@ __all__ = [
     "ProjectQueueMetadata",
     "PublicReleasePort",
     "PublicReleaseState",
+    "QuietRunStart",
     "ResearchSource",
     "ResearchSourceType",
     "RetryRow",

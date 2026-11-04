@@ -14,6 +14,14 @@ from rag_backend.modules.generation_queue.domain.owner_retry import (
 )
 
 
+class RetryRefusedError(Exception):
+    """Raised where a Retry loses (a CAS, a lock), so its savepoint rolls back."""
+
+    def __init__(self, refusal: RetryRefusal) -> None:
+        super().__init__(refusal.value)
+        self.refusal = refusal
+
+
 @dataclass(frozen=True, kw_only=True)
 class RetryPlan:
     """An accepted decision, with the feedback line a revise sends."""
@@ -56,6 +64,14 @@ class RetryResult:
     lock_version: int | None = None
     autopilot_run_id: UUID | None = None
 
+    @property
+    def starts_run(self) -> bool:
+        """True when the accepted Retry queued a run (a re-drive or a revise)."""
+        return self.kind in _RUN_KINDS
+
+
+_RUN_KINDS = frozenset({RetryKind.REDRIVE, RetryKind.REVISE})
+
 
 @dataclass(frozen=True, kw_only=True)
 class RetryCapability:
@@ -71,7 +87,10 @@ class OwnerRetryStore(Protocol):
     """Fresh facts under the row lock and one savepoint-scoped write."""
 
     async def read(self, command: OwnerRetryCommand) -> RetryFacts | None:
-        """Lock the carousel row and gather the facts; None when it is missing."""
+        """Lock the run and carousel rows and gather the facts; None when missing.
+
+        Raises ``RetryRefusedError`` when a lock is lost (deadlock, lock timeout).
+        """
         ...
 
     async def apply(self, plan: RetryPlan) -> RetryWrite:
@@ -84,6 +103,10 @@ class OwnerRetryStore(Protocol):
 
     async def rollback(self) -> None:
         """Roll back a refused Retry and release the row lock."""
+        ...
+
+    async def announce(self, project_id: str, phase: str) -> None:
+        """Push the run start to the browser; only after the commit."""
         ...
 
 
@@ -101,6 +124,7 @@ __all__ = [
     "RetryAuditCommand",
     "RetryCapability",
     "RetryPlan",
+    "RetryRefusedError",
     "RetryResult",
     "RetryWrite",
 ]

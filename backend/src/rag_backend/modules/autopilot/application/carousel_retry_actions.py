@@ -6,7 +6,8 @@ the escalated run back to ``generating`` in one transaction. Owner-only is
 enforced twice: ``is_owner`` on the chat before any dispatch, and the Retry
 itself compares the carousel's owner with the autopilot owner's user. An
 accepted Retry edits the message to "Refazendo a fase …"; a refusal answers
-with its own text and leaves the message and its button as they were.
+with its own text and leaves the message and its button as they were. The run
+start reaches the browser only after the webhook commits (``deliver``).
 """
 
 from __future__ import annotations
@@ -79,6 +80,18 @@ class CarouselRetryOwnerActions:
         await self._answer(update, ANSWER_CAROUSEL_RETRY_REFUSED)
         await self._tell(update, refusal_text(outcome.refusal))
         return True
+
+    async def _deliver_retries(self: _Host) -> None:
+        """Announce the accepted Retries' run starts, after the webhook commit."""
+        retrier = self._deps.carousel_retrier
+        if retrier is not None:
+            await retrier.deliver()
+
+    def _discard_retries(self: _Host) -> None:
+        """Drop the run starts of Retries the webhook rolled back."""
+        retrier = self._deps.carousel_retrier
+        if retrier is not None:
+            retrier.discard()
 
 
 __all__ = ["CarouselRetryOwnerActions"]

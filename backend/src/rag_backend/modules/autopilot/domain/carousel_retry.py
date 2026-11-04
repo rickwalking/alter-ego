@@ -47,6 +47,14 @@ class CarouselRetrier(Protocol):
         """Stage the Retry in the caller's transaction, or refuse it."""
         ...
 
+    async def deliver(self) -> None:
+        """Announce the accepted run starts; after the caller's commit."""
+        ...
+
+    def discard(self) -> None:
+        """Forget the run starts of a rolled-back transaction."""
+        ...
+
 
 def carousel_retry_keyboard(run_id: UUID) -> InlineKeyboard:
     """ "Tentar de novo" for an escalated run's carousel."""

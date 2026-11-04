@@ -154,7 +154,6 @@ AUDIT_CAROUSEL_RETRY = "carousel.retry.requested"
 AUTOPILOT_STATE_ESCALATED = "escalated"
 AUTOPILOT_DEAD_LETTER_PREFIX = "queue_dead_letter:"
 REASON_OWNER_CAROUSEL_RETRY = "owner_carousel_retry"
-RETRY_REVIEWER_ID = "owner-retry"
 RETRY_PROMPT_DOMAIN = "owner_retry"
 RETRY_PROMPT_FEEDBACK = "retry_feedback"
 RETRY_PROMPT_VERSION = "v1"
@@ -167,6 +166,7 @@ RETRY_VAR_REASON = "reason"
 RETRY_VAR_DETAIL = "detail"
 LOG_RETRY_REFUSED = "carousel_retry_refused"
 LOG_RETRY_ACCEPTED = "carousel_retry_accepted"
+RETRY_LOCK_LOST_SQLSTATES = frozenset({"40P01", "40001", "55P03"})
 RECOVERABLE_ERROR_CODES = (
     ERROR_TRANSIENT,
     ERROR_PHASE_BUDGET,

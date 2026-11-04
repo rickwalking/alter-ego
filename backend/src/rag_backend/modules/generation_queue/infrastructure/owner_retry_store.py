@@ -12,6 +12,7 @@ so it rolls back as one: no stage, no status change, no run move.
 
 from __future__ import annotations
 
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel import (
@@ -44,9 +45,13 @@ from rag_backend.modules.editorial.public import (
     AutomationRun,
     CarouselProjectWriteOwner,
     EditorialWorkflowEngine,
+    QuietRunStart,
     claim_automation_phase,
 )
-from rag_backend.modules.generation_queue.constants import REASON_OWNER_CAROUSEL_RETRY
+from rag_backend.modules.generation_queue.constants import (
+    REASON_OWNER_CAROUSEL_RETRY,
+    RETRY_LOCK_LOST_SQLSTATES,
+)
 from rag_backend.modules.generation_queue.domain.models import (
     WorkflowResumePayload,
     resume_stage,
@@ -60,6 +65,7 @@ from rag_backend.modules.generation_queue.domain.owner_retry import (
 )
 from rag_backend.modules.generation_queue.domain.owner_retry_ports import (
     RetryPlan,
+    RetryRefusedError,
     RetryWrite,
 )
 from rag_backend.modules.generation_queue.infrastructure.owner_retry_facts import (
@@ -76,14 +82,6 @@ _REFUSAL_BY_ERROR: dict[str, RetryRefusal] = {
 }
 
 
-class RetryRefusedError(Exception):
-    """Raised inside the savepoint so a lost write rolls back as one."""
-
-    def __init__(self, refusal: RetryRefusal) -> None:
-        super().__init__(refusal.value)
-        self.refusal = refusal
-
-
 class SqlOwnerRetryStore:
     """Implement the Retry store without owning the request session."""
 
@@ -93,8 +91,17 @@ class SqlOwnerRetryStore:
         self._facts = OwnerRetryFacts(session, engine)
 
     async def read(self, command: OwnerRetryCommand) -> RetryFacts | None:
-        """Lock the carousel row and gather the facts."""
-        return await self._facts.read(command)
+        """Lock the run and carousel rows and gather the facts, in a savepoint.
+
+        A lost lock (deadlock, serialization failure, lock timeout) rolls the
+        savepoint back, so the caller's transaction stays usable, and raises
+        ``RetryRefusedError(concurrent_update)``.
+        """
+        try:
+            async with self._session.begin_nested():
+                return await self._facts.read(command)
+        except DBAPIError as exc:
+            raise RetryRefusedError(_lock_refusal(exc)) from exc
 
     async def apply(self, plan: RetryPlan) -> RetryWrite:
         """Write the Retry in a savepoint; a refusal leaves nothing behind."""
@@ -103,11 +110,17 @@ class SqlOwnerRetryStore:
                 return await self._write(plan)
         except RetryRefusedError as exc:
             return RetryWrite(refusal=exc.refusal)
+        except DBAPIError as exc:
+            return RetryWrite(refusal=_lock_refusal(exc))
         except ValueError as exc:
             refusal = _REFUSAL_BY_ERROR.get(str(exc))
             if refusal is None:
                 raise
             return RetryWrite(refusal=refusal)
+
+    async def announce(self, project_id: str, phase: str) -> None:
+        """Publish the phase change and ``run.started``; after the commit."""
+        await QuietRunStart(self._engine, self._session).announce(project_id, phase)
 
     async def commit(self) -> None:
         """Commit the Retry and its audit together."""
@@ -118,11 +131,12 @@ class SqlOwnerRetryStore:
         await self._session.rollback()
 
     async def _write(self, plan: RetryPlan) -> RetryWrite:
+        """CAS and stage, move the escalated run, then flip ``in_progress`` last."""
         if plan.kind is RetryKind.REOPEN:
-            write = await self._reopen(plan)
-        else:
-            write = await self._rerun(plan)
-        return await self._revive(plan, write)
+            return await self._revive(plan, await self._reopen(plan))
+        write = await self._revive(plan, await self._rerun(plan))
+        await QuietRunStart(self._engine, self._session).stage(plan.command.project_id)
+        return write
 
     async def _reopen(self, plan: RetryPlan) -> RetryWrite:
         """Put a rejected final review back in front of the owner."""
@@ -177,6 +191,7 @@ class SqlOwnerRetryStore:
             reviewer_id=plan.command.actor_id,
             feedback=plan.feedback,
             structured_feedback=_structured(plan),
+            mark_in_progress=False,
         )
 
     async def _revive(self, plan: RetryPlan, write: RetryWrite) -> RetryWrite:
@@ -216,6 +231,14 @@ def _expected(plan: RetryPlan) -> int:
     return expected
 
 
+def _lock_refusal(exc: DBAPIError) -> RetryRefusal:
+    """A lost lock is a ``concurrent_update``; any other database error raises."""
+    code = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+    if code in RETRY_LOCK_LOST_SQLSTATES:
+        return RetryRefusal.CONCURRENT_UPDATE
+    raise exc
+
+
 def _structured(plan: RetryPlan) -> dict[str, object] | None:
     """Tag the system feedback line so it is applied once and never re-fed."""
     if not plan.feedback:
@@ -223,4 +246,4 @@ def _structured(plan: RetryPlan) -> dict[str, object] | None:
     return {STRUCTURED_FEEDBACK_SOURCE_KEY: FEEDBACK_SOURCE_AUTOPILOT}
 
 
-__all__ = ["RetryRefusedError", "SqlOwnerRetryStore"]
+__all__ = ["SqlOwnerRetryStore"]

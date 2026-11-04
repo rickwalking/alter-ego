@@ -11,8 +11,9 @@ Feature: Owner Retry for failed, blocked, escalated and rejected carousels (AE-0
     Given a carousel whose outline phase failed with its checkpoint parked before the node
     When the owner retries it at the current lock version
     Then a workflow re-drive is staged at the bumped lock version
-    And the carousel is in progress
+    And the carousel is in progress, flipped as the last write of the transaction
     And one carousel.retry.requested audit is written with retry kind redrive
+    And the phase change and run.started reach the browser only after the commit
 
   Scenario: A blocked content gate is revised with the system retry feedback line
     Given a carousel waiting at the content gate whose approve is blocked by a low persona score
@@ -52,8 +53,37 @@ Feature: Owner Retry for failed, blocked, escalated and rejected carousels (AE-0
 
   Scenario: A queue dead letter answers use_reprocess
     Given an autopilot run the generation queue parked as a dead letter
+    And the carousel's latest generation run is that dead letter
     When the owner retries its carousel
     Then the retry is refused with use_reprocess
+
+  Scenario: A discarded dead letter no longer blocks the retry
+    Given the owner discarded a dead-lettered autopilot run of the carousel
+    And the carousel's latest generation run is still that dead letter
+    When the owner retries the carousel
+    Then the retry is accepted
+
+  Scenario: A second retry waits on the row lock and then answers run_in_progress
+    Given a first retry holds the carousel row lock in an open transaction
+    When a second retry arrives on another connection
+    Then the second retry waits until the first commits
+    And it is refused with run_in_progress
+
+  Scenario: A lost lock is refused as concurrent_update
+    Given the database reports a deadlock, a serialization failure or a lock timeout
+    When the owner retries
+    Then the retry is refused with concurrent_update and the transaction stays usable
+
+  Scenario: A stuck sweep never rejects a carousel a Retry just started
+    Given the stuck-workflow sweep read a carousel as stuck
+    And an owner Retry committed in progress before the sweep rejected it
+    When the sweep continues
+    Then it re-reads the row under its lock and leaves it in progress
+
+  Scenario: The retry capability shows a revise at the cap as refused
+    Given a blocked content gate that already used its five revisions
+    When the owner reads the retry capability
+    Then it says revision_cap_exceeded
 
   Scenario: A closed autopilot run leaves the run alone and re-runs the carousel only
     Given a carousel rejected after its autopilot run closed as rejected
@@ -105,6 +135,7 @@ Feature: Owner Retry for failed, blocked, escalated and rejected carousels (AE-0
     When the owner retries its carousel
     Then the retry is refused with concurrent_update
     And no stage and no audit remain
+    And the carousel is not in progress and no run.started is published
 
   Scenario: An artifact mutation in progress refuses the retry
     Given an artifact mutator holds the carousel lock

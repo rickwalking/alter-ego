@@ -175,7 +175,7 @@ class TestRefusals:
         assert decide_retry(facts).refusal is RetryRefusal.RUN_IN_PROGRESS
 
     def test_an_active_generation_run_is_refused(self) -> None:
-        facts = _facts(queue=QueueFacts(active_run=True, held_run=True))
+        facts = _facts(queue=QueueFacts(active_run=True, latest_dead_letter=True))
         assert decide_retry(facts).refusal is RetryRefusal.RUN_IN_PROGRESS
 
     # Scenario: An artifact mutation in progress refuses the retry
@@ -190,13 +190,39 @@ class TestRefusals:
         assert decide_retry(facts).refusal is RetryRefusal.AUTOPILOT_ACTIVE
 
     # Scenario: A queue dead letter answers use_reprocess
-    def test_a_dead_letter_escalation_is_refused(self) -> None:
-        facts = _facts(autopilot=_run("escalated", "queue_dead_letter:timeout"))
+    def test_a_latest_dead_letter_of_a_parked_run_is_refused(self) -> None:
+        facts = _facts(
+            queue=QueueFacts(latest_dead_letter=True),
+            autopilot=_run("escalated", "queue_dead_letter:timeout"),
+        )
         assert decide_retry(facts).refusal is RetryRefusal.USE_REPROCESS
 
-    def test_a_held_dead_letter_run_is_refused(self) -> None:
-        facts = _facts(queue=QueueFacts(held_run=True))
+    def test_a_latest_dead_letter_without_a_run_is_refused(self) -> None:
+        facts = _facts(queue=QueueFacts(latest_dead_letter=True))
         assert decide_retry(facts).refusal is RetryRefusal.USE_REPROCESS
+
+    # Scenario: A discarded dead letter no longer blocks the retry
+    def test_a_discarded_dead_letter_is_retried(self) -> None:
+        facts = _facts(
+            queue=QueueFacts(latest_dead_letter=True),
+            autopilot=_run("rejected", "owner_queue_discard"),
+        )
+        assert decide_retry(facts).kind is RetryKind.REVISE
+
+    def test_an_older_dead_letter_does_not_block(self) -> None:
+        facts = _facts(autopilot=_run("escalated", "queue_dead_letter:timeout"))
+        assert decide_retry(facts).kind is RetryKind.REVISE
+
+    # Scenario: A revise at the revision cap is refused
+    def test_a_capped_revise_is_refused(self) -> None:
+        facts = _facts(checkpoint=CheckpointFacts(present=True, revise_capped=True))
+        assert decide_retry(facts).refusal is RetryRefusal.REVISION_CAP_EXCEEDED
+
+    def test_a_capped_phase_can_still_be_redriven(self) -> None:
+        facts = _facts(
+            checkpoint=CheckpointFacts(present=True, parked=True, revise_capped=True)
+        )
+        assert decide_retry(facts).kind is RetryKind.REDRIVE
 
     # Scenario: An approved or published carousel is not retryable
     @pytest.mark.parametrize(

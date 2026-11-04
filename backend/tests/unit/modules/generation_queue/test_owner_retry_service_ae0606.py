@@ -29,6 +29,7 @@ from rag_backend.modules.generation_queue.domain.owner_retry import (
 from rag_backend.modules.generation_queue.domain.owner_retry_ports import (
     RetryAuditCommand,
     RetryPlan,
+    RetryRefusedError,
     RetryWrite,
 )
 
@@ -61,12 +62,19 @@ class _Store:
     facts: RetryFacts | None = _FACTS
     write: RetryWrite = _WRITTEN
     plans: list[RetryPlan] = field(default_factory=list)
+    events: list[str] = field(default_factory=list)
     commits: int = 0
     rollbacks: int = 0
+    lost_lock: bool = False
 
     async def read(self, command: OwnerRetryCommand) -> RetryFacts | None:
         del command
+        if self.lost_lock:
+            raise RetryRefusedError(RetryRefusal.CONCURRENT_UPDATE)
         return self.facts
+
+    async def announce(self, project_id: str, phase: str) -> None:
+        self.events.append(f"announce:{project_id}:{phase}")
 
     async def apply(self, plan: RetryPlan) -> RetryWrite:
         self.plans.append(plan)
@@ -74,6 +82,7 @@ class _Store:
 
     async def commit(self) -> None:
         self.commits += 1
+        self.events.append("commit")
 
     async def rollback(self) -> None:
         self.rollbacks += 1
@@ -114,6 +123,7 @@ class TestOwnerRetryService:
         assert plan.feedback.strip() == plan.feedback
         assert audit.records == [RetryAuditCommand(plan=plan, write=_WRITTEN)]
         assert (store.commits, store.rollbacks) == (1, 0)
+        assert store.events == ["commit", "announce:p-1:content"]
 
     # Scenario: A failed phase parked before its node is re-driven
     async def test_a_redrive_sends_no_feedback_line(self) -> None:
@@ -172,6 +182,37 @@ class TestOwnerRetryService:
         assert accepted.accepted is True
         assert refused.accepted is False
         assert (store.commits, store.rollbacks) == (0, 0)
+        assert store.events == []
+        await service.announce(accepted, "p-1")
+        await service.announce(refused, "p-1")
+        assert store.events == ["announce:p-1:content"]
+
+    # Scenario: A lost lock is refused as concurrent_update
+    async def test_a_lost_lock_on_read_is_refused(self) -> None:
+        store, audit = _Store(lost_lock=True), _Audit()
+
+        result = await _service(store, audit).retry(_COMMAND)
+        capability = await _service(store, audit).inspect(_COMMAND)
+
+        assert result.refusal is RetryRefusal.CONCURRENT_UPDATE
+        assert capability.refusal is RetryRefusal.CONCURRENT_UPDATE
+        assert capability.can_retry is False
+        assert store.plans == []
+        assert store.rollbacks == 2
+
+    async def test_a_reopen_announces_no_run(self) -> None:
+        facts = replace(
+            _FACTS,
+            carousel=replace(
+                _FACTS.carousel, phase="final_review", phase_status="rejected"
+            ),
+        )
+        store = _Store(facts=facts)
+
+        result = await _service(store, _Audit()).retry(_COMMAND)
+
+        assert result.kind is RetryKind.REOPEN
+        assert store.events == ["commit"]
 
     # Scenario: The retry capability is read without any change
     async def test_inspect_reads_the_capability_and_writes_nothing(self) -> None:

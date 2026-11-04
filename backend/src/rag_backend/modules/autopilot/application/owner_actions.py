@@ -191,12 +191,14 @@ class OwnerActionService(
         """Publish queue notices and replies after the commit."""
         if self._deps.queue is not None:
             await self._deps.queue.deliver_notifications()
+        await self._deliver_retries()
         return await self._replies.deliver()
 
     def discard(self) -> int:
         """Drop queue notices and replies after a rollback."""
         if self._deps.queue is not None:
             self._deps.queue.discard_notifications()
+        self._discard_retries()
         return self._replies.discard()
 
     async def handle(self, update: WebhookUpdate) -> None:

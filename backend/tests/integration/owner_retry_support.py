@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -70,6 +71,31 @@ class FakeEngine:
     def typed(self) -> EditorialWorkflowEngine:
         """The fake as the engine type the Retry expects."""
         return cast(EditorialWorkflowEngine, self)
+
+
+def record_run_starts(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Record every phase change and ``run.started`` the Retry publishes."""
+    from rag_backend.application.services.carousel import (
+        editorial_workflow_run_events,
+        editorial_workflow_sse_publish,
+    )
+
+    events: list[str] = []
+
+    async def _run_started(project_id: str, phase: str, started: object) -> None:
+        del started
+        events.append(f"run.started:{project_id}:{phase}")
+
+    async def _phase_change(project_id: str, phase: str, status: str) -> None:
+        events.append(f"phase:{project_id}:{phase}:{status}")
+
+    monkeypatch.setattr(
+        editorial_workflow_run_events, "publish_run_started", _run_started
+    )
+    monkeypatch.setattr(
+        editorial_workflow_sse_publish, "publish_workflow_phase_change", _phase_change
+    )
+    return events
 
 
 @asynccontextmanager

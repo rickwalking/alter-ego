@@ -115,6 +115,7 @@ class CheckpointFacts:
     parked: bool = False
     blocker: str | None = None
     persona_score: float | None = None
+    revise_capped: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -128,10 +129,14 @@ class AutopilotFacts:
 
 @dataclass(frozen=True, kw_only=True)
 class QueueFacts:
-    """The generation queue and the artifact lock around the carousel."""
+    """The generation queue and the artifact lock around the carousel.
+
+    ``latest_dead_letter``: the carousel's latest generation run is a dead letter,
+    the run the reprocess action recovers.
+    """
 
     active_run: bool = False
-    held_run: bool = False
+    latest_dead_letter: bool = False
     mutation_locked: bool = False
 
 
@@ -166,7 +171,10 @@ def decide_retry(facts: RetryFacts) -> RetryDecision:
         if refusal is not None:
             return RetryDecision(refusal=refusal)
     decide = _BY_PHASE_STATUS.get(facts.carousel.phase_status, _other)
-    return decide(facts)
+    decision = decide(facts)
+    if decision.kind is RetryKind.REVISE and facts.checkpoint.revise_capped:
+        return RetryDecision(refusal=RetryRefusal.REVISION_CAP_EXCEEDED)
+    return decision
 
 
 def escalated_run(facts: RetryFacts) -> AutopilotFacts | None:
@@ -212,10 +220,16 @@ def _autopilot_driving(facts: RetryFacts) -> RetryRefusal | None:
 
 
 def _dead_letter(facts: RetryFacts) -> RetryRefusal | None:
-    if facts.queue.held_run:
-        return RetryRefusal.USE_REPROCESS
-    run = escalated_run(facts)
-    if run is not None and (run.reason or "").startswith(AUTOPILOT_DEAD_LETTER_PREFIX):
+    """Reprocess's job: the latest run dead-lettered and nobody resolved it.
+
+    The same rule the reprocess classifier applies: a dead letter whose autopilot
+    run was discarded (or otherwise moved on) is not reprocessable, so Retry
+    takes it.
+    """
+    if not facts.queue.latest_dead_letter:
+        return None
+    run = facts.autopilot
+    if run is None or (run.reason or "").startswith(AUTOPILOT_DEAD_LETTER_PREFIX):
         return RetryRefusal.USE_REPROCESS
     return None
 

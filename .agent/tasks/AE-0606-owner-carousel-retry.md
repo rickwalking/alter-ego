@@ -208,6 +208,26 @@ Pending.
 - The `CarouselRetrier` port lives in `domain/carousel_retry.py` with the button and the parser, not in
   `owner_ports.py`, to keep the Telegram Retry pieces together.
 
+- Review round 1 (2026-11-03):
+  - The `in_progress` flip is the last write of the Retry's savepoint (after the stage and the run CAS), through
+    `QuietRunStart.stage` (no event); the phase change and `run.started` are published by `QuietRunStart.announce`
+    only after the commit: by the service on the website, by `OwnerActionService.deliver` after the webhook commit
+    on Telegram (dropped on `discard`). `claim_automation_phase` gained `mark_in_progress=False` for this; the
+    autopilot path is unchanged. `EditorialWorkflowService.mark_resume_in_progress` builds its state through the
+    shared `resume_in_progress.in_progress_state` helper (same values).
+  - `use_reprocess` only when the carousel's latest generation run is a dead letter and its autopilot run is still
+    parked by the queue (reason `queue_dead_letter:*`) or absent: the reprocess classifier's rule. A discarded dead
+    letter no longer blocks Retry.
+  - The stuck sweep re-reads each row `FOR UPDATE SKIP LOCKED` with the same eligibility filter before it rejects,
+    and returns the count it actually rejected. A select, not an UPDATE: the raw-update gate and its allowlist are
+    unchanged. The reject stays in `WorkflowTimeoutRepository` (an infrastructure module that importing the editorial
+    write owner from would make an import cycle through `abandoned_carousel`).
+  - Lock order: the Retry locks the autopilot run row before the carousel row, the order of the 72-hour escalation
+    close. Deadlock, serialization failure and lock timeout (`40P01`, `40001`, `55P03`) are caught in savepoints and
+    refused as `concurrent_update`; any other database error still raises.
+  - The capability (`GET`) and the Retry both refuse a revise at the revision cap (`revision_cap_exceeded`) from
+    the checkpoint's counters, through the editorial cap-phase rule; the editorial cap check stays as the backstop.
+
 ## Blockers
 
 None.

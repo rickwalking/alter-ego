@@ -49,10 +49,17 @@ _OWNER_USER = "owner-user"
 class _Retrier:
     outcome: CarouselRetryOutcome
     requests: list[CarouselRetryRequest] = field(default_factory=list)
+    events: list[str] = field(default_factory=list)
 
     async def retry(self, request: CarouselRetryRequest) -> CarouselRetryOutcome:
         self.requests.append(request)
         return self.outcome
+
+    async def deliver(self) -> None:
+        self.events.append("deliver")
+
+    def discard(self) -> None:
+        self.events.append("discard")
 
 
 def _with_retrier(world: _World, retrier: _Retrier | None) -> _World:
@@ -83,6 +90,16 @@ class TestCarouselRetryTap:
         ]
         assert world.messenger.answers[-1].text == "Refazendo"
         assert world.messenger.edits[-1].text == "🔁 Refazendo a fase content…"
+        assert retrier.events == ["deliver"]
+
+    async def test_a_rolled_back_webhook_discards_the_run_starts(self) -> None:
+        retrier = _Retrier(CarouselRetryOutcome(accepted=True, phase="content"))
+        world = _with_retrier(_world(), retrier)
+
+        await world.service.handle(_tap(1, _retry_tap(world)))
+        world.service.discard()
+
+        assert retrier.events == ["discard"]
 
     # Scenario: A double tap ends in run_in_progress
     async def test_a_refused_retry_answers_with_its_own_text(self) -> None:

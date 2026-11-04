@@ -55,6 +55,7 @@ class AutomationRun:
     reviewer_id: str = ""
     feedback: str = ""
     structured_feedback: Mapping[str, object] | None = None
+    mark_in_progress: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -83,7 +84,8 @@ async def claim_automation_phase(run: AutomationRun) -> AutomationClaim:
     (Retry is its only way back), ``resume_render_pending`` when a final-review
     approve meets a pending re-render (the needs-republish marker of a cover
     switch or a slide edit), ``version_conflict`` when the CAS loses, and
-    ``revision_cap_exceeded`` for a revise over the cap.
+    ``revision_cap_exceeded`` for a revise over the cap. With
+    ``mark_in_progress=False`` the flip is left to the caller (``QuietRunStart``).
     """
     facts = await _row_facts(run.session, run.project_id)
     if facts.phase_status == PHASE_STATUS_IN_PROGRESS:
@@ -93,7 +95,8 @@ async def claim_automation_phase(run: AutomationRun) -> AutomationClaim:
     await _ensure_revision_room(run, facts.topic)
     owner = CarouselProjectWriteOwner(run.session)
     version = await owner.bump_resume_lock_version(run.project_id, run.expected_version)
-    await run.engine.mark_resume_in_progress(run.project_id, run.session)
+    if run.mark_in_progress:
+        await run.engine.mark_resume_in_progress(run.project_id, run.session)
     return AutomationClaim(lock_version=version, topic=facts.topic)
 
 

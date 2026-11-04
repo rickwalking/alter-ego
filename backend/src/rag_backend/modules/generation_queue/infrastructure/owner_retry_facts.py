@@ -1,25 +1,28 @@
 """Gather the facts of an owner Retry on the request's session.
 
-The carousel row is read ``FOR UPDATE`` through the editorial write owner, so a
-second Retry waits for the first and then reads its ``in_progress``. The
-checkpoint, the autopilot run, the generation queue and the artifact lock are
-read after the lock is held.
+Lock order, the same as the 72-hour escalation close (run, then carousel): the
+carousel's autopilot run row is read ``FOR UPDATE`` first, then the carousel row
+through the editorial write owner, so a second Retry waits for the first and
+then reads its ``in_progress``. The checkpoint, the generation queue and the
+artifact lock are read after both locks are held.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 
-from sqlalchemy import ColumnElement, literal, select
+from sqlalchemy import literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
+)
 from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_REVISION_CAP_PER_PHASE,
     PHASE_STATUS_AWAITING_HUMAN,
 )
 from rag_backend.domain.persona_score import lowest_overall
-from rag_backend.modules.autopilot.infrastructure.repository import (
-    SqlAlchemyAutopilotRepository,
-)
+from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.editorial.public import (
     CarouselProjectWriteOwner,
     EditorialWorkflowEngine,
@@ -27,6 +30,7 @@ from rag_backend.modules.editorial.public import (
     content_approve_blocker,
     is_carousel_project_lock_held_session,
 )
+from rag_backend.modules.generation_queue.constants import STATUS_DEAD_LETTER
 from rag_backend.modules.generation_queue.domain.owner_retry import (
     AutopilotFacts,
     CarouselRetryState,
@@ -35,9 +39,11 @@ from rag_backend.modules.generation_queue.domain.owner_retry import (
     QueueFacts,
     RetryFacts,
 )
+from rag_backend.modules.generation_queue.infrastructure.models import (
+    GenerationRunModel,
+)
 from rag_backend.modules.generation_queue.infrastructure.run_fences import (
     project_has_active_run,
-    project_has_held_run,
 )
 
 _PERSONA_SCORES_KEY = "persona_scores"
@@ -52,6 +58,7 @@ class OwnerRetryFacts:
 
     async def read(self, command: OwnerRetryCommand) -> RetryFacts | None:
         """None when the carousel is missing."""
+        autopilot = await self._lock_autopilot(command.project_id)
         owner = CarouselProjectWriteOwner(self._session)
         row = await owner.lock_for_retry(command.project_id)
         if row is None:
@@ -60,8 +67,8 @@ class OwnerRetryFacts:
             actor_id=command.actor_id,
             carousel=_carousel(row),
             checkpoint=await self._checkpoint(row),
-            queue=await self._queue(row.project_id),
-            autopilot=await self._autopilot(row.project_id),
+            queue=await self._queue(row.project_id, autopilot),
+            autopilot=autopilot,
         )
 
     async def _checkpoint(self, row: RetryRow) -> CheckpointFacts:
@@ -77,31 +84,71 @@ class OwnerRetryFacts:
             parked=await self._engine.is_parked_before_node(row.project_id),
             blocker=blocker,
             persona_score=lowest_overall(snapshot.get(_PERSONA_SCORES_KEY)),
+            revise_capped=_revise_capped(state),
         )
 
-    async def _queue(self, project_id: str) -> QueueFacts:
+    async def _queue(
+        self, project_id: str, autopilot: AutopilotFacts | None
+    ) -> QueueFacts:
+        active = await self._session.scalar(
+            select(project_has_active_run(literal(project_id)))
+        )
         return QueueFacts(
-            active_run=await self._exists(project_has_active_run(literal(project_id))),
-            held_run=await self._exists(project_has_held_run(literal(project_id))),
+            active_run=bool(active),
+            latest_dead_letter=await self._latest_dead(project_id, autopilot),
             mutation_locked=await is_carousel_project_lock_held_session(
                 self._session, project_id
             ),
         )
 
-    async def _exists(self, clause: ColumnElement[bool]) -> bool:
-        return bool(await self._session.scalar(select(clause)))
+    async def _latest_dead(
+        self, project_id: str, autopilot: AutopilotFacts | None
+    ) -> bool:
+        """True when the newest generation run of the carousel dead-lettered."""
+        scope = GenerationRunModel.carousel_project_id == project_id
+        if autopilot is not None:
+            scope = or_(
+                scope, GenerationRunModel.autopilot_run_id == str(autopilot.run_id)
+            )
+        latest = await self._session.scalar(
+            select(GenerationRunModel.status)
+            .where(scope)
+            .order_by(
+                GenerationRunModel.created_at.desc(), GenerationRunModel.id.desc()
+            )
+            .limit(1)
+        )
+        return latest == STATUS_DEAD_LETTER
 
-    async def _autopilot(self, project_id: str) -> AutopilotFacts | None:
-        run = await SqlAlchemyAutopilotRepository(self._session).find_by_carousel(
-            project_id
-        )
-        if run is None:
+    async def _lock_autopilot(self, project_id: str) -> AutopilotFacts | None:
+        row = (
+            await self._session.execute(
+                select(
+                    AutopilotRunModel.id,
+                    AutopilotRunModel.state,
+                    AutopilotRunModel.state_reason,
+                )
+                .where(AutopilotRunModel.carousel_project_id == project_id)
+                .with_for_update()
+            )
+        ).one_or_none()
+        if row is None:
             return None
-        return AutopilotFacts(
-            run_id=run.run_id,
-            state=run.state.value,
-            reason=run.state_reason,
-        )
+        return AutopilotFacts(run_id=row[0], state=str(row[1]), reason=row[2])
+
+
+def _revise_capped(state: CarouselWorkflowState) -> bool:
+    """A plain revise of the current phase would exceed the revision cap."""
+    from rag_backend.application.services.carousel import (
+        editorial_workflow_service_helpers as engine_checks,
+    )
+
+    phase = engine_checks.resolve_revision_cap_phase(state, None)
+    if phase is None:
+        return False
+    counts = state.get("revision_count") or {}
+    used = int(counts.get(phase, 0)) if isinstance(counts, dict) else 0
+    return used >= DEFAULT_REVISION_CAP_PER_PHASE
 
 
 def _carousel(row: RetryRow) -> CarouselRetryState:

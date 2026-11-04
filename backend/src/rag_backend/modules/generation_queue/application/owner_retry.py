@@ -35,6 +35,7 @@ from rag_backend.modules.generation_queue.domain.owner_retry_ports import (
     RetryAuditCommand,
     RetryCapability,
     RetryPlan,
+    RetryRefusedError,
     RetryResult,
     RetryWrite,
 )
@@ -61,7 +62,10 @@ class OwnerRetryService:
 
     async def retry(self, command: OwnerRetryCommand) -> RetryResult:
         """Accept and stage one Retry, or refuse it with nothing changed."""
-        facts = await self._deps.store.read(command)
+        try:
+            facts = await self._deps.store.read(command)
+        except RetryRefusedError as exc:
+            return await self._refused(command, exc.refusal)
         if facts is None:
             return await self._refused(command, RetryRefusal.NOT_FOUND)
         decision = decide_retry(facts)
@@ -72,18 +76,15 @@ class OwnerRetryService:
         if write.refusal is not None:
             return await self._refused(command, write.refusal)
         await self._deps.audit.record(RetryAuditCommand(plan=plan, write=write))
-        await self._commit()
-        logger.info(
-            LOG_RETRY_ACCEPTED,
-            project_id=command.project_id,
-            surface=command.surface.value,
-            retry_kind=plan.kind.value,
-        )
-        return _accepted(plan, write)
+        return await self._accept(plan, write)
 
     async def inspect(self, command: OwnerRetryCommand) -> RetryCapability:
         """Whether a Retry would be accepted now; nothing is written."""
-        facts = await self._deps.store.read(command)
+        try:
+            facts = await self._deps.store.read(command)
+        except RetryRefusedError as exc:
+            await self._rollback()
+            return RetryCapability(can_retry=False, refusal=exc.refusal)
         await self._rollback()
         if facts is None:
             return RetryCapability(can_retry=False, refusal=RetryRefusal.NOT_FOUND)
@@ -94,6 +95,26 @@ class OwnerRetryService:
             refusal=decision.refusal,
             lock_version=facts.carousel.lock_version,
         )
+
+    async def announce(self, result: RetryResult, project_id: str) -> None:
+        """Push the run start to the browser; call only after the commit."""
+        if result.starts_run:
+            await self._deps.store.announce(project_id, result.phase)
+
+    async def _accept(self, plan: RetryPlan, write: RetryWrite) -> RetryResult:
+        """Commit when the transaction is ours, then announce the run start."""
+        command = plan.command
+        await self._commit()
+        logger.info(
+            LOG_RETRY_ACCEPTED,
+            project_id=command.project_id,
+            surface=command.surface.value,
+            retry_kind=plan.kind.value,
+        )
+        result = _accepted(plan, write)
+        if self._owns_transaction:
+            await self.announce(result, command.project_id)
+        return result
 
     async def _refused(
         self, command: OwnerRetryCommand, refusal: RetryRefusal
