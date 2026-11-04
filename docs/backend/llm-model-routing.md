@@ -37,7 +37,8 @@ the model block, so outline 2048, hook 1024, caption 512, slide fix 2048, refine
 repair 4096 all run at 32000. A caller that starts binding one of those brings the AE-0607 failure
 back. `LLMService.generate` has no `max_tokens` argument, so its callers always run at 32000. Its
 `temperature` is bound on the model and reaches the provider. An answer with no visible text raises
-`EmptyLLMResponseError`.
+`EmptyLLMResponseError`. Blog suggest and improve answer it with a 503 and the `provider_unavailable`
+code, and store nothing.
 
 Blog suggest, improve and translation and the conversation title use the role-less
 `container.llm_service()`, so they run on `GLM_MODEL` with no fallback and no per-call timeout.

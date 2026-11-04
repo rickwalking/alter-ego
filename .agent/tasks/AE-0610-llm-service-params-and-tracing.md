@@ -66,14 +66,16 @@ once.
 
 | Caller | Before, on an empty answer | Now |
 |---|---|---|
-| Blog suggest | 200 with an empty suggestion, stored on the post | 500, nothing stored |
-| Blog improve | 200 with empty `improved_text` | 500 |
+| Blog suggest | 200 with an empty suggestion, stored on the post | 503 `provider_unavailable`, nothing stored |
+| Blog improve | 200 with empty `improved_text` | 503 `provider_unavailable`, nothing stored |
 | Blog translation | `BlogTranslationError` (the empty answer fails the JSON parse) | `BlogTranslationError` |
 | Conversation title | Blank title saved | The service's first-message title |
 | Refine image / design | `AllModelsUnavailableError` from the queue | Same, with a queue. See below |
 | LinkedIn | `AllModelsUnavailableError` from the queue | Same, with a queue. See below |
 
-The 500 is what those two routes already return for any other model failure: they map only `ValueError` to 400.
+The 503 body is `{"detail": "The model returned nothing. Please try again.", "code": "provider_unavailable"}`. It
+names no model. Any other model failure on those two routes is still a 500: they map only `ValueError` to 400 and this
+error to 503.
 
 "Same" holds only when `LLM_MODEL_QUEUE_FAST` is set. `deploy.yml:173` sets it by default, so production has a queue.
 Without one, the fast role is a routed model with a fallback, and a blank answer from that fallback now raises
@@ -101,7 +103,7 @@ Without one, the fast role is a routed model with a fallback, and a blank answer
 - No caller moves to another model or role (see Decision Log).
 - No timeout, gate or threshold change. No new LLM call. No prompt change.
 - The temperatures callers request stay as they are.
-- `EmptyLLMResponseError` on the blog suggest and improve routes stays a generic 500.
+- The conversation-title fallback and the refine tools' handling of an empty answer stay as they are.
 
 ## Acceptance Criteria
 
@@ -113,6 +115,8 @@ Without one, the fast role is a routed model with a fallback, and a blank answer
 - [x] Refinement, conversation title and blog AI traces carry the user id where one is known, and the explicit
   `unknown` fallback where none is.
 - [x] The conversation title trace carries the conversation id as its project id.
+- [x] An empty answer on blog suggest and improve is a 503 with the `provider_unavailable` code and a safe message, and
+  stores nothing.
 - [x] The tests stay hermetic: no exporter and no network.
 - [x] The touched tests and the cheap backend gates pass.
 
@@ -142,6 +146,8 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
   Scenario: The service opens the phase the call names
   Scenario: A call that names no user keeps the unknown fallback
   Scenario: A failing call closes the phase it named
+  Scenario Outline: An empty answer on a blog AI route is a typed 503
+  Scenario: An empty answer on ai-suggest stores no suggestion
 ```
 
 ## Delta
@@ -158,6 +164,8 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 - `regenerate_slide_image`, `refine_carousel_design`, `get_conversation_title_generator`: pass an `LlmCallTrace`.
 - `LlmCallTrace` gains `user_id`. `get_conversation_title_generator` takes the conversation id and the signed-in user.
 - `blog_ai_propagate` takes an optional `user_id`, and `BlogTranslationService.translate` an optional `user_id`.
+- `ai_suggest` and `ai_improve` answer `EmptyLLMResponseError` with a coded 503.
+- `EmptyLLMResponseError` moves to `domain/protocols/ai.py`. `routed_chat_model` still exports it.
 - `docs/backend/llm-model-routing.md`: the `LLMService` paragraph. AE-0609 ticket: the blog AI audit row.
 
 ### REMOVED
@@ -171,7 +179,8 @@ Feature: LLMService sends the requested temperature and records its calls (AE-06
 - Backend: `infrastructure/external/anthropic_llm.py`, `domain/protocols/ai.py`, `domain/constants/langfuse_tracing.py`,
   `domain/protocols/__init__.py`, `blog_post_ai_service.py`, `blog_translation_service.py`,
   `blog_workflow_observability.py`,
-  `carousel_refinement.py`, `api/dependencies/conversation.py`, `api/routes/blog_post_sections.py`
+  `carousel_refinement.py`, `api/dependencies/conversation.py`, `api/routes/blog_post_sections.py`,
+  `api/routes/blog_post_ai.py`, `domain/constants/blog_editor.py`, `infrastructure/external/routed_chat_model.py`
 - Tests: new feature and two unit test files
 - Observability: new generations for every `LLMService` call
 - Frontend / Database / Deployment: none
@@ -211,6 +220,9 @@ LinkedIn scenario went with them (see Decision Log). The tests were rewritten to
 Review round 1 follow-ups. Against the old source, keeping only the new `LlmCallTrace.user_id` field so the tests
 collect, 14 tests failed on the behaviour: no user id on the refinement, title and blog traces, and the exact
 `blog_ai_propagate` arguments. Two new tests pass by design there: the `unknown` fallback and the project with no owner.
+
+Owner answers applied. The three new route tests failed with the 503 mapping removed (the error reached the generic
+handler) and pass with it.
 
 ## Files Touched
 
@@ -267,6 +279,18 @@ Pending.
   the EN gate and the EN repair, are background work with no user.
 - **The blog image call is unchanged.** It goes to an image provider, not through `LLMService`.
 - **The refinement's empty guards are removed.** `generate` raises first, so they could only run with a test double.
+- **Temperatures stay exactly as written (Pedro's decision, 2026-11-04).** LinkedIn 0.8, translation 0.2, design
+  refinement 0.3, JSON repair 0.2. Nothing is pinned to 0.7.
+- **An empty answer on blog suggest and improve is a typed 503 (Pedro's decision, 2026-11-04).** It uses the existing
+  `provider_unavailable` code and a safe message. Nothing is stored. The conversation-title fallback and the refine
+  tools stay as they are.
+- **`_ai_call_errors` holds both mappings.** Repeating the `try/except` in the two routes took `backend:duplication` to
+  0.41%, over its 0.4% limit.
+- **`CodedHTTPException`, not a dict in `detail`.** The repo's coded error already gives `{detail, code}`, and
+  `api-client.ts` reads a top-level `code`. `detail` holds the safe message.
+- **`EmptyLLMResponseError` moved to the domain.** Importing it into the route from infrastructure is a new layering
+  pair, and the baseline is not grown. Exceptions already sit on ports, as `StrategyNotFoundError` does.
+- **Only these two routes map it.** A section rewrite is outside the decision.
 - **The temperature change is the visible effect.** Translation gets more literal (0.2), design more repeatable
   (0.3), LinkedIn looser (0.8). These are the values the code always asked for.
 
@@ -276,6 +300,9 @@ Pending.
   `conversation.py` (`get_conversation_title_generator`) could use `fast_llm_service`. This is the owner's call. The
   routing doc records `glm-5.3` answering nothing after about 8.5 min, which is why it stopped being a fallback, and
   these calls still run on it.
+- **The blog editor does not show the safe message yet.** `api-client.ts` builds the error text from a top-level
+  `message`, and the coded body has `detail`, so `use-blog-ai` shows `HTTP error! status: 503`. The `code` reaches it, so
+  the fix is a frontend mapping to a translated message.
 - **Blog AI traces record `project_id=unknown`.** `blog_ai_propagate` sends the post id as `post_id` only.
 
 ## Blockers
