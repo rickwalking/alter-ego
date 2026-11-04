@@ -1,11 +1,11 @@
 # AE-0605 — The EN heading-case check reads the first visible letter
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
 Area: Backend
-Owner: Worker (Claude)
+Owner: Claude
 Agent Lane: developer → qa → release
 Branch: fix/ae-0605-heading-case-leading-markup
 Kanban Card: TBD
@@ -152,7 +152,7 @@ Pending.
 
 ## Decision Log
 
-- **The repair is in scope.** The brief's scope names the check, but fixing the check alone would leave
+- **The repair is in scope.** The report names the check, but fixing the check alone would leave
   `<strong>word` firing and being repaired to `<Strong>word`, which still fires: the old repair only "worked"
   because the check then read the `S` of the tag. A blocker that can no longer be repaired, plus a corrupted
   tag, is worse than the false positive, so the repair moves with the check. No validator changes.
