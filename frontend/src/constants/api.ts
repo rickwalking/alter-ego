@@ -85,6 +85,7 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/workflow/state`,
   CAROUSEL_WORKFLOW_RESUME: (id: string) =>
     `/api/carousels/${id}/workflow/resume`,
+  CAROUSEL_RETRY: (id: string) => `/api/carousels/${id}/workflow/retry`,
   CAROUSEL_WORKFLOW_STREAM: (id: string) =>
     `/api/carousels/${id}/workflow/stream`,
   BLOG_POSTS: "/api/blog-posts",

@@ -109,3 +109,47 @@ export const REPROCESS_REFUSAL_CODES: ReadonlySet<string> = new Set(
 );
 
 export const REPROCESS_POLL_INTERVAL_MS = 2_000;
+
+/** What an accepted owner Retry runs, as the retry route reports it. */
+export const RETRY_KIND = {
+  REDRIVE: "redrive",
+  REVISE: "revise",
+  REOPEN: "reopen",
+} as const;
+
+export const RETRY_KINDS: ReadonlySet<string> = new Set(
+  Object.values(RETRY_KIND),
+);
+
+/** Why the backend refuses an owner Retry (the retry route's typed codes). */
+export const RETRY_REFUSAL = {
+  NOT_FOUND: "not_found",
+  NOT_OWNER: "not_owner",
+  NOT_ASSIGNED_REVIEWER: "not_assigned_reviewer",
+  NOT_RETRYABLE: "not_retryable",
+  RUN_IN_PROGRESS: "resume_already_in_progress",
+  MUTATION_IN_PROGRESS: "mutation_in_progress",
+  USE_REPROCESS: "use_reprocess",
+  AUTOPILOT_ACTIVE: "autopilot_active",
+  NO_CHECKPOINT: "no_checkpoint",
+  VERSION_CONFLICT: "version_conflict",
+  REVISION_CAP_EXCEEDED: "revision_cap_exceeded",
+  CONCURRENT_UPDATE: "concurrent_update",
+} as const;
+
+export const RETRY_REFUSAL_CODES: ReadonlySet<string> = new Set(
+  Object.values(RETRY_REFUSAL),
+);
+
+/** Refusals that end on their own, so the capability is read again. */
+export const RETRY_TEMPORARY_REFUSALS: ReadonlySet<string> = new Set([
+  RETRY_REFUSAL.RUN_IN_PROGRESS,
+  RETRY_REFUSAL.MUTATION_IN_PROGRESS,
+  RETRY_REFUSAL.AUTOPILOT_ACTIVE,
+]);
+
+/** The toast variants of an owner Retry. */
+export const RETRY_TOAST_VARIANT = {
+  SUCCESS: "success",
+  ERROR: "error",
+} as const;

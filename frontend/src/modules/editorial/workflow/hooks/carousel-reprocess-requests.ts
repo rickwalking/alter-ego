@@ -11,7 +11,7 @@ import {
 } from "@/schemas/carousel-reprocess";
 import type { CarouselReprocessRequest } from "./types";
 
-const REQUEST_FAILED = "Carousel reprocess request failed";
+const REQUEST_FAILED = "Carousel workflow request failed";
 const errorDetailSchema = z.object({ detail: z.string() });
 
 async function readRequestError(response: Response): Promise<ApiError> {
@@ -22,7 +22,8 @@ async function readRequestError(response: Response): Promise<ApiError> {
   return error;
 }
 
-async function requestReprocess<T>(
+/** One carousel recovery call: typed error detail, validated body. */
+export async function requestCarouselRecovery<T>(
   url: string,
   schema: z.ZodType<T>,
   options?: RequestInit,
@@ -36,7 +37,7 @@ async function requestReprocess<T>(
 export function fetchCarouselReprocessCapability(
   projectId: string,
 ): Promise<CarouselReprocessCapability> {
-  return requestReprocess(
+  return requestCarouselRecovery(
     WORKFLOW_API.CAROUSEL_REPROCESS(projectId),
     carouselReprocessCapabilitySchema,
   );
@@ -46,7 +47,7 @@ export function postCarouselReprocess(
   projectId: string,
   input: CarouselReprocessRequest,
 ): Promise<ManualReprocessResponse> {
-  return requestReprocess(
+  return requestCarouselRecovery(
     WORKFLOW_API.CAROUSEL_REPROCESS(projectId),
     manualReprocessResponseSchema,
     {

@@ -19,6 +19,9 @@ export function WorkflowFailedCard({
   errorMessage,
   onRetry,
   isRetrying,
+  recoveryAction,
+  restartLabel,
+  restartDisabled = false,
 }: Readonly<WorkflowFailedCardProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow");
 
@@ -68,18 +71,30 @@ export function WorkflowFailedCard({
           </pre>
         </>
       ) : null}
-      <NeonButton size="sm" disabled={isRetrying} onClick={onRetry}>
-        {isRetrying ? (
-          <span
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <NeonSpinner />
-            {t("failed.retrying")}
-          </span>
-        ) : (
-          t("failed.retryButton")
-        )}
-      </NeonButton>
+      <div className="flex flex-wrap items-start gap-3">
+        {recoveryAction}
+        <NeonButton
+          size="sm"
+          variant={restartLabel ? "secondary" : "primary"}
+          disabled={isRetrying || restartDisabled}
+          onClick={onRetry}
+        >
+          {isRetrying ? (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <NeonSpinner />
+              {t("failed.retrying")}
+            </span>
+          ) : (
+            (restartLabel ?? t("failed.retryButton"))
+          )}
+        </NeonButton>
+      </div>
     </div>
   );
 }
