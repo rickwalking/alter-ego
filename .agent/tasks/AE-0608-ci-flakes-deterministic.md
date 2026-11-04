@@ -112,8 +112,9 @@ CI and test tooling, "unit tests suffice" (root CLAUDE.md, AE-0153):
   `test_recorder_timeout_preserves_authoritative_generation_state` proves the real budget still fires.
 - (c) Affected gates: `frontend:lint` (`lint:comments`, `lint:knip`), `frontend:test`, `backend:test`, and backend
   format, lint, comments, docstrings and gherkin-refs.
-- (d) Reviewer or QA sign-off on the no-`.feature` classification is requested on the PR. The tests keep citing their
-  existing scenarios.
+- (d) Reviewer sign-off on the no-`.feature` classification (2026-11-04): accepted. Tests and tooling only; nothing
+  under `backend/src`, `pyproject.toml`, `uv.lock` or the CI workflows changes, and no gate, limit or timeout is loosened.
+  The tests keep citing their existing scenarios.
 
 ## Decision Log
 
@@ -203,7 +204,9 @@ See `.agent/reports/AE-0608.dev-summary.md`.
 
 ## QA Report
 
-Not run yet: the no-`.feature` classification sign-off is requested on the PR.
+Review (2026-11-04): approved after one round. The round removed the suite-wide `None` event-write budget; the
+real 100 ms budget now applies everywhere, proven by `test_cancelled_event_writes_leave_the_workflow_intact`.
+No-`.feature` classification signed off (see (d)). Full gate at 780f5bd1: 26 pass, 0 fail, 1 skip (mutation runs in CI).
 
 ## Blockers
 
