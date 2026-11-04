@@ -61,6 +61,7 @@ _ALLOWED_DETAIL_KEYS = frozenset({
     "total_count",
     "truncated",
     "unscored_count",
+    "violation_codes",
     "violation_count",
 })
 
