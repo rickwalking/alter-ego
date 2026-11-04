@@ -21,6 +21,9 @@ from rag_backend.modules.autopilot.infrastructure.boost_store import SqlBoostSto
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
+from rag_backend.modules.autopilot.infrastructure.carousel_retrier import (
+    QueueCarouselRetrier,
+)
 from rag_backend.modules.autopilot.infrastructure.carousel_source import (
     PublishingCarouselSource,
 )
@@ -116,6 +119,7 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         boosts=SqlBoostStore(build.session),
         boost_limits=limits_from(build.settings),
         pauser=SettingsCampaignPauser(build.settings),
+        carousel_retrier=QueueCarouselRetrier(build.session, build.engine_factory),
     )
     return OwnerActionService(deps)
 
