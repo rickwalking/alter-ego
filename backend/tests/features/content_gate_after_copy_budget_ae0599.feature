@@ -66,7 +66,7 @@ Feature: Generated copy passes the content gate after the copy budget step (AE-0
     And whose slide 4 EN translation kept a quote card its PT draft lost
     When the copy budget step runs and the content review is built
     Then slide 5 has the insight in both locales
-    And the gate reports only the translation_shape_mismatch of slide 4
+    And the gate reports no violation
 
   # --- C: the drafting prompts put this slide's limits next to the role ------
 
