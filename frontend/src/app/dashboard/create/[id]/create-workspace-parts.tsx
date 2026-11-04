@@ -6,14 +6,11 @@ import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
-import {
-  CarouselReprocess,
-  useCarouselReprocess,
-  WorkflowFailedCard,
-} from "@/modules/editorial";
+import { WorkflowFailedCard } from "@/modules/editorial";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
-import type { CarouselReprocessState } from "@/modules/editorial";
+import { useWorkspaceRecovery } from "./create-workspace-recovery";
+import type { WorkspaceRecovery } from "./types";
 import type { CreateWorkspace } from "./use-create-workspace";
 
 const briefCardStyle = {
@@ -83,42 +80,20 @@ function PublishStepCard({
 
 type LoadedProject = NonNullable<CreateWorkspace["projectQuery"]["data"]>;
 
-function shouldShowReprocess(reprocess: CarouselReprocessState): boolean {
-  if (reprocess.pending || reprocess.error !== null) return true;
-  return (
-    typeof reprocess.capability?.stuck_kind === "string" ||
-    reprocess.progressVisible
-  );
-}
-
 /** The active step's body: failed card, publish hand-off, brief or a phase. */
-export function WorkspaceStepBody({
+function WorkspaceStepContent({
   workspace,
   project,
+  recovery,
 }: Readonly<{
   workspace: CreateWorkspace;
   project: LoadedProject;
+  recovery: WorkspaceRecovery;
 }>): React.ReactElement {
   const { editorialWorkflow, activeStepId, projectId, starter } = workspace;
+  const { reprocessControl, retryControl, retryPending, startOverLabel } =
+    recovery;
   const state = editorialWorkflow.state;
-  const reprocess = useCarouselReprocess({
-    projectId,
-    enabled: Boolean(state?.current_phase),
-    fallbackExpectedVersion: state?.lock_version,
-    refreshWorkflow: editorialWorkflow.refreshState,
-  });
-  const showReprocess = shouldShowReprocess(reprocess);
-  const reprocessControl = showReprocess ? (
-    <CarouselReprocess
-      capability={reprocess.capability}
-      pending={reprocess.pending}
-      canSubmit={reprocess.canSubmit}
-      error={reprocess.error}
-      onReprocess={() => {
-        void reprocess.reprocess();
-      }}
-    />
-  ) : null;
   if (state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED) {
     return (
       <>
@@ -130,6 +105,9 @@ export function WorkspaceStepBody({
             void starter.handleRetryWorkflow();
           }}
           isRetrying={starter.retrying}
+          recoveryAction={retryControl}
+          restartLabel={startOverLabel}
+          restartDisabled={retryPending}
         />
       </>
     );
@@ -138,6 +116,7 @@ export function WorkspaceStepBody({
     return (
       <>
         {reprocessControl}
+        {retryControl}
         <PublishStepCard onGoToPublish={workspace.navigation.goToPublish} />
       </>
     );
@@ -158,6 +137,7 @@ export function WorkspaceStepBody({
   return (
     <>
       {reprocessControl}
+      {retryControl}
       <WorkflowStepContent
         project={project}
         projectId={projectId}
@@ -168,6 +148,27 @@ export function WorkspaceStepBody({
         publishedProject={workspace.publishedProject}
         onPublished={workspace.setPublishedProject}
       />
+    </>
+  );
+}
+
+/** The step body, and a Retry toast that outlives the Retry button. */
+export function WorkspaceStepBody({
+  workspace,
+  project,
+}: Readonly<{
+  workspace: CreateWorkspace;
+  project: LoadedProject;
+}>): React.ReactElement {
+  const recovery = useWorkspaceRecovery(workspace);
+  return (
+    <>
+      <WorkspaceStepContent
+        workspace={workspace}
+        project={project}
+        recovery={recovery}
+      />
+      {recovery.retryToast}
     </>
   );
 }

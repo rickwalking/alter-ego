@@ -1,6 +1,6 @@
 # AE-0606 — Owner Retry for failed, blocked, escalated and rejected carousels (backend)
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -233,6 +233,26 @@ Pending.
   `validate_revision_cap` and the Retry facts). The Telegram rejected check now reads the gate for approved
   carousels too (one read). `owner_actions.py` stays under 400 lines by moving `choice_deps` to
   `owner_action_helpers.py`.
+
+- PR2, frontend (2026-11-04):
+  - The website button is on the phase card: inside the failed card next to "Start over", above the phase content
+    on a blocked or rejected carousel (Pedro's decision, 2026-11-03).
+  - A `reopen` runs nothing, so no `run.finished` arrives: every 202 re-reads the workflow state, and the
+    finished toasts follow only a retry accepted as `in_progress`.
+  - `finishedOk` / `finishedFailed` come from the workflow state the page already follows (SSE): `awaiting_human`
+    is ok; `failed` and `rejected` are failed. Tracking lives in the page, so a reload drops it.
+  - The capability is keyed by phase, status and lock version, so a state change re-reads it. It is polled at the
+    board interval while the refusal is temporary (`resume_already_in_progress`, `mutation_in_progress`,
+    `autopilot_active`): an escalation changes neither the phase nor the lock version. It is not polled while the
+    phase is `in_progress`, because the run's end changes the key.
+  - The finished toasts are keyed on the version the accepted Retry moved past, not on a status edge. SSE can show
+    `in_progress` before the 202 returns, and an edge watch then lost the toast and fired it for a later run. A
+    state past that version that is not `in_progress` ends the watch, so no later run can show the toast.
+  - A refusal is shown in a toast and next to the button, and clears when the workflow state changes.
+  - A failed capability read hides the button without an error: Retry is an optional action on the card.
+  - The publish page's failed notice keeps its label: its button only links back to the workspace, so
+    "Start over" would be wrong there. `WorkflowFailedCard` takes `restartLabel`, passed by the workspace only.
+  - `url-inventory.snapshot.json` regenerated for the new proxy route; it records routes and allows nothing.
 
 ## Blockers
 
