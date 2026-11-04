@@ -16,7 +16,7 @@ from rag_backend.domain.models import (
     CarouselProject,
     CarouselStatus,
 )
-from rag_backend.infrastructure.external.routed_chat_model import EmptyLLMResponseError
+from rag_backend.domain.protocols.ai import EmptyLLMResponseError
 
 from .carousel_refinement_helpers import (
     make_refinement_service_with_mocks,
