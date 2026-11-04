@@ -1,4 +1,4 @@
-"""Shared Postgres helpers of the AE-0615 gate-selection tests.
+"""Shared Postgres helpers of the gate-selection tests.
 
 Feature: tests/features/autopilot_cover_gate_select_ae0615.feature. ``_Drive``
 is the autopilot drive between two polls of the background selection: it
