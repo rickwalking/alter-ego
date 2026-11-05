@@ -24,9 +24,7 @@ from rag_backend.application.services.carousel.content_budget_step import (
     run_content_budget_step,
 )
 from rag_backend.application.services.carousel.content_fail_closed import (
-    FailClosedReviewCommand,
     SlideDraftRetryFn,
-    build_fail_closed_review_updates,
 )
 from rag_backend.application.services.carousel.content_feedback_lifecycle import (
     active_feedback_notes,
@@ -57,7 +55,6 @@ from rag_backend.application.services.carousel.persona_slide_scoring import (
     score_slide_voices,
 )
 from rag_backend.application.services.carousel.revision_scope import (
-    keep_unscoped_slides,
     revision_scope,
     scoped_draft_updates,
 )
@@ -103,6 +100,12 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
 
 from .carousel_rubric_step import CarouselRubricStep, RubricScoreInput
 from .content_mode_brief import ContentModeBrief, load_content_mode_brief
+from .content_review_step import (
+    ContentPhaseUpdates,
+    ContentReviewContext,
+    RedraftTranslator,
+    review_content,
+)
 from .editorial_distribution_pack import (
     DistributionBuildContext,
     build_editorial_distribution_updates,
@@ -207,17 +210,6 @@ async def _design_tokens_updates(
         return {}
     await apply_design_tokens(db, str(state.get("project_id", "")), slides)
     return {"design_applied": True}
-
-
-@dataclass(frozen=True)
-class ContentReviewContext:
-    """Inputs for building the fail-closed content review updates."""
-
-    project_id: str
-    slide_drafts: object
-    translations_en: object
-    retry_draft: SlideDraftRetryFn | None
-    policy_version: str | None = None
 
 
 class DistributionCheckParams(TypedDict):
@@ -530,21 +522,21 @@ class PhaseArtifactRunner:
                 scorer=partial(self._score_content_drafts, resolved),
             ),
         )
-        updates.update(
-            await self._build_presentation_review_updates(
-                ContentReviewContext(
-                    project_id=str(state.get("project_id", "")),
-                    slide_drafts=fit.slide_drafts,
-                    translations_en=fit.translations_en,
-                    retry_draft=self._resolve_slide_draft_retry(
-                        resolved, outline, regen
-                    ),
-                    policy_version=_state_policy_version(state),
-                )
-            )
+        await review_content(
+            self._db,
+            ContentPhaseUpdates(state, updates),
+            ContentReviewContext(
+                project_id=str(state.get("project_id", "")),
+                slide_drafts=fit.slide_drafts,
+                translations_en=fit.translations_en,
+                retry_draft=self._resolve_slide_draft_retry(resolved, outline, regen),
+                policy_version=_state_policy_version(state),
+                translate_slides=RedraftTranslator(
+                    self._llm, self._translation_answers
+                ),
+                scope=regen.scope if regenerated else None,
+            ),
         )
-        if regenerated and regen.scope is not None:
-            updates.update(keep_unscoped_slides(state, updates, regen.scope))
         await self._repair_content_gate(state, updates, resolved)
         if regenerated:
             updates.update(_settle_used_notes(state, updates))
@@ -603,36 +595,6 @@ class PhaseArtifactRunner:
                 mode=regen.mode if regen else None,
                 rubric=regen.rubric if regen else None,
             ),
-        )
-
-    @staticmethod
-    async def _build_presentation_review_updates(
-        context: ContentReviewContext,
-    ) -> dict[str, object]:
-        """Build content review updates through the fail-closed chain."""
-        from rag_backend.application.services.carousel.presentation_review import (
-            deserialize_translations_en,
-        )
-
-        slide_drafts = context.slide_drafts
-        draft_dicts = (
-            [slide for slide in slide_drafts if isinstance(slide, dict)]
-            if isinstance(slide_drafts, list)
-            else []
-        )
-        translations = (
-            deserialize_translations_en(context.translations_en)
-            if context.translations_en is not None
-            else None
-        )
-        return await build_fail_closed_review_updates(
-            FailClosedReviewCommand(
-                project_id=context.project_id,
-                slide_drafts=draft_dicts,
-                translations_en=translations,
-                policy_version=context.policy_version,
-                retry_draft=context.retry_draft,
-            )
         )
 
     async def _generate_content_drafts(

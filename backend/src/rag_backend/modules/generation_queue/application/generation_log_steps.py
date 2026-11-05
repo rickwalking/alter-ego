@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from rag_backend.domain.persona_score import lowest_overall, stored_overall
+from rag_backend.modules.generation_queue.application.content_gate_codes import (
+    violation_code_details,
+)
 from rag_backend.modules.generation_queue.application.generation_events import (
     note_workflow_failure,
     record_generation_event,
@@ -166,6 +169,7 @@ async def _record_gate(
             details={
                 "violation_count": violation_count,
                 "blocking_count": blocking_count,
+                **violation_code_details(validation),
             },
             langfuse_trace_id=trace_id,
             langfuse_trace_url=trace_url,
