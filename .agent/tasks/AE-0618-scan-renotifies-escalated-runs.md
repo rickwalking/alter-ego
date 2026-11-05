@@ -161,6 +161,9 @@ Third round: `application/notifications.py` (the claim; `status_notice` moved ou
   daily-scan integration files, plus 34 in the six autopilot notifier integration files, on Postgres; 100% line and
   branch coverage on `notifications.py`, `renotice_send.py`, `status_notice.py` and both `escalation_renotice.py` files.
 - PR #360 CI at `8ade4019`: all checks passed, mutation included.
+- PR #360 CI at `a6c973bd`: `Test & Coverage` failed on an unclosed `aiosqlite` connection collected during
+  `test_a_wrong_current_password_leaves_the_stored_user_unchanged` (run 41939599716), which ran before every test of this
+  ticket, so the leak is not from this change. `backend-gate` passed at that head; its mutation score was 92.90%.
 - PR #360 CI at `7011e232`: all checks passed, `backend-gate` on its second attempt. The first failed on
   `test_cancelled_event_writes_leave_the_workflow_intact` (`assert events == []`), a timing test this change does not
   touch; `Test & Coverage` passed at the same head and the one rerun passed (run 41872220335).
