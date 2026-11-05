@@ -26,6 +26,9 @@ from rag_backend.modules.autopilot.domain.notify import (
     StatusNotice,
     StatusSendResult,
 )
+from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
+    SqlRenoticeClaims,
+)
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.notice_source import (
     SqlAutopilotEventSource,
@@ -130,6 +133,7 @@ async def tick(engine: AsyncEngine, telegram: FakeTelegram) -> int:
                 facts=_NoFacts(),
                 notices=SqlNoticeLogStore(session),
                 notifier=telegram,
+                claims=SqlRenoticeClaims(session),
                 clock=_Clock(),
                 chat_id="owner-chat",
                 configured=True,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
+from typing import Protocol
 from uuid import UUID
 
 from rag_backend.modules.autopilot.constants import PAYLOAD_REASON, PAYLOAD_STATE
@@ -13,14 +14,18 @@ from rag_backend.modules.autopilot.domain.dead_letter import (
 )
 from rag_backend.modules.autopilot.domain.messages import notice_kind, reason_of
 from rag_backend.modules.autopilot.domain.models import AutopilotRun
-from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, attempt_count
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
 from rag_backend.modules.autopilot.notify_constants import (
+    ATTEMPT_STATUS_PREFIX,
     KIND_ESCALATED,
     KIND_PUBLISH_FAILED,
+    NOTIFY_MAX_ATTEMPTS,
 )
 from rag_backend.modules.autopilot.renotice_constants import (
     RENOTICE_KEY,
+    RENOTICE_KEY_FORMAT,
+    RENOTICE_SENDING_KEY,
     RENOTICE_STATES,
     RESOLVED_REASONS,
 )
@@ -36,13 +41,26 @@ class PastNotice:
     since_retry: bool
 
 
+class RenoticeClaims(Protocol):
+    """The durable claim on one notice's send."""
+
+    async def take(self, run_id: UUID, event_id: str) -> bool:
+        """Claim the send and commit; False when it is claimed or delivered."""
+        ...
+
+    async def release(self, run_id: UUID, event_id: str) -> None:
+        """Drop the claim: the send certainly did not happen. The caller commits."""
+        ...
+
+
 def renotice_due(run: AutopilotRun) -> bool:
-    """A stuck run with a carousel, not closed or parked, not re-notified yet."""
+    """A stuck run with a carousel, not closed or parked, whose notices all failed."""
     if run.state not in RENOTICE_STATES or not run.carousel_project_id:
         return False
     if run.state_reason in RESOLVED_REASONS or is_dead_letter(run.state_reason):
         return False
-    return RENOTICE_KEY not in run.notice_log.statuses
+    log = run.notice_log
+    return all(_given_up(log, event_id) for event_id in _queued(log))
 
 
 def carried_retry(notice: PastNotice) -> bool:
@@ -63,9 +81,26 @@ def carried_retry(notice: PastNotice) -> bool:
     return status_keyboard(kind, notice.run_id, notice.payload) is not None
 
 
-def mark_renoticed(log: NoticeLog) -> NoticeLog:
-    """``log`` with the marker that keeps the run to one re-sent notice."""
-    return replace(log, statuses=(*log.statuses, RENOTICE_KEY))
+def mark_renoticed(log: NoticeLog, event_id: str) -> NoticeLog:
+    """``log`` with the marker of the notice queued as ``event_id``."""
+    marker = RENOTICE_KEY_FORMAT.format(key=RENOTICE_KEY, event_id=event_id)
+    return replace(log, statuses=(*log.statuses, marker))
+
+
+def send_claimed(log: NoticeLog, event_id: str) -> bool:
+    """True when a send of ``event_id`` started and may have been delivered."""
+    return _claim(event_id) in log.statuses
+
+
+def claim_send(log: NoticeLog, event_id: str) -> NoticeLog:
+    """``log`` with the claim taken before ``event_id`` is sent."""
+    return replace(log, statuses=(*log.statuses, _claim(event_id)))
+
+
+def release_send(log: NoticeLog, event_id: str) -> NoticeLog:
+    """``log`` without the claim: that send certainly did not happen."""
+    claim = _claim(event_id)
+    return replace(log, statuses=tuple(item for item in log.statuses if item != claim))
 
 
 def renotice_payload(run: AutopilotRun) -> dict[str, object]:
@@ -76,10 +111,35 @@ def renotice_payload(run: AutopilotRun) -> dict[str, object]:
     }
 
 
+def _claim(event_id: str) -> str:
+    return RENOTICE_KEY_FORMAT.format(key=RENOTICE_SENDING_KEY, event_id=event_id)
+
+
+def _queued(log: NoticeLog) -> list[str]:
+    prefix = RENOTICE_KEY_FORMAT.format(key=RENOTICE_KEY, event_id="")
+    return [
+        status.removeprefix(prefix)
+        for status in log.statuses
+        if status.startswith(prefix)
+    ]
+
+
+def _given_up(log: NoticeLog, event_id: str) -> bool:
+    """Certainly undelivered: not recorded, no send in doubt, no attempt left."""
+    if event_id in log.statuses or send_claimed(log, event_id):
+        return False
+    key = f"{ATTEMPT_STATUS_PREFIX}{event_id}"
+    return attempt_count(log, key) >= NOTIFY_MAX_ATTEMPTS
+
+
 __all__ = [
     "PastNotice",
+    "RenoticeClaims",
     "carried_retry",
+    "claim_send",
     "mark_renoticed",
+    "release_send",
     "renotice_due",
     "renotice_payload",
+    "send_claimed",
 ]

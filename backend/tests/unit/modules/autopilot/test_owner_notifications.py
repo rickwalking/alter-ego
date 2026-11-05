@@ -56,6 +56,16 @@ _RUN = UUID("33333333-3333-4333-8333-333333333333")
 _PROJECT = "carousel-1"
 
 
+class _NoClaims:
+    """No re-sent notice goes through these tests."""
+
+    async def take(self, run_id: UUID, event_id: str) -> bool:
+        raise AssertionError((run_id, event_id))
+
+    async def release(self, run_id: UUID, event_id: str) -> None:
+        raise AssertionError((run_id, event_id))
+
+
 class _Clock:
     def now(self) -> datetime:
         return _NOW
@@ -187,6 +197,7 @@ def _service(
         facts=facts or _Facts(),
         notices=store,
         notifier=notifier,
+        claims=_NoClaims(),
         clock=_Clock(),
         chat_id=chat_id,
         configured=configured,

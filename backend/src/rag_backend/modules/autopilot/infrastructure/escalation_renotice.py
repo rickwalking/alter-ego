@@ -2,7 +2,8 @@
 
 Staging writes the outbox row and the ledger marker in one transaction, under the
 run's row lock, so a run gets one event however many scans race. The worker's
-notifier delivers the event. Neither the run's state nor ``updated_at`` moves.
+notifier delivers the event, taking a claim from ``SqlRenoticeClaims`` first.
+Neither the run's state nor ``updated_at`` moves.
 """
 
 from __future__ import annotations
@@ -24,10 +25,14 @@ from rag_backend.modules.autopilot.constants import (
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
     PastNotice,
     carried_retry,
+    claim_send,
     mark_renoticed,
+    release_send,
     renotice_due,
+    send_claimed,
 )
 from rag_backend.modules.autopilot.domain.models import AutopilotRun
+from rag_backend.modules.autopilot.domain.notice_log import parse_stored
 from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
@@ -87,14 +92,15 @@ class SqlEscalationRenotices:
         run = run_from_row(row)
         if not await self._still_eligible(run, carousel_open):
             return False
-        audit, outbox = build_event_records(renotice_record(run))
+        record = renotice_record(run)
+        audit, outbox = build_event_records(record)
         self._session.add(audit)
         self._session.add(outbox)
         await self._session.flush()
         await SqlNoticeLogStore(self._session).save(
             SaveNoticeLog(
                 run_id=run.run_id,
-                log=mark_renoticed(run.notice_log),
+                log=mark_renoticed(run.notice_log, record.event_id),
                 base=run.notice_log,
             )
         )
@@ -135,8 +141,44 @@ class SqlEscalationRenotices:
         }
 
 
+class SqlRenoticeClaims:
+    """``RenoticeClaims`` on the run's ledger.
+
+    ``take`` commits the tick's session, so the claim outlives a crash and a
+    rollback of anything that step does after the send.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def take(self, run_id: UUID, event_id: str) -> bool:
+        """Claim the send under the row lock and commit; False when already taken."""
+        stored = await self._session.scalar(
+            select(_R.telegram_message_ids).where(_R.id == run_id).with_for_update()
+        )
+        log = parse_stored(stored)
+        if event_id in log.statuses or send_claimed(log, event_id):
+            await self._session.commit()
+            return False
+        await SqlNoticeLogStore(self._session).save(
+            SaveNoticeLog(run_id=run_id, log=claim_send(log, event_id), base=log)
+        )
+        await self._session.commit()
+        return True
+
+    async def release(self, run_id: UUID, event_id: str) -> None:
+        """Drop the claim of a send that did not happen. The caller commits."""
+        stored = await self._session.scalar(
+            select(_R.telegram_message_ids).where(_R.id == run_id).with_for_update()
+        )
+        log = parse_stored(stored)
+        await SqlNoticeLogStore(self._session).save(
+            SaveNoticeLog(run_id=run_id, log=release_send(log, event_id), base=log)
+        )
+
+
 def _mapping(payload: object) -> Mapping[str, object]:
     return cast(dict[str, object], payload) if isinstance(payload, dict) else {}
 
 
-__all__ = ["CarouselOpen", "SqlEscalationRenotices"]
+__all__ = ["CarouselOpen", "SqlEscalationRenotices", "SqlRenoticeClaims"]

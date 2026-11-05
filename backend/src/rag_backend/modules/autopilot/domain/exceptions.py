@@ -66,8 +66,16 @@ class TelegramRateLimitedError(TelegramDeliveryError):
     """Still limited after honouring retry_after. Do not count a failure."""
 
 
+class TelegramDeliveryUnknownError(TelegramDeliveryError):
+    """The request left and no answer came back: it may have been delivered."""
+
+
 class NotifierUnconfiguredError(Exception):
     """The bot token is empty. Callers must not record a delivery."""
+
+
+class RenoticeClaimedError(Exception):
+    """Another worker holds this notice's send. Nothing was sent."""
 
 
 class InstagramCallError(Exception):
