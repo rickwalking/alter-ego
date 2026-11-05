@@ -5,6 +5,10 @@ carousel. Without the owner's recorded consent (the ``AUTOPILOT_COVER_CONSENT``
 switch) the step skips and logs before any photo is even read — none leaves
 the app. The generation runs on its own session, so a failure can never break
 the tick's session: the run is never affected by the cover.
+
+``apply_cover`` (the runner, at each gate before it resumes) puts the
+succeeded cover on slide 1 under the same consent; the editorial selection
+writes on its own sessions and a crash is logged, never raised.
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.cover_constants import (
+    ACTION_APPLY_COVER,
     LOG_COVER,
     LOG_COVER_AUTO_SKIPPED,
     LOG_COVER_AUTO_STARTED,
@@ -23,13 +28,14 @@ from rag_backend.modules.autopilot.cover_constants import (
 from rag_backend.modules.editorial.public import (
     AutoCoverOutcome,
     schedule_autopilot_cover,
+    select_cover_at_gate,
 )
 
 logger = structlog.get_logger()
 
 
 class EditorialAutoCoverScheduler:
-    """``AutoCoverScheduler``: one consent-gated cover job per fresh carousel."""
+    """``AutoCoverScheduler`` and ``AutoCoverApplier``, both consent-gated."""
 
     def __init__(self, sessions: Callable[[], AsyncSession], *, consent: bool) -> None:
         self._sessions = sessions
@@ -52,6 +58,18 @@ class EditorialAutoCoverScheduler:
             project_id=project_id,
             generation_id=outcome.generation_id,
         )
+
+    async def apply_cover(self, project_id: str) -> bool:
+        """True when slide 1 just took the succeeded cover; False otherwise."""
+        if not self._consent:
+            return False
+        try:
+            return await select_cover_at_gate(self._sessions, project_id)
+        except Exception:
+            logger.exception(
+                LOG_COVER, action=ACTION_APPLY_COVER, project_id=project_id
+            )
+            return False
 
     async def _run(self, project_id: str) -> AutoCoverOutcome | None:
         """The facade call on its own session; None when it crashed."""

@@ -33,7 +33,8 @@ _IG_MEDIA_REVISION = "f9a0b1c2d3e4"
 _IG_MEDIA_PARENT = "e7a91c4d2f60"
 _BOOSTS_REVISION = "a8b9c0d1e2f3"
 _FLAG_REVISION = "b9c0d1e2f3a4"
-ALEMBIC_HEAD = "c0d1e2f3a4b5"
+_TOKEN_VERSION_REVISION = "c0d1e2f3a4b5"
+ALEMBIC_HEAD = "b2c3d4e5f6a8"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -98,7 +99,10 @@ def test_autopilot_revision_is_the_only_head() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     assert list(script.get_heads()) == [ALEMBIC_HEAD]
-    token_version = script.get_revision(ALEMBIC_HEAD)
+    baselines = script.get_revision(ALEMBIC_HEAD)
+    assert baselines is not None
+    assert baselines.down_revision == _TOKEN_VERSION_REVISION
+    token_version = script.get_revision(_TOKEN_VERSION_REVISION)
     assert token_version is not None
     assert token_version.down_revision == _FLAG_REVISION
     flag = script.get_revision(_FLAG_REVISION)

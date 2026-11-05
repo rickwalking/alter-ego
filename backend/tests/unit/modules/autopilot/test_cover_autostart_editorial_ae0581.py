@@ -126,7 +126,9 @@ def _helper(
 
     monkeypatch.setattr(carousel_cover_autostart, "cover_run_wiring", _wiring)
     monkeypatch.setattr(
-        carousel_cover_autostart, "cover_generation_service", lambda _s: service
+        carousel_cover_autostart,
+        "cover_generation_service",
+        lambda _s, _store=None: service,
     )
     monkeypatch.setattr(
         carousel_cover_autoselect, "cover_generation_task", lambda _w, run: run
