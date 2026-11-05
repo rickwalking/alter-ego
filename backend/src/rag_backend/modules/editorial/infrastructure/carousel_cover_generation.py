@@ -53,6 +53,7 @@ if TYPE_CHECKING:
         CoverGenerationConfig,
         CoverGenerationRun,
         CoverGenerationService,
+        CoverGenerationStore,
     )
     from rag_backend.application.services.carousel.cover_generation_runner import (
         CoverGenerationRunner,
@@ -218,8 +219,14 @@ def cover_generation_config() -> CoverGenerationConfig:
     )
 
 
-def cover_generation_service(session: AsyncSession) -> CoverGenerationService:
-    """Usage and start of a generation on the request's session."""
+def cover_generation_service(
+    session: AsyncSession, store: CoverGenerationStore | None = None
+) -> CoverGenerationService:
+    """Usage and start of a generation on the request's session.
+
+    ``store`` replaces the session's generation rows (the autopilot's adds its
+    baseline row in the same transaction).
+    """
     from rag_backend.application.services.carousel.cover_generation import (
         CoverGenerationService,
     )
@@ -228,7 +235,7 @@ def cover_generation_service(session: AsyncSession) -> CoverGenerationService:
     )
 
     return CoverGenerationService(
-        SqlCoverGenerationRepository(session),
+        store or SqlCoverGenerationRepository(session),
         EditorialOwnerPhotos(session),
         cover_generation_config(),
     )

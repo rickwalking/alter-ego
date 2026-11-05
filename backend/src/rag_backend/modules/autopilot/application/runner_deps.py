@@ -15,7 +15,10 @@ from rag_backend.modules.autopilot.domain.autofix import (
     GateRepairer,
     SlideFixer,
 )
-from rag_backend.modules.autopilot.domain.cover_autostart import AutoCoverScheduler
+from rag_backend.modules.autopilot.domain.cover_autostart import (
+    AutoCoverApplier,
+    AutoCoverScheduler,
+)
 from rag_backend.modules.autopilot.domain.cover_ports import CoverOffers, CoverSwitcher
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
@@ -47,7 +50,8 @@ class RunnerDependencies:
     ``spacing`` keeps a queued run waiting until the previous start is old enough.
     ``retryable`` names the errors the generation queue retries instead.
     ``auto_cover`` schedules one slide-1 cover generation when a fresh carousel
-    starts (None: the step is off). ``carousels`` rejects the carousel of an
+    starts (None: the step is off); ``cover_apply`` puts it on slide 1 at the next
+    gate once it succeeded (None: off). ``carousels`` rejects the carousel of an
     escalation closed unfixed (None: the stuck-workflow auto-reject does it later).
     """
 
@@ -66,6 +70,7 @@ class RunnerDependencies:
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
     auto_cover: AutoCoverScheduler | None = None
+    cover_apply: AutoCoverApplier | None = None
     spacing: StartSpacing | None = None
     carousels: CarouselSettler | None = None
     retryable: Callable[[BaseException], bool] = field(default=_never_retryable)

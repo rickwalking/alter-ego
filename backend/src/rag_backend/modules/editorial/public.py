@@ -3,8 +3,7 @@
 **This file is the module's public API.** Cross-module code SHALL import only
 the symbols re-exported here (also re-exported from the package ``__init__``);
 everything else under ``rag_backend.modules.editorial.*`` is private to the
-module. The dedicated Import Linter facade contract is added alongside the later
-phases.
+module (Import Linter contract ``editorial-public-facade``).
 
 The facade exposes:
 
@@ -23,8 +22,7 @@ The facade exposes:
   composition root (manual constructor injection);
 * ``CarouselAutomationAcl`` and the ``build_start_input`` /
   ``build_resume_input`` / ``content_approve_blocker`` / ``is_provider_outage``
-  helpers — the in-process automation seam the autopilot module drives the
-  workflow through (QA r1), so it imports no legacy carousel code;
+  helpers — the autopilot's automation seam (no legacy carousel imports);
 * ``settle_abandoned_carousel`` / ``AbandonedCarouselSettle`` — rejects the
   carousel of an abandoned autopilot escalation that still waits unchanged.
 
@@ -152,6 +150,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect impo
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autostart import (
     AutoCoverOutcome,
     schedule_autopilot_cover,
+    select_cover_at_gate,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
@@ -388,6 +387,7 @@ __all__ = [
     "run_owner_autofix",
     "run_slide_fix",
     "schedule_autopilot_cover",
+    "select_cover_at_gate",
     "selecting_cover_task",
     "settle_abandoned_carousel",
     "slide_cover_switch_service",
