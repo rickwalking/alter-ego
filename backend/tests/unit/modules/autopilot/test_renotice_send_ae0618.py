@@ -193,3 +193,45 @@ async def test_a_failure_after_the_request_left_is_unknown(error: Exception) -> 
 def test_an_unknown_outcome_is_still_a_delivery_failure() -> None:
     """Scenario: A send with an unknown outcome is never repeated"""
     assert issubclass(TelegramDeliveryUnknownError, TelegramDeliveryError)
+
+
+_UNREADABLE = [
+    pytest.param("no json", id="not json"),
+    pytest.param("{}", id="empty object"),
+    pytest.param('{"ok": true}', id="no result"),
+    pytest.param('{"ok": true, "result": {}}', id="no message id"),
+    pytest.param('{"ok": true, "result": {"message_id": "7"}}', id="bad id"),
+    pytest.param('{"ok": true, "result": []}', id="result is a list"),
+    pytest.param("[]", id="json list"),
+    pytest.param('{"ok": false}', id="ok false"),
+]
+
+
+def _answers(body: str) -> TelegramNotifier:
+    return _client(lambda request: httpx.Response(200, text=body))
+
+
+@pytest.mark.parametrize("body", _UNREADABLE)
+async def test_an_unreadable_success_is_unknown(body: str) -> None:
+    """Scenario Outline: A successful answer that cannot be read counts as unknown"""
+    with pytest.raises(TelegramDeliveryUnknownError):
+        await _answers(body).send_status(_notice(_event()))
+
+
+@pytest.mark.parametrize("body", _UNREADABLE)
+async def test_an_unreadable_success_keeps_the_claim(body: str) -> None:
+    """Scenario Outline: A successful answer that cannot be read counts as unknown"""
+    event = _event()
+    claims = _Claims()
+    sender = status_sender(_answers(body), claims, event)
+    with pytest.raises(TelegramDeliveryUnknownError):
+        await sender.send_status(_notice(event))
+    assert claims.calls == [("take", event.run_id, "e1")]
+
+
+async def test_an_error_status_is_still_a_plain_failure() -> None:
+    """Scenario: A refused connection counts as not sent"""
+    denied = _client(lambda request: httpx.Response(400, text='{"ok": false}'))
+    with pytest.raises(TelegramDeliveryError) as caught:
+        await denied.send_status(_notice(_event()))
+    assert not isinstance(caught.value, TelegramDeliveryUnknownError)

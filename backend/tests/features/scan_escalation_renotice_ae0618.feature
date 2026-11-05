@@ -47,6 +47,12 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     When the daily scan runs again
     Then a third escalation_renotice event is written for the run
 
+  Scenario: A run is queued again at most three times
+    Given a run whose every notice the notifier gives up on
+    When the daily scan runs on six days
+    Then four escalation_renotice events are written for the run
+    And the cap is logged once, when the last one is queued
+
   Scenario: A notice still being retried is not queued again
     Given a run the scan already re-notified
     And one delivery attempt failed
@@ -96,6 +102,38 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     When a second worker tries to send the same notice
     Then the second worker sends nothing
 
+  Scenario: A worker with a stale copy cannot send a notice out of attempts
+    Given a run whose notice failed twice
+    And a second worker read the run with those two failures
+    When the third failure closes the notice and the daily scan queues a new one
+    And the second worker tries to send the old notice
+    And the worker's notifier ticks
+    Then exactly one notice is delivered
+
+  Scenario: A notice out of attempts cannot be claimed
+    Given a run whose notice the notifier gave up on
+    When a worker tries to claim the notice
+    Then the claim is refused
+
+  Scenario: A released notice behind the cursor is sent again
+    Given a notice one worker has claimed
+    And a second worker moves the cursor past it, out of the rescan window
+    When the first worker's send fails and it releases the claim
+    And the worker's notifier ticks
+    Then exactly one notice is delivered
+
+  Scenario: A released notice too far behind the cursor is not read again
+    Given a re-sent notice a day older than the cursor
+    When the notifier reads the outbox
+    Then the notice is not read
+
+  Scenario: A released claim survives a later failure in the worker step
+    Given a run the scan already re-notified
+    And the send failed and the claim was released
+    And a later failure rolls the worker step back
+    When the worker's notifier ticks again
+    Then exactly one notice is delivered
+
   Scenario: A refused connection counts as not sent
     Given Telegram refuses the connection
     When the notice is sent
@@ -105,6 +143,21 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     Given the request left and no response came back
     When the notice is sent
     Then the failure is an unknown delivery outcome
+
+  Scenario Outline: A successful answer that cannot be read counts as unknown
+    Given Telegram answers 200 with <body>
+    When the notice is sent
+    Then the failure is an unknown delivery outcome
+    And the claim is kept
+
+    Examples:
+      | body                |
+      | text that is no JSON |
+      | an empty object     |
+      | no message id       |
+      | a bad message id    |
+      | a JSON list         |
+      | ok false            |
 
   Scenario Outline: A settled or running carousel is skipped
     Given a run escalated before Retry shipped whose carousel is <carousel>

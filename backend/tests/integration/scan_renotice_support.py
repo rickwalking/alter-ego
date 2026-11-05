@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -16,6 +17,7 @@ from rag_backend.modules.autopilot.application.notifications import (
     NotificationDependencies,
     OwnerNotificationService,
 )
+from rag_backend.modules.autopilot.domain.escalation_renotice import RenoticeClaims
 from rag_backend.modules.autopilot.domain.exceptions import TelegramDeliveryError
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, parse_stored
@@ -86,12 +88,15 @@ class FakeTelegram:
     failing: bool = False
     crash_after_send: bool = False
     error: Exception | None = None
+    during_send: Callable[[], Awaitable[None]] | None = None
     sent: list[StatusNotice] = field(default_factory=list)
 
     async def send_review(self, notice: ReviewNotice) -> ReviewSendResult:
         raise AssertionError(notice)
 
     async def send_status(self, notice: StatusNotice) -> StatusSendResult:
+        if self.during_send is not None:
+            await self.during_send()
         if self.failing:
             raise TelegramDeliveryError(detail="status 500")
         if self.error is not None:
@@ -100,6 +105,30 @@ class FakeTelegram:
         if self.crash_after_send:
             raise RuntimeError("worker died")
         return StatusSendResult(message_id=len(self.sent))
+
+
+@dataclass(frozen=True, kw_only=True)
+class ClaimHooks:
+    """What else happens around a worker's claim, to stage a race."""
+
+    before_take: Callable[[], Awaitable[None]] | None = None
+    after_release: Exception | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class _HookedClaims:
+    claims: RenoticeClaims
+    hooks: ClaimHooks
+
+    async def take(self, run_id: UUID, event_id: str) -> bool:
+        if self.hooks.before_take is not None:
+            await self.hooks.before_take()
+        return await self.claims.take(run_id, event_id)
+
+    async def release(self, run_id: UUID, event_id: str) -> None:
+        await self.claims.release(run_id, event_id)
+        if self.hooks.after_release is not None:
+            raise self.hooks.after_release
 
 
 class _NoFacts:
@@ -124,7 +153,11 @@ def daily_scan(engine: AsyncEngine) -> DailyRecoveryScan:
     )
 
 
-async def tick(engine: AsyncEngine, telegram: FakeTelegram) -> int:
+async def tick(
+    engine: AsyncEngine,
+    telegram: FakeTelegram,
+    hooks: ClaimHooks | None = None,
+) -> int:
     async with _sessions(engine)() as session:
         sent = await OwnerNotificationService(
             NotificationDependencies(
@@ -133,7 +166,9 @@ async def tick(engine: AsyncEngine, telegram: FakeTelegram) -> int:
                 facts=_NoFacts(),
                 notices=SqlNoticeLogStore(session),
                 notifier=telegram,
-                claims=SqlRenoticeClaims(session),
+                claims=_HookedClaims(
+                    claims=SqlRenoticeClaims(session), hooks=hooks or ClaimHooks()
+                ),
                 clock=_Clock(),
                 chat_id="owner-chat",
                 configured=True,

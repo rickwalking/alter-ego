@@ -166,6 +166,19 @@ def test_every_queued_notice_must_be_given_up_on() -> None:
     assert renotice_due(_with_log(_run(), _attempts(second, "e2", 3)))
 
 
+def _given_up_on(count: int) -> NoticeLog:
+    log = NoticeLog()
+    for index in range(count):
+        log = _attempts(mark_renoticed(log, f"e{index}"), f"e{index}", 3)
+    return log
+
+
+def test_the_third_requeue_is_the_last() -> None:
+    """Scenario: A run is queued again at most three times"""
+    assert renotice_due(_with_log(_run(), _given_up_on(3)))
+    assert not renotice_due(_with_log(_run(), _given_up_on(4)))
+
+
 def test_the_claim_is_held_until_released() -> None:
     """Scenario: A send with an unknown outcome is never repeated"""
     log = claim_send(NoticeLog(), "e1")
