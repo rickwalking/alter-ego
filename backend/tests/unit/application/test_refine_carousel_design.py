@@ -16,6 +16,7 @@ from rag_backend.domain.models import (
     CarouselProject,
     CarouselStatus,
 )
+from rag_backend.domain.protocols.ai import EmptyLLMResponseError
 
 from .carousel_refinement_helpers import (
     make_refinement_service_with_mocks,
@@ -172,7 +173,7 @@ class TestRefineCarouselDesign:
         assert ".hero-img { height: 600px; }" in content
 
     # Scenario: Empty LLM CSS response is rejected during design refinement
-    async def test_refinement_raises_when_llm_returns_empty_css(
+    async def test_refinement_changes_nothing_when_llm_returns_empty_css(
         self, tmp_path: Path
     ) -> None:
         agent, repo, _, _ = make_refinement_service_with_mocks()
@@ -185,10 +186,12 @@ class TestRefineCarouselDesign:
         )
         repo.get_project_by_id = AsyncMock(return_value=project)
         repo.get_slides_by_project = AsyncMock(return_value=[make_test_slide(1)])
-        agent._llm.generate = AsyncMock(return_value="  ")
+        agent._llm.generate = AsyncMock(side_effect=EmptyLLMResponseError("model"))
 
-        with pytest.raises(ValueError, match="empty CSS"):
+        with pytest.raises(EmptyLLMResponseError):
             await agent.refine_carousel_design(project.id, "make images bigger")
+
+        assert list(tmp_path.iterdir()) == []
 
     # Scenario: Missing project is rejected during design refinement
     async def test_refinement_raises_when_project_missing(self) -> None:

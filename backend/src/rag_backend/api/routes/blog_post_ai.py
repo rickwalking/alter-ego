@@ -1,5 +1,7 @@
 """Blog post AI assistance API routes."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 from uuid import UUID
 
@@ -12,6 +14,7 @@ from rag_backend.api.dependencies.resource_access import (
     lock_blog_post,
 )
 from rag_backend.api.dependencies.roles import EditorUser
+from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.blog_post_ai import (
     BlogPostAiImproveRequest,
@@ -36,7 +39,10 @@ from rag_backend.domain.constants.ai_disclosure import (
     AI_ACTION_IMPROVE,
     AI_ACTION_SUGGEST,
 )
+from rag_backend.domain.constants.blog_editor import MSG_BLOG_AI_EMPTY_ANSWER
+from rag_backend.domain.constants.carousel_workflow import ERR_PROVIDER_UNAVAILABLE
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
+from rag_backend.domain.protocols import EmptyLLMResponseError
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.events.factory import get_event_publisher
@@ -94,6 +100,29 @@ def blog_event_service() -> WorkflowEventService:
     return WorkflowEventService(get_event_publisher(settings.redis_url or None))
 
 
+def _empty_answer_error() -> CodedHTTPException:
+    """The model answered nothing: retryable, and it names no internals."""
+    return CodedHTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=MSG_BLOG_AI_EMPTY_ANSWER,
+        code=ERR_PROVIDER_UNAVAILABLE,
+    )
+
+
+@contextmanager
+def _ai_call_errors() -> Iterator[None]:
+    """Answer the AI service's expected failures: bad input, or an empty answer."""
+    try:
+        yield
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_INVALID_REQUEST,
+        ) from None
+    except EmptyLLMResponseError:
+        raise _empty_answer_error() from None
+
+
 def _build_ai_service() -> BlogPostAIService:
     container = get_container()
     return BlogPostAIService(llm_service=container.llm_service())
@@ -119,7 +148,7 @@ async def ai_suggest(
     """
     user_id = await _authorize_then_release(db, post_id, current_user)
     service = _build_ai_service()
-    try:
+    with _ai_call_errors():
         result = await service.suggest(
             _SuggestInput(
                 text=body.text,
@@ -128,11 +157,6 @@ async def ai_suggest(
                 trace=BlogAiTraceContext(post_id=str(post_id), user_id=user_id),
             )
         )
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_INVALID_REQUEST,
-        ) from None
 
     post = await lock_blog_post(db, post_id)
     post.ai_suggestions = [
@@ -160,7 +184,7 @@ async def ai_improve(
     """Improve selected blog text, optionally using a persona voice."""
     user_id = await _authorize_then_release(db, post_id, current_user)
     service = _build_ai_service()
-    try:
+    with _ai_call_errors():
         result = await service.improve(
             _ImproveInput(
                 db=db,
@@ -171,11 +195,6 @@ async def ai_improve(
                 trace=BlogAiTraceContext(post_id=str(post_id), user_id=user_id),
             )
         )
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_INVALID_REQUEST,
-        ) from None
     post = await lock_blog_post(db, post_id)
     await _record_ai_action(db, post, post_id, user_id, AI_ACTION_IMPROVE)
     await db.commit()

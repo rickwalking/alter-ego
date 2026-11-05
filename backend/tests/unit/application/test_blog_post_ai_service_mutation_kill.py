@@ -26,6 +26,7 @@ from rag_backend.domain.constants.input_sanitizer import MAX_LLM_INPUT_LENGTH
 MODULE = "rag_backend.application.services.blog_post_ai_service"
 UNKNOWN_POST = "unknown"
 POST_ID = "post-9"
+SYSTEM_USER = "system"
 ACTION = "improve"
 
 
@@ -89,7 +90,7 @@ async def test_suggest_without_trace_propagates_unknown(
     """No trace context propagates the literal unknown post id."""
     await service.suggest(_SuggestInput("text", action=ACTION))
 
-    propagate.assert_called_once_with(UNKNOWN_POST, "ai_suggest")
+    propagate.assert_called_once_with(UNKNOWN_POST, "ai_suggest", SYSTEM_USER)
 
 
 # Scenario: An empty model answer becomes an empty suggestion
@@ -109,7 +110,7 @@ async def test_improve_without_trace_propagates_unknown(
     """No trace context on improve propagates the literal unknown post id."""
     await service.improve(_ImproveInput(db=db, text="text", action=ACTION))
 
-    propagate.assert_called_once_with(UNKNOWN_POST, "ai_improve")
+    propagate.assert_called_once_with(UNKNOWN_POST, "ai_improve", SYSTEM_USER)
 
 
 # Scenario: Rewrite without a trace propagates the unknown post id
@@ -122,7 +123,9 @@ async def test_rewrite_without_trace_propagates_unknown(
     """No trace context on rewrite propagates unknown and the rewrite phase."""
     await service.rewrite_section(_RewriteInput(db=db, body_md="body"))
 
-    propagate.assert_called_once_with(UNKNOWN_POST, PHASE_BLOG_SECTION_REWRITE)
+    propagate.assert_called_once_with(
+        UNKNOWN_POST, PHASE_BLOG_SECTION_REWRITE, SYSTEM_USER
+    )
 
 
 # Scenario: Rewrite with a trace propagates the given post id
@@ -133,11 +136,11 @@ async def test_rewrite_with_trace_propagates_post_id(
     agent_cls: MagicMock,
 ) -> None:
     """A trace context post id is propagated unchanged."""
-    trace = BlogAiTraceContext(post_id=POST_ID)
+    trace = BlogAiTraceContext(post_id=POST_ID, user_id="u1")
 
     await service.rewrite_section(_RewriteInput(db=db, body_md="body", trace=trace))
 
-    propagate.assert_called_once_with(POST_ID, PHASE_BLOG_SECTION_REWRITE)
+    propagate.assert_called_once_with(POST_ID, PHASE_BLOG_SECTION_REWRITE, "u1")
 
 
 # Scenario: Rewrite enforces the persona voice with the heading context
