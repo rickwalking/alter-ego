@@ -10,7 +10,7 @@ Agent Lane: developer → qa → release
 Branch: feat/ae-0618-scan-renotifies-escalated-runs
 Kanban Card: TBD
 Created: 2026-11-04
-Updated: 2026-11-04
+Updated: 2026-11-05
 
 ## Goal
 
@@ -56,6 +56,9 @@ without the button and never get another, so they stay stuck unless the owner op
       exercising its exclusion on a carousel that is otherwise open.
 - [x] A notice the notifier gave up on is queued again by the next scan; a delivered, pending or in-doubt one is not.
 - [x] No run gets two delivered notices through a crash after the send, an outbox replay, two scans or two workers.
+- [x] A 2xx answer that cannot be read keeps the claim; a notice out of attempts cannot be claimed; a released claim
+      survives a later failure in the step and its notice is not stranded behind the cursor.
+- [x] A run is queued again at most 3 times, the cap is logged once and no further event is written.
 - [x] A failing item is logged and reported and does not stop the others; a failing listing does not stop the scan.
 - [x] The summary carries the count.
 - [x] Nothing changes run state, reason, `updated_at`, or the carousel.
@@ -133,6 +136,8 @@ Third round: `application/notifications.py` (the claim; `status_notice` moved ou
 `application/renotice_send.py`, `application/status_notice.py`, `bootstrap_telegram.py`, `domain/exceptions.py`,
 `infrastructure/telegram_notifier.py`.
 
+Fourth round: `infrastructure/notice_source.py`, `infrastructure/telegram_payload.py`, `recovery_constants.py`.
+
 `status_keyboard.py`, `queue_bridge.py`, `dispatcher.py`, `infrastructure/repository.py`,
 `generation_queue/constants.py` and `frontend/` are unchanged.
 
@@ -167,6 +172,13 @@ Third round: `application/notifications.py` (the claim; `status_notice` moved ou
 - PR #360 CI at `7011e232`: all checks passed, `backend-gate` on its second attempt. The first failed on
   `test_cancelled_event_writes_leave_the_workflow_intact` (`assert events == []`), a timing test this change does not
   touch; `Test & Coverage` passed at the same head and the one rerun passed (run 41872220335).
+- Fourth round, failing first at `93ac8bca`, all on assertions: 24 of 106 tests. A stale worker sent a notice out of
+  attempts (`stale.sent` not empty), a released notice behind the cursor was never sent (`0 == 1`), a rollback undid the
+  release, `take` accepted a notice out of attempts, the scan queued six days in a row, and every unreadable 2xx
+  shape raised a plain failure and released the claim. The "more than a week back" half of the read-back test is a pin.
+- Fourth round: 1,492 passed across `tests/unit/modules/autopilot`, `tests/unit/modules/generation_queue` and the
+  daily-scan integration files, plus 35 in the notifier integration files, on Postgres; 100% line and branch coverage on
+  `notifications.py`, `renotice_send.py`, `renotice_bridge.py` and both `escalation_renotice.py` files.
 - Without Postgres the concurrent-scans test is skipped through `requires_postgres`: it needs real row locks.
 - Cheap gates green (see the dev summary). Full gate: lead's heavy slot.
 
@@ -232,7 +244,8 @@ Pending.
 13. **Another chance comes from the next daily scan.** The notifier has no mechanism that retries a dropped event type,
     and keeping one event open would stop its cursor, so a new event is the smallest change. `renotice_due` allows a new
     event only when every queued one is certainly undelivered: no event id in `statuses`, no claim, and no attempt left.
-    A notice that keeps failing is queued once per scan. Each new event passes every check of decisions 1, 7 and 12.
+    A notice that keeps failing is queued once per scan, up to the cap of decision 18. Each new event passes every check
+    of decisions 1, 7 and 12.
 14. **A claim before the send keeps it to one delivered.** The notifier records a send when its worker step commits, and
     that step goes on after the send, so a crash or a later failure in the step forgot a delivered notice and the next
     tick sent it again. Only for this event type, `SqlRenoticeClaims.take` commits `scan_renotice_sending:<event id>`
@@ -245,6 +258,24 @@ Pending.
     claim, as does any unexpected exception. When delivery is in doubt the notice is not repeated, so two limits remain:
     a worker that dies between the claim's commit and the send loses that notice, and a 5xx answer is read as not sent
     although a gateway error cannot prove it.
+
+16. **A 2xx that cannot be read is an unknown outcome.** Pedro's decision (2026-11-04): at most one notice delivered per
+    run, ever. After a 2xx the message went out, so a body that is not JSON, has no usable `message_id`, or says
+    `ok: false` raises `TelegramDeliveryUnknownError` and keeps the claim. `ok: false` on a 2xx is included on purpose:
+    Telegram pairs it with an error status, so it should never be seen, and if it is, we fail towards no second notice.
+    The error stays a subclass, so every other caller behaves as before.
+17. **`take` decides on the ledger read under the lock, and released notices are read from further back.** `take` now
+    refuses a notice out of attempts, which is the rule `renotice_due` relies on: a new event is staged only when every
+    earlier one is closed, so an old one can never go out after it. The cursor can still pass a claimed notice, because a
+    claim kept for an unknown outcome looks the same as one in flight, and holding the cursor on a kept claim would stop
+    every notice for good. Telling them apart needs a lease with a time on it. Instead, `recent()` also reads
+    `escalation_renotice` events from up to `NOTIFY_RENOTICE_RESCAN_DAYS` (7) behind the cursor, and the ledger skips the
+    closed ones, so a released notice is not stranded. `release` commits as `take` does; the attempt count is written
+    after it, so a later failure can lose one count, which costs one extra attempt and never a second delivery.
+18. **At most 3 re-queues.** `RENOTICE_MAX_REQUEUES = 3` counts the notices after a run's first, as "re-queued" reads,
+    so a run gets 4 events at most and at most 12 send attempts. `autopilot_renotice_cap_hit` is logged once, after the
+    commit that queues the last allowed event, so the log means no further event will be written, not that the last one
+    failed. No marker is written and the listing stays read-only.
 
 ## Blockers
 
