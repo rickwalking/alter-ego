@@ -33,11 +33,78 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     When the daily scan runs again
     Then no new event is written for the run
 
-  Scenario: A notice the notifier gave up on is not offered again
+  Scenario: A notice the notifier gave up on gets another chance on the next scan
     Given a run the scan already re-notified
-    And every delivery attempt failed
+    And every delivery attempt failed, so the notifier gave up
+    When the daily scan runs again
+    And the worker's notifier ticks
+    Then a second escalation_renotice event is written for the run
+    And exactly one notice is delivered
+    And a later scan writes no new event
+
+  Scenario: A notice that keeps failing is queued once per scan
+    Given a run whose notice the notifier gave up on twice
+    When the daily scan runs again
+    Then a third escalation_renotice event is written for the run
+
+  Scenario: A notice still being retried is not queued again
+    Given a run the scan already re-notified
+    And one delivery attempt failed
     When the daily scan runs again
     Then no new event is written for the run
+
+  Scenario: A run that moved on is not queued again after a give-up
+    Given a run whose notice the notifier gave up on
+    And the owner retried the run
+    When the daily scan runs again
+    Then no new event is written for the run
+
+  Scenario: Two scans after a give-up queue one notice
+    Given a run whose notice the notifier gave up on
+    When two daily scans run at the same time
+    Then one new escalation_renotice event is written for the run
+
+  Scenario: A crash after the send never sends the notice twice
+    Given a run the scan already re-notified
+    And the worker dies after Telegram accepted the notice and before the tick commits
+    When the worker's notifier ticks again
+    And the daily scan runs again
+    Then the notice was delivered once
+    And no new event is written for the run
+
+  Scenario: A send with an unknown outcome is never repeated
+    Given a run the scan already re-notified
+    And the send timed out after the request left
+    When the worker's notifier ticks again
+    And the daily scan runs again
+    Then the notice was attempted once
+    And no new event is written for the run
+
+  Scenario: A rate limited send stays open
+    Given a run the scan already re-notified
+    And Telegram rate limited the send
+    When the worker's notifier ticks again
+    Then exactly one notice is delivered
+
+  Scenario: An outbox replay sends nothing
+    Given a run whose notice was delivered
+    When the notifier reads its event again from the start of the outbox
+    Then no notice is sent
+
+  Scenario: A second worker cannot take a send in flight
+    Given a notice one worker has claimed
+    When a second worker tries to send the same notice
+    Then the second worker sends nothing
+
+  Scenario: A refused connection counts as not sent
+    Given Telegram refuses the connection
+    When the notice is sent
+    Then the failure is a plain delivery failure
+
+  Scenario: A timeout after the request left counts as unknown
+    Given the request left and no response came back
+    When the notice is sent
+    Then the failure is an unknown delivery outcome
 
   Scenario Outline: A settled or running carousel is skipped
     Given a run escalated before Retry shipped whose carousel is <carousel>
@@ -134,6 +201,7 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
 
   Scenario: The first scan after the deploy picks exactly the three approved runs
     Given runs shaped like the seven production rows of Pedro's decision (2026-11-04)
+    And the skipped rows each exercise one exclusion on a carousel that is otherwise open
     When the daily scan runs
     And the worker's notifier ticks
     Then only the persona, content quality and phase failed escalations are re-notified

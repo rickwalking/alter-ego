@@ -81,6 +81,8 @@ class _Clock:
 @dataclass
 class FakeTelegram:
     failing: bool = False
+    crash_after_send: bool = False
+    error: Exception | None = None
     sent: list[StatusNotice] = field(default_factory=list)
 
     async def send_review(self, notice: ReviewNotice) -> ReviewSendResult:
@@ -89,7 +91,11 @@ class FakeTelegram:
     async def send_status(self, notice: StatusNotice) -> StatusSendResult:
         if self.failing:
             raise TelegramDeliveryError(detail="status 500")
+        if self.error is not None:
+            raise self.error
         self.sent.append(notice)
+        if self.crash_after_send:
+            raise RuntimeError("worker died")
         return StatusSendResult(message_id=len(self.sent))
 
 
@@ -221,8 +227,18 @@ async def ledger(engine: AsyncEngine, run_id: str) -> NoticeLog:
     return parse_stored(row.telegram_message_ids)
 
 
+def renotice_markers(log: NoticeLog) -> list[str]:
+    return [status for status in log.statuses if status.startswith(f"{MARKER}:")]
+
+
+async def give_up(engine: AsyncEngine) -> None:
+    """Every delivery attempt of the pending notices fails."""
+    for _ in range(3):
+        await tick(engine, FakeTelegram(failing=True))
+
+
 async def assert_skipped(engine: AsyncEngine, run_id: str) -> None:
     report = await daily_scan(engine).run_once()
     assert report.renotified == 0
     assert await renotices(engine, run_id) == []
-    assert MARKER not in (await ledger(engine, run_id)).statuses
+    assert renotice_markers(await ledger(engine, run_id)) == []

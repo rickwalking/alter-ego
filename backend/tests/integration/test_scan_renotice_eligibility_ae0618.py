@@ -21,7 +21,6 @@ from tests.integration.pg_schema_support import requires_postgres
 from tests.integration.scan_renotice_support import (
     BEFORE_RETRY,
     DEAD,
-    MARKER,
     REASON,
     RETRY_DEPLOYED,
     SCAN_DAY,
@@ -34,6 +33,7 @@ from tests.integration.scan_renotice_support import (
     ledger,
     move_run,
     past_notice,
+    renotice_markers,
     renotices,
     renotifier,
     stuck,
@@ -54,14 +54,20 @@ FAILED_PUBLISH: dict[str, object] = {
     "error_code": "ig_error",
 }
 OPEN = {"phase_status": "awaiting_human", "status": "pending"}
-PHASE_FAILED = {"phase_status": "failed", "status": "pending"}
+PHASE_FAILED = {
+    "current_phase": "outline",
+    "phase_status": "failed",
+    "status": "pending",
+}
 AUTO_REJECTED = {"phase_status": "rejected", "status": "failed"}
+ARCHIVED = {**OPEN, "archived_at": BEFORE_RETRY}
+PUBLISHED = {**OPEN, "current_phase": "published"}
 
 
 async def assert_not_staged(engine: AsyncEngine, run_id: str, staged: bool) -> None:
     assert staged is False
     assert await renotices(engine, run_id) == []
-    assert MARKER not in (await ledger(engine, run_id)).statuses
+    assert renotice_markers(await ledger(engine, run_id)) == []
 
 
 @pytest.mark.parametrize("state", [_S.ESCALATED, _S.FAILED])
@@ -114,12 +120,16 @@ async def test_the_first_scan_picks_exactly_the_three_approved_runs(
         await escalation_event(engine, run_id, BEFORE_RETRY)
     await tick(engine, FakeTelegram())
     skipped = {
+        await stuck(engine, (_S.FAILED, "owner_queue_cancelled"), OPEN),
         await _autopilot_run(
             engine, _S.FAILED, "owner_queue_cancelled", timedelta(days=3)
         ),
         await stuck(engine, (_S.FAILED, "engine_error"), AUTO_REJECTED),
         await stuck(engine, (_S.FAILED, "engine_error"), AUTO_REJECTED),
-        await stuck(engine, (_S.GENERATING, None)),
+        await stuck(engine, (_S.GENERATING, None), OPEN),
+        await stuck(engine, (_S.ESCALATED, DEAD), OPEN),
+        await stuck(engine, (_S.ESCALATED, "content_quality"), ARCHIVED),
+        await stuck(engine, (_S.ESCALATED, "content_quality"), PUBLISHED),
     }
 
     assert set(await renotifier(engine).stuck_runs()) == approved

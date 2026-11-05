@@ -36,6 +36,7 @@ from tests.integration.scan_renotice_support import (
     daily_scan,
     escalation_event,
     ledger,
+    renotice_markers,
     renotices,
     renotifier,
     stuck,
@@ -73,7 +74,12 @@ async def test_an_eligible_escalated_run_gets_one_notice_with_the_retry(
     assert notice.text.startswith(f"Escalated: {REASON}")
     assert await tick(engine, telegram) == 0
     statuses = (await ledger(engine, run_id)).statuses
-    assert set(statuses) == {MARKER, str(events[0].event_id)}
+    event_id = str(events[0].event_id)
+    assert set(statuses) == {
+        f"{MARKER}:{event_id}",
+        f"scan_renotice_sending:{event_id}",
+        event_id,
+    }
 
 
 async def test_a_failed_run_with_a_live_carousel_gets_the_same_notice(
@@ -109,19 +115,6 @@ async def test_a_notice_still_in_the_outbox_is_not_emitted_again(
     """Scenario: A notice still waiting in the outbox is not emitted again"""
     run_id = await stuck(engine)
     await daily_scan(engine).run_once()
-    report = await daily_scan(engine).run_once()
-    assert report.renotified == 0
-    assert len(await renotices(engine, run_id)) == 1
-
-
-async def test_a_notice_the_notifier_gave_up_on_is_not_offered_again(
-    engine: AsyncEngine,
-) -> None:
-    """Scenario: A notice the notifier gave up on is not offered again"""
-    run_id = await stuck(engine)
-    await daily_scan(engine).run_once()
-    for _ in range(3):
-        await tick(engine, FakeTelegram(failing=True))
     report = await daily_scan(engine).run_once()
     assert report.renotified == 0
     assert len(await renotices(engine, run_id)) == 1
@@ -255,7 +248,7 @@ async def test_a_failed_item_writes_nothing_and_stays_eligible(
     assert first.renotified == 0
     assert [item.run_id for item in first.renotify_failures] == [run_id]
     assert await renotices(engine, run_id) == []
-    assert MARKER not in (await ledger(engine, run_id)).statuses
+    assert renotice_markers(await ledger(engine, run_id)) == []
     monkeypatch.setattr(escalation_renotice.SqlNoticeLogStore, "save", original)
     second = await daily_scan(engine).run_once()
     assert second.renotified == 1

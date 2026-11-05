@@ -17,13 +17,20 @@ from rag_backend.modules.autopilot.domain.carousel_retry import (
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
     PastNotice,
     carried_retry,
+    claim_send,
     mark_renoticed,
+    release_send,
     renotice_due,
     renotice_payload,
+    send_claimed,
 )
 from rag_backend.modules.autopilot.domain.messages import notice_kind
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
-from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, record_status
+from rag_backend.modules.autopilot.domain.notice_log import (
+    NoticeLog,
+    bump_attempt,
+    record_status,
+)
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
 from rag_backend.modules.autopilot.infrastructure.escalation_renotice import _mapping
 from rag_backend.modules.autopilot.notify_constants import (
@@ -114,15 +121,62 @@ def test_a_parked_run_is_not_due(state: _S) -> None:
     assert not renotice_due(_run(state, "queue_dead_letter:run_budget_exhausted"))
 
 
-def test_the_marker_makes_a_run_not_due_and_keeps_the_ledger() -> None:
+def test_the_marker_names_its_event_and_keeps_the_ledger() -> None:
     """Scenario: A second scan sends nothing"""
-    log = record_status(NoticeLog(), "earlier", 7)
-    run = _run()
-    marked = mark_renoticed(log)
-    assert marked.statuses == ("earlier", RENOTICE_KEY)
+    marked = mark_renoticed(record_status(NoticeLog(), "earlier", 7), "e1")
+    assert marked.statuses == ("earlier", "scan_renotified:e1")
     assert marked.message_ids == (7,)
     assert RENOTICE_KEY == "scan_renotified"
-    assert not renotice_due(_with_log(run, marked))
+
+
+def test_a_notice_still_waiting_keeps_a_run_not_due() -> None:
+    """Scenario: A notice still waiting in the outbox is not emitted again"""
+    assert not renotice_due(_with_log(_run(), mark_renoticed(NoticeLog(), "e1")))
+
+
+def test_a_delivered_notice_keeps_a_run_not_due_even_after_failures() -> None:
+    """Scenario: A second scan sends nothing"""
+    log = _attempts(mark_renoticed(NoticeLog(), "e1"), "e1", 3)
+    assert not renotice_due(_with_log(_run(), record_status(log, "e1", 7)))
+
+
+def test_a_notice_with_attempts_left_keeps_a_run_not_due() -> None:
+    """Scenario: A notice still being retried is not queued again"""
+    log = _attempts(mark_renoticed(NoticeLog(), "e1"), "e1", 2)
+    assert not renotice_due(_with_log(_run(), log))
+
+
+def test_a_notice_given_up_on_makes_a_run_due_again() -> None:
+    """Scenario: A notice the notifier gave up on gets another chance on the next scan"""
+    log = _attempts(mark_renoticed(NoticeLog(), "e1"), "e1", 3)
+    assert renotice_due(_with_log(_run(), log))
+
+
+def test_a_claimed_notice_keeps_a_run_not_due_even_when_exhausted() -> None:
+    """Scenario: A send with an unknown outcome is never repeated"""
+    log = _attempts(mark_renoticed(NoticeLog(), "e1"), "e1", 3)
+    assert not renotice_due(_with_log(_run(), claim_send(log, "e1")))
+
+
+def test_every_queued_notice_must_be_given_up_on() -> None:
+    """Scenario: A notice that keeps failing is queued once per scan"""
+    first = _attempts(mark_renoticed(NoticeLog(), "e1"), "e1", 3)
+    second = mark_renoticed(first, "e2")
+    assert not renotice_due(_with_log(_run(), second))
+    assert renotice_due(_with_log(_run(), _attempts(second, "e2", 3)))
+
+
+def test_the_claim_is_held_until_released() -> None:
+    """Scenario: A send with an unknown outcome is never repeated"""
+    log = claim_send(NoticeLog(), "e1")
+    assert log.statuses == ("scan_renotice_sending:e1",)
+    assert send_claimed(log, "e1")
+    assert not send_claimed(log, "e2")
+    assert not send_claimed(release_send(log, "e1"), "e1")
+    assert claim_send(log, "e2").statuses == (
+        "scan_renotice_sending:e1",
+        "scan_renotice_sending:e2",
+    )
 
 
 def test_any_other_status_leaves_a_run_due() -> None:
@@ -131,6 +185,12 @@ def test_any_other_status_leaves_a_run_due() -> None:
 
 def _with_log(run: AutopilotRun, log: NoticeLog) -> AutopilotRun:
     return replace(run, notice_log=log)
+
+
+def _attempts(log: NoticeLog, event_id: str, count: int) -> NoticeLog:
+    for _ in range(count):
+        log = bump_attempt(log, f"status:{event_id}")
+    return log
 
 
 def test_the_payload_carries_the_state_and_reason() -> None:
