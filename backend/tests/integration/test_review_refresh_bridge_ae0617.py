@@ -7,10 +7,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from rag_backend.domain.constants.carousel_workflow import (
@@ -33,12 +35,14 @@ from rag_backend.modules.autopilot.infrastructure.models import (
 )
 from rag_backend.modules.autopilot.queue_bridge import AutopilotQueueBridge
 from rag_backend.modules.autopilot.webhook_constants import AUTOFIX_REWORK_PHASE
+from tests.integration.pg_schema_support import PG_URL, requires_postgres
 
 pytestmark = pytest.mark.integration
 
 Sessions = async_sessionmaker[AsyncSession]
 _REWORKING = AutopilotRunState.REWORKING
 _LIMIT = 10
+_LONG_AGO = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,6 +63,23 @@ async def sessions() -> AsyncIterator[Sessions]:
         await conn.run_sync(Base.metadata.create_all)
     yield async_sessionmaker(engine, expire_on_commit=False)
     await engine.dispose()
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def pg_sessions() -> AsyncIterator[Sessions]:
+    schema = f"refresh_{uuid4().hex[:12]}"
+    engine = create_async_engine(
+        PG_URL, connect_args={"server_settings": {"search_path": schema}}
+    )
+    async with engine.begin() as conn:
+        await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+        await conn.run_sync(Base.metadata.create_all)
+    try:
+        yield async_sessionmaker(engine, expire_on_commit=False)
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        await engine.dispose()
 
 
 def _bridge(sessions: Sessions) -> AutopilotQueueBridge:
@@ -135,6 +156,17 @@ async def _seed_run(
     return run_id
 
 
+async def _backdate(sessions: Sessions, run_id: UUID) -> None:
+    """Make ``run_id`` older than any run seeded now."""
+    async with sessions() as session:
+        await session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.id == run_id)
+            .values(created_at=_LONG_AGO)
+        )
+        await session.commit()
+
+
 async def test_a_reworking_run_at_final_review_is_a_refresh(
     sessions: Sessions,
 ) -> None:
@@ -205,3 +237,61 @@ async def test_the_limit_bounds_the_scan(sessions: Sessions) -> None:
     for _ in range(2):
         await _seed_run(sessions, await _seed_carousel(sessions, _Carousel()))
     assert len(await _bridge(sessions).review_refresh_run_ids(1)) == 1
+
+
+async def test_older_reworking_runs_do_not_use_up_the_limit(
+    sessions: Sessions,
+) -> None:
+    """Scenario: Older reworks with work left do not hide a refresh"""
+    for carousel in (
+        _Carousel(phase="content", phase_status="in_progress"),
+        _Carousel(workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH),
+        _Carousel(is_public=True),
+    ):
+        older = await _seed_run(sessions, await _seed_carousel(sessions, carousel))
+        await _backdate(sessions, older)
+    project_id = await _seed_carousel(sessions, _Carousel())
+    run_id = await _seed_run(sessions, project_id)
+    assert await _bridge(sessions).review_refresh_run_ids(2) == [
+        (str(run_id), project_id)
+    ]
+
+
+async def test_a_later_page_never_overshoots_the_limit(sessions: Sessions) -> None:
+    """Scenario: Older reworks with work left do not hide a refresh"""
+    approved = _Carousel(workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH)
+    older = await _seed_run(sessions, await _seed_carousel(sessions, approved))
+    await _backdate(sessions, older)
+    for _ in range(3):
+        await _seed_run(sessions, await _seed_carousel(sessions, _Carousel()))
+    refreshes = await _bridge(sessions).review_refresh_run_ids(2)
+    assert len(set(refreshes)) == 2
+
+
+async def test_every_refresh_is_found_when_all_created_at_tie(
+    sessions: Sessions,
+) -> None:
+    """Scenario: Older reworks with work left do not hide a refresh"""
+    approved = _Carousel(workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH)
+    runs = [
+        await _seed_run(sessions, await _seed_carousel(sessions, approved))
+        for _ in range(3)
+    ]
+    runs.append(await _seed_run(sessions, await _seed_carousel(sessions, _Carousel())))
+    for run_id in runs:
+        await _backdate(sessions, run_id)
+    found = await _bridge(sessions).review_refresh_run_ids(2)
+    assert [UUID(run_id) for run_id, _ in found] == [runs[-1]]
+
+
+@requires_postgres
+async def test_the_refresh_query_runs_on_postgres(pg_sessions: Sessions) -> None:
+    """Scenario: Older reworks with work left do not hide a refresh"""
+    approved = _Carousel(workflow_status=WORKFLOW_STATUS_APPROVED_FOR_PUBLISH)
+    older = await _seed_run(pg_sessions, await _seed_carousel(pg_sessions, approved))
+    await _backdate(pg_sessions, older)
+    project_id = await _seed_carousel(pg_sessions, _Carousel())
+    run_id = await _seed_run(pg_sessions, project_id)
+    assert await _bridge(pg_sessions).review_refresh_run_ids(1) == [
+        (str(run_id), project_id)
+    ]

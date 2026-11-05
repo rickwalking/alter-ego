@@ -7,13 +7,14 @@ driving. Each call opens its own session and commits it, like one worker tick.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from itertools import count
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import Row, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.modules.autopilot.application.backlog_promotion import (
@@ -195,33 +196,51 @@ class AutopilotQueueBridge:
             return [(str(row[0]), row[1]) for row in result.all()]
 
     async def review_refresh_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
-        """Reworking runs that only owe the final-review stop, oldest first.
+        """Up to ``limit`` reworking runs that only owe the final-review stop,
+        oldest first.
 
         A queued rework still has work to do; a revise under way has left the
-        final review, so ``reopened`` tells it from a refresh. A wrong answer only
-        moves one drive in the queue: the drive decides what to do on its own.
+        final review, so ``reopened`` tells it from a refresh. That check is
+        editorial's, so the candidates are read in pages until ``limit`` of them
+        pass or they run out: older runs that are no refresh never use up
+        ``limit``. A wrong answer only moves one drive in the queue: the drive
+        decides what to do on its own.
         """
+        refreshes: list[tuple[str, str | None]] = []
         async with self.sessions() as session:
-            result = await session.execute(
-                select(AutopilotRunModel.id, AutopilotRunModel.carousel_project_id)
-                .where(
-                    AutopilotRunModel.state == AutopilotRunState.REWORKING.value,
-                    AutopilotRunModel.rework_phase.is_(None),
-                    AutopilotRunModel.carousel_project_id.is_not(None),
-                )
-                .order_by(AutopilotRunModel.created_at)
-                .limit(limit)
-            )
             reviews = EditorialReopenedReviews(session)
-            return [
-                (str(run_id), project_id)
-                for run_id, project_id in result.all()
-                if project_id is not None and await reviews.reopened(project_id)
-            ]
+            for offset in count(step=limit):
+                rows = await _rework_candidates(session, offset, limit)
+                refreshes += [
+                    (str(run_id), project_id)
+                    for run_id, project_id in rows
+                    if project_id is not None and await reviews.reopened(project_id)
+                ]
+                if len(refreshes) >= limit or len(rows) < limit:
+                    break
+        return refreshes[:limit]
 
     def _runner(self, session: AsyncSession) -> AutopilotRunner:
         deps = runner_dependencies(session, self.config)
         return AutopilotRunner(replace(deps, retryable=self.retryable))
+
+
+async def _rework_candidates(
+    session: AsyncSession, offset: int, limit: int
+) -> Sequence[Row[tuple[UUID, str | None]]]:
+    """One page of the reworking runs with a carousel and no rework queued."""
+    result = await session.execute(
+        select(AutopilotRunModel.id, AutopilotRunModel.carousel_project_id)
+        .where(
+            AutopilotRunModel.state == AutopilotRunState.REWORKING.value,
+            AutopilotRunModel.rework_phase.is_(None),
+            AutopilotRunModel.carousel_project_id.is_not(None),
+        )
+        .order_by(AutopilotRunModel.created_at, AutopilotRunModel.id)
+        .offset(offset)
+        .limit(limit)
+    )
+    return result.all()
 
 
 async def _locked_run(session: AsyncSession, run_id: str) -> AutopilotRun | None:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -16,6 +16,7 @@ import pytest
 import pytest_asyncio
 from pgqueuer.adapters.drivers.asyncpg import AsyncpgDriver
 from pgqueuer.adapters.persistence.queries import Queries
+from pgqueuer.domain.models import Job
 from pgqueuer.domain.types import QueueEntrypoint, QueueManagerId
 from pgqueuer.ports.repository import EntrypointExecutionParameter
 from sqlalchemy.ext.asyncio import (
@@ -34,7 +35,10 @@ from rag_backend.modules.generation_queue.constants import (
     ORDINARY_PRIORITY,
     REVIEW_REFRESH_PRIORITY,
 )
-from rag_backend.modules.generation_queue.domain.models import autopilot_stage
+from rag_backend.modules.generation_queue.domain.models import (
+    RetryCommand,
+    autopilot_stage,
+)
 from rag_backend.modules.generation_queue.domain.priority import priority_of
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
@@ -57,6 +61,7 @@ PG_URL = os.environ.get("DATABASE_URL", "")
 DSN = PG_URL.replace("+asyncpg", "", 1)
 _LIST_LIMIT = 10
 _NO_LIMIT = 0
+_RETRY_DELAY = timedelta(seconds=60)
 _JOB_SQL = "SELECT status, priority, execute_after FROM pgqueuer WHERE id = $1"
 _DELAY_SQL = "UPDATE pgqueuer SET execute_after = NOW() + INTERVAL '1 hour' WHERE id=$1"
 
@@ -99,6 +104,10 @@ class _Harness:
         self.active.refreshes = [(run_id, f"project-{run_id}")]
 
     async def pick(self) -> int:
+        """The id of the job a worker with one slot picks next."""
+        return int((await self.pick_job()).id)
+
+    async def pick_job(self) -> Job:
         """The job a worker with one slot picks next."""
         jobs = await self.queries.dequeue(
             batch_size=1,
@@ -109,7 +118,7 @@ class _Harness:
             global_concurrency_limit=None,
             heartbeat_timeout=timedelta(seconds=300),
         )
-        return int(jobs[0].id)
+        return jobs[0]
 
     async def job(self, job_id: int) -> asyncpg.Record:
         rows = await self.queries.driver.fetch(_JOB_SQL, job_id)
@@ -184,6 +193,40 @@ async def test_a_raise_keeps_the_retry_delay(harness: _Harness) -> None:
     after = await harness.job(job_id)
     assert after["priority"] == REVIEW_REFRESH_PRIORITY
     assert after["execute_after"] == before["execute_after"]
+
+
+async def test_a_retry_wait_is_raised_on_the_pass_after_the_retry(
+    harness: _Harness,
+) -> None:
+    """Scenario: A drive put back to wait is raised on the pass after its retry"""
+    run_id, job_id = await harness.drive("waiting")
+    picked = await harness.pick_job()
+    attempt_id = await harness.store.mark_running(run_id)
+    assert attempt_id is not None
+    assert await harness.store.mark_waiting(
+        RetryCommand(
+            run_id=run_id,
+            attempt_id=attempt_id,
+            next_attempt_at=datetime.now(UTC) + _RETRY_DELAY,
+            error_code="waiting",
+            error="",
+        )
+    )
+    harness.refresh("waiting")
+    await harness.dispatch()
+    held = await harness.job(job_id)
+    assert (held["status"], held["priority"]) == ("picked", ORDINARY_PRIORITY)
+    await harness.queries.retry_job(picked, _RETRY_DELAY, None)
+    released = await harness.job(job_id)
+    assert (released["status"], released["priority"]) == ("queued", ORDINARY_PRIORITY)
+    await harness.dispatch()
+    raised = await harness.job(job_id)
+    assert raised["priority"] == REVIEW_REFRESH_PRIORITY
+    assert raised["execute_after"] == released["execute_after"]
+    run = await harness.store.get(run_id)
+    assert run is not None
+    assert run.status.value == "retry_wait"
+    assert priority_of(run.payload) == REVIEW_REFRESH_PRIORITY
 
 
 async def test_a_running_drive_is_not_interrupted(harness: _Harness) -> None:

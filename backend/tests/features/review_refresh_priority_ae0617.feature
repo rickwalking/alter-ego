@@ -22,6 +22,13 @@ Feature: A final-review refresh runs ahead of queued full drives (AE-0617)
     When the dispatcher raises it
     Then its job has the raised priority and is not due any sooner
 
+  Scenario: A drive put back to wait is raised on the pass after its retry
+    Given the running drive of a refresh run was put back to wait
+    And its job is still held by the worker
+    When the dispatcher runs and the worker then releases the job for its retry
+    Then the job stays as it was until the release
+    And the next dispatcher pass raises it and keeps its delay
+
   Scenario: A running drive is not interrupted
     Given a full drive running on the worker and a refresh drive queued
     When the dispatcher runs
@@ -52,6 +59,12 @@ Feature: A final-review refresh runs ahead of queued full drives (AE-0617)
       | whose revise is regenerating an earlier phase   |
       | whose carousel was approved on the website      |
       | whose carousel was released                     |
+
+  Scenario: Older reworks with work left do not hide a refresh
+    Given more older reworking runs than the batch size, none of them a refresh
+    And a newer reworking run that only owes the final-review refresh
+    When the dispatcher lists the refresh runs
+    Then the newer run is listed
 
   Scenario: A run in another state is no refresh
     Given a run queued, generating or waiting for the owner, at any carousel state
