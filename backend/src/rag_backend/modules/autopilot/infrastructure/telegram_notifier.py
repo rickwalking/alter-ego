@@ -22,6 +22,7 @@ from rag_backend.modules.autopilot.domain.cover_offer import (
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
     TelegramDeliveryError,
+    TelegramDeliveryUnknownError,
     TelegramRateLimitedError,
 )
 from rag_backend.modules.autopilot.domain.messages import (
@@ -224,8 +225,10 @@ class TelegramNotifier:
             if files:
                 return await self._client.post(url, data=data, files=dict(files))
             return await self._client.post(url, data=data)
-        except httpx.HTTPError:
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
             raise TelegramDeliveryError(DETAIL_TRANSPORT) from None
+        except httpx.HTTPError:
+            raise TelegramDeliveryUnknownError(DETAIL_TRANSPORT) from None
 
     async def _wait(self, response: httpx.Response) -> None:
         seconds = retry_after_seconds(response)

@@ -25,11 +25,13 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     NotifyCursorModel,
 )
 from rag_backend.modules.autopilot.notify_constants import (
+    EVENT_TYPE_ESCALATION_RENOTICE,
     NOTIFY_EVENT_TYPES,
     OUTBOX_SCAN_LIMIT,
 )
 from rag_backend.modules.autopilot.recovery_constants import (
     NOTIFY_CURSOR_NAME,
+    NOTIFY_RENOTICE_RESCAN_DAYS,
     NOTIFY_RESCAN_WINDOW_MINUTES,
 )
 
@@ -44,19 +46,25 @@ class SqlAutopilotEventSource:
     skips re-read events its notice ledger already records. The window and
     the rows after the cursor are separate queries with their own limit, so a
     window full of settled rows can never starve new events (QA r3 Q1).
+
+    A worker can settle a re-sent notice on another worker's claim, and that claim
+    can then be released. A kept claim looks the same and must not hold the cursor,
+    so re-sent notices are read again from further back; the ledger skips the
+    closed ones.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
-        """The re-scan window behind the cursor, then the rows after it."""
+        """Re-sent notices further back, the re-scan window, then the rows after it."""
         cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
         if cursor is None:
             return await self._scan(None)
+        released = await self._scan(_renotice_further_back(cursor))
         behind = await self._scan(_in_window(cursor))
         ahead = await self._scan(_after(cursor))
-        return behind + ahead
+        return released + behind + ahead
 
     async def _scan(
         self, condition: ColumnElement[bool] | None
@@ -113,6 +121,17 @@ def _in_window(cursor: NotifyCursorModel) -> ColumnElement[bool]:
     return and_(
         EventOutboxModel.created_at > _aware(cursor.created_at) - window,
         _position() <= _cursor_position(cursor),
+    )
+
+
+def _renotice_further_back(cursor: NotifyCursorModel) -> ColumnElement[bool]:
+    window = timedelta(minutes=NOTIFY_RESCAN_WINDOW_MINUTES)
+    reach = timedelta(days=NOTIFY_RENOTICE_RESCAN_DAYS)
+    moment = _aware(cursor.created_at)
+    return and_(
+        EventOutboxModel.event_type == EVENT_TYPE_ESCALATION_RENOTICE,
+        EventOutboxModel.created_at <= moment - window,
+        EventOutboxModel.created_at > moment - reach,
     )
 
 

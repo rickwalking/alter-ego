@@ -16,7 +16,10 @@ from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyScanDependencies,
     summary_text,
 )
-from rag_backend.modules.generation_queue.bootstrap import _NoParkedAutopilot
+from rag_backend.modules.generation_queue.bootstrap import (
+    _NoEscalationRenotifier,
+    _NoParkedAutopilot,
+)
 from rag_backend.modules.generation_queue.domain.recovery import (
     ParkedDrive,
     RecoveryFailure,
@@ -115,6 +118,7 @@ async def test_disabled_autopilot_scans_preserve_one_attempt_marking() -> None:
         DailyScanDependencies(
             store=store,
             autopilot=_NoParkedAutopilot(store=store),
+            renotifier=_NoEscalationRenotifier(),
             clock=_Clock(),
         )
     )

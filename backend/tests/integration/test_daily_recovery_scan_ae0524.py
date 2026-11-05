@@ -33,6 +33,7 @@ from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyRecoveryScan,
     DailyScanDependencies,
 )
+from rag_backend.modules.generation_queue.bootstrap import _NoEscalationRenotifier
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
 )
@@ -166,6 +167,7 @@ def _scan(engine: AsyncEngine) -> DailyRecoveryScan:
         DailyScanDependencies(
             store=SqlRecoveryStore(_sessions(engine)),
             autopilot=_bridge(engine),
+            renotifier=_NoEscalationRenotifier(),
             clock=_Clock(),
         )
     )

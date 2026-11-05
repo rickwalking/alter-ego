@@ -34,6 +34,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     CALLBACK_REWORK_PREFIX,
     CAPTION_PREVIEW_CHARS,
     CAPTION_TEMPLATE,
+    EVENT_TYPE_ESCALATION_RENOTICE,
     EVENT_TYPE_IG_EXPIRING,
     KIND_ESCALATED,
     KIND_ESCALATION_CLOSED,
@@ -215,12 +216,18 @@ def owner_ui_link(base_url: str, project_id: str) -> str:
     return f"{base}{PATH_OWNER_UI}/{project_id}"
 
 
+_FIXED_KINDS: dict[str, str] = {
+    EVENT_TYPE_READY_FOR_OWNER: KIND_REVIEW,
+    EVENT_TYPE_IG_EXPIRING: KIND_IG_EXPIRING,
+    EVENT_TYPE_ESCALATION_RENOTICE: KIND_ESCALATED,
+}
+
+
 def notice_kind(event_type: str, payload: Mapping[str, object]) -> str | None:
     """Which notice an outbox event asks for, or None to ignore it."""
-    if event_type == EVENT_TYPE_READY_FOR_OWNER:
-        return KIND_REVIEW
-    if event_type == EVENT_TYPE_IG_EXPIRING:
-        return KIND_IG_EXPIRING
+    fixed = _FIXED_KINDS.get(event_type)
+    if fixed is not None:
+        return fixed
     if event_type == EVENT_TYPE_PUBLISH_NOTICE:
         return _publish_kind(payload)
     if event_type == EVENT_TYPE_STATE_CHANGED:

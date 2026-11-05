@@ -18,6 +18,7 @@ from rag_backend.modules.autopilot.constants import (
 
 REASON_NOTIFIER_UNCONFIGURED = "notifier_unconfigured"
 EVENT_TYPE_IG_EXPIRING = "content.autopilot.ig_token_expiring"
+EVENT_TYPE_ESCALATION_RENOTICE = "content.autopilot.escalation_renotice"
 PAYLOAD_REVISION = "revision"
 PAYLOAD_PERSONA_SCORE = "persona_score"
 PAYLOAD_SOURCES_COUNT = "sources_count"
@@ -133,4 +134,5 @@ NOTIFY_EVENT_TYPES = (
     EVENT_TYPE_STATE_CHANGED,
     EVENT_TYPE_PUBLISH_NOTICE,
     EVENT_TYPE_IG_EXPIRING,
+    EVENT_TYPE_ESCALATION_RENOTICE,
 )
