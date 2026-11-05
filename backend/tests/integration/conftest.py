@@ -11,6 +11,9 @@ from httpx import ASGITransport, AsyncClient
 
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
 from rag_backend.domain.models import User, UserRole
+from tests.support.outbox_relay_settle import pytest_runtest_call
+
+__all__ = ["pytest_runtest_call"]
 
 TEST_SECRET = "test-secret-for-integration-tests!!"
 
