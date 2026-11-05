@@ -15,7 +15,14 @@ from rag_backend.application.services.carousel.nodes.images import (
 )
 from rag_backend.application.services.carousel.types import unpack_extras
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_AGENT_CAROUSEL_REFINEMENT,
+    TRACE_CONTENT_TYPE_CAROUSEL,
+    TRACE_PHASE_REFINE_DESIGN,
+    TRACE_PHASE_REFINE_IMAGE,
+)
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols import LlmCallTrace
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -26,12 +33,10 @@ _ERR_NO_OUTPUT_DIR_IMAGE = (
 )
 _ERR_SLIDE_NOT_FOUND = "Slide {} not found in project {}"
 _ERR_NO_IMAGE_PROMPT = "Slide {} has no image_prompt to refine."
-_ERR_EMPTY_IMAGE_PROMPT = "LLM returned an empty image prompt; no changes applied."
 _ERR_NO_OUTPUT_DIR_DESIGN = (
     "Carousel project {} has no output_dir; cannot apply design changes."
 )
 _ERR_NO_SLIDES = "Carousel project {} has no slides."
-_ERR_EMPTY_CSS = "LLM returned empty CSS; no changes applied."
 _ERR_WRITE_OVERRIDES = "Could not write design overrides to {}: {}"
 
 IMAGE_PROMPT_REWRITE_TEMPLATE = (
@@ -113,6 +118,20 @@ def _render_design_prompt(instruction: str, current_css: str) -> str:
         return prompt_text
 
 
+def _refinement_trace(project: CarouselProject, phase: str) -> LlmCallTrace:
+    """The Langfuse phase of one refinement of ``project``.
+
+    The user is the project owner: the agent tools only refine for the owner.
+    """
+    return LlmCallTrace(
+        phase=phase,
+        agent_name=TRACE_AGENT_CAROUSEL_REFINEMENT,
+        content_type=TRACE_CONTENT_TYPE_CAROUSEL,
+        project_id=str(project.id),
+        user_id=project.owner_id or "",
+    )
+
+
 class CarouselRefinementMixin:
     """Mixin providing carousel refinement operations.
 
@@ -159,10 +178,9 @@ class CarouselRefinementMixin:
         new_prompt = await self._llm.generate(
             [{"role": "user", "content": rewrite_prompt}],
             temperature=0.7,
+            trace=_refinement_trace(project, TRACE_PHASE_REFINE_IMAGE),
         )
         new_prompt = new_prompt.strip()
-        if not new_prompt:
-            raise ValueError(_ERR_EMPTY_IMAGE_PROMPT)
 
         slide.image_prompt = new_prompt
         extras: dict[str, object] = dict(slide.extras or {})
@@ -237,10 +255,9 @@ class CarouselRefinementMixin:
         override_css = await self._llm.generate(
             [{"role": "user", "content": design_prompt}],
             temperature=0.3,
+            trace=_refinement_trace(project, TRACE_PHASE_REFINE_DESIGN),
         )
         override_css = override_css.strip()
-        if not override_css:
-            raise ValueError(_ERR_EMPTY_CSS)
 
         if override_css.startswith("```css"):
             override_css = override_css[6:]

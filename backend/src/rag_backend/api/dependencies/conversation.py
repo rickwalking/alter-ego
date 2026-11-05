@@ -15,11 +15,21 @@ Routes depend on :func:`get_conversation_module`; they never call
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from functools import partial
+from typing import TYPE_CHECKING, Annotated
+from uuid import UUID
 
 from fastapi import Depends
 
+from rag_backend.api.dependencies.auth import require_authenticated_user
 from rag_backend.api.dependencies.knowledge import get_container, get_session
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_AGENT_CONVERSATION_TITLE,
+    TRACE_CONTENT_TYPE_CHAT,
+    TRACE_PHASE_CONVERSATION_TITLE,
+)
+from rag_backend.domain.models import User
+from rag_backend.domain.protocols import LlmCallTrace
 from rag_backend.modules.conversation import (
     ConversationAdapters,
     ConversationHandlers,
@@ -104,11 +114,23 @@ def get_conversation_stream_handler(
     return ConversationStreamHandler(LegacyStreamChatRunner(db))
 
 
-def get_conversation_title_generator() -> LlmGenerate:
+def get_conversation_title_generator(
+    conversation_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
+) -> LlmGenerate:
     """Resolve the LLM ``generate`` callable for conversation title generation.
 
     Kept at the edge so the route never reaches the global container itself;
     mirrors how ``get_knowledge_service`` resolves collaborators
-    via the container here in ``api/dependencies/``.
+    via the container here in ``api/dependencies/``. The title has no workflow
+    around it, so the call names its own Langfuse phase, with the conversation in
+    the project field.
     """
-    return get_container().llm_service().generate
+    trace = LlmCallTrace(
+        phase=TRACE_PHASE_CONVERSATION_TITLE,
+        agent_name=TRACE_AGENT_CONVERSATION_TITLE,
+        content_type=TRACE_CONTENT_TYPE_CHAT,
+        project_id=str(conversation_id),
+        user_id=str(user.id),
+    )
+    return partial(get_container().llm_service().generate, trace=trace)

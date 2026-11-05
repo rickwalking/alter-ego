@@ -1,11 +1,31 @@
 """Protocols for AI service interfaces."""
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import Document, DocumentChunk, SearchResult
 from rag_backend.domain.types import ChatEvent
+
+
+class EmptyLLMResponseError(RuntimeError):
+    """The primary model returned no content and no tool call."""
+
+
+@dataclass(frozen=True)
+class LlmCallTrace:
+    """Who an LLM call belongs to, for a caller with no workflow phase around it.
+
+    The LLM adapter opens the trace, so the caller needs no tracing dependency. An
+    empty ``project_id`` or ``user_id`` is recorded as ``unknown``.
+    """
+
+    phase: str
+    agent_name: str
+    content_type: str
+    project_id: str = ""
+    user_id: str = ""
 
 
 class LLMService(Protocol):
@@ -15,14 +35,13 @@ class LLMService(Protocol):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int | None = None,
+        trace: LlmCallTrace | None = None,
     ) -> str: ...
 
     def generate_stream(
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         """Generate a streaming response.
 

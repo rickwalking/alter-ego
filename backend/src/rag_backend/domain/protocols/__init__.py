@@ -4,7 +4,13 @@ These protocols define contracts that infrastructure implementations must fulfil
 Using Protocols instead of abstract classes allows for more flexible, decoupled design.
 """
 
-from rag_backend.domain.protocols.ai import Agent, DocumentProcessor, LLMService
+from rag_backend.domain.protocols.ai import (
+    Agent,
+    DocumentProcessor,
+    EmptyLLMResponseError,
+    LlmCallTrace,
+    LLMService,
+)
 from rag_backend.domain.protocols.carousel import (
     CarouselExportService,
     CarouselRefinementService,
@@ -38,10 +44,12 @@ __all__ = [
     "DocumentProcessor",
     "DocumentRepository",
     "EmbeddingService",
+    "EmptyLLMResponseError",
     "ExportConfig",
     "ImageGenerationService",
     "ImageStyleStrategy",
     "LLMService",
+    "LlmCallTrace",
     "MessageRepository",
     "PublishResult",
     "ResearchEnrichmentParams",

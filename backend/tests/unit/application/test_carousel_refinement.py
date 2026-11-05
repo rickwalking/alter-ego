@@ -12,8 +12,6 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.application.services.carousel_refinement import (
-    _ERR_EMPTY_CSS,
-    _ERR_EMPTY_IMAGE_PROMPT,
     _ERR_NO_IMAGE_PROMPT,
     _ERR_NO_OUTPUT_DIR_DESIGN,
     _ERR_NO_OUTPUT_DIR_IMAGE,
@@ -187,23 +185,6 @@ class TestRegenerateSlideImage:
             await mixin.regenerate_slide_image(project.id, 1, "x")
 
     @pytest.mark.asyncio
-    async def test_empty_llm_response_raises(self) -> None:
-        """Given LLM returns empty string, when regenerating, then ValueError."""
-        mixin = _FakeMixin()
-        project = _make_project(output_dir="/tmp/out")
-        slide = _make_slide(image_prompt="sunset")
-        mixin._repo.get_project_by_id.return_value = project
-        mixin._repo.get_slides_by_project.return_value = [slide]
-        mixin._llm.generate.return_value = "   "
-
-        with pytest.raises(ValueError, match=_ERR_EMPTY_IMAGE_PROMPT):
-            await mixin.regenerate_slide_image(project.id, 1, "x")
-
-        mixin._llm.generate.assert_awaited_once()
-        _, kwargs = mixin._llm.generate.call_args
-        assert kwargs.get("temperature") == 0.7
-
-    @pytest.mark.asyncio
     async def test_llm_prompt_structure(self) -> None:
         """Given valid inputs, when regenerating, then LLM receives correct prompt."""
         mixin = _FakeMixin()
@@ -354,24 +335,6 @@ class TestRefineCarouselDesign:
 
         with pytest.raises(ValueError, match=_ERR_NO_SLIDES.format(project.id)):
             await mixin.refine_carousel_design(project.id, "dark mode")
-
-    @pytest.mark.asyncio
-    async def test_empty_css_response_raises(self) -> None:
-        """Given LLM returns empty CSS, when refining design, then ValueError."""
-        mixin = _FakeMixin()
-        project = _make_project(output_dir="/tmp/out")
-        slide = _make_slide()
-        mixin._repo.get_project_by_id.return_value = project
-        mixin._repo.get_slides_by_project.return_value = [slide]
-        mixin._phase4_design.return_value = "<html><style>body{}</style></html>"
-        mixin._llm.generate.return_value = "   "
-
-        with pytest.raises(ValueError, match=_ERR_EMPTY_CSS):
-            await mixin.refine_carousel_design(project.id, "dark mode")
-
-        mixin._llm.generate.assert_awaited_once()
-        _, kwargs = mixin._llm.generate.call_args
-        assert kwargs.get("temperature") == 0.3
 
     @pytest.mark.asyncio
     async def test_css_extraction_with_style_tags(self) -> None:
