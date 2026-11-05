@@ -123,7 +123,7 @@ Feature: The daily recovery scan re-sends the escalation notice with Retry once 
     Then exactly one notice is delivered
 
   Scenario: A released notice too far behind the cursor is not read again
-    Given a re-sent notice a day older than the cursor
+    Given a re-sent notice more than a week older than the cursor
     When the notifier reads the outbox
     Then the notice is not read
 

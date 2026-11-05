@@ -19,7 +19,9 @@ from rag_backend.modules.autopilot.domain.escalation_renotice import (
     carried_retry,
     claim_send,
     mark_renoticed,
+    notice_closed,
     release_send,
+    renotice_capped,
     renotice_due,
     renotice_payload,
     send_claimed,
@@ -177,6 +179,21 @@ def test_the_third_requeue_is_the_last() -> None:
     """Scenario: A run is queued again at most three times"""
     assert renotice_due(_with_log(_run(), _given_up_on(3)))
     assert not renotice_due(_with_log(_run(), _given_up_on(4)))
+
+
+def test_the_cap_is_hit_by_the_fourth_notice() -> None:
+    """Scenario: A run is queued again at most three times"""
+    assert not renotice_capped(_given_up_on(3))
+    assert renotice_capped(_given_up_on(4))
+
+
+def test_a_notice_is_closed_when_nothing_more_can_be_sent() -> None:
+    """Scenario: A notice out of attempts cannot be claimed"""
+    assert not notice_closed(_attempts(NoticeLog(), "e1", 2), "e1")
+    assert notice_closed(_attempts(NoticeLog(), "e1", 3), "e1")
+    assert notice_closed(claim_send(NoticeLog(), "e1"), "e1")
+    assert notice_closed(record_status(NoticeLog(), "e1", 7), "e1")
+    assert not notice_closed(_attempts(NoticeLog(), "e1", 3), "e2")
 
 
 def test_the_claim_is_held_until_released() -> None:

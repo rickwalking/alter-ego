@@ -67,7 +67,7 @@ class TelegramRateLimitedError(TelegramDeliveryError):
 
 
 class TelegramDeliveryUnknownError(TelegramDeliveryError):
-    """The request left and no answer came back: it may have been delivered."""
+    """The request left and no readable answer came back: it may have been delivered."""
 
 
 class NotifierUnconfiguredError(Exception):
@@ -75,7 +75,7 @@ class NotifierUnconfiguredError(Exception):
 
 
 class RenoticeClaimedError(Exception):
-    """Another worker holds this notice's send. Nothing was sent."""
+    """This notice's send is held or closed by another worker. Nothing was sent."""
 
 
 class InstagramCallError(Exception):

@@ -9,12 +9,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from rag_backend.modules.autopilot.domain.escalation_renotice import renotice_capped
 from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
     CarouselOpen,
     SqlEscalationRenotices,
 )
+from rag_backend.modules.autopilot.renotice_constants import LOG_RENOTICE_CAP_HIT
+
+logger = structlog.get_logger()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,7 +53,11 @@ class AutopilotRenoticeBridge:
             renotices = SqlEscalationRenotices(session)
             staged = await renotices.stage(UUID(run_id), carousel_open)
             await session.commit()
-        return staged
+        if staged is None:
+            return False
+        if renotice_capped(staged):
+            logger.warning(LOG_RENOTICE_CAP_HIT, run_id=run_id)
+        return True
 
 
 __all__ = ["AutopilotRenoticeBridge", "RenoticeCandidate"]

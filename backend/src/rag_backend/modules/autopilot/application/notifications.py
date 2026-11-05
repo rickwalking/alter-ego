@@ -23,7 +23,7 @@ from rag_backend.modules.autopilot.constants import (
 from rag_backend.modules.autopilot.domain.carousel_defaults import profile_line
 from rag_backend.modules.autopilot.domain.escalation_renotice import (
     RenoticeClaims,
-    send_claimed,
+    notice_closed,
 )
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
@@ -169,7 +169,7 @@ class OwnerNotificationService:
             revision = revision_of(event.payload)
             key = f"{ATTEMPT_REVIEW_PREFIX}{revision}"
             return is_review_complete(log, revision) or _exhausted(log, key)
-        return _status_closed(log, event.event_id)
+        return notice_closed(log, event.event_id)
 
     async def _one(self, event: AutopilotOutboxEvent) -> bool:
         kind = notice_kind(event.event_type, event.payload)
@@ -230,7 +230,7 @@ class OwnerNotificationService:
     ) -> bool:
         log = run.notice_log
         key = f"{ATTEMPT_STATUS_PREFIX}{event.event_id}"
-        if _status_closed(log, event.event_id):
+        if notice_closed(log, event.event_id):
             return False
         job = StatusJob(event=event, run=run, kind=kind)
         notice = status_notice(self._deps.chat_id, self._deps.web_base_url, job)
@@ -328,13 +328,6 @@ def _configured(deps: NotificationDependencies) -> bool:
 
 def _exhausted(log: NoticeLog, key: str) -> bool:
     return attempt_count(log, key) >= NOTIFY_MAX_ATTEMPTS
-
-
-def _status_closed(log: NoticeLog, event_id: str) -> bool:
-    """Delivered, out of attempts, or a claimed send that may have been delivered."""
-    if event_id in log.statuses or send_claimed(log, event_id):
-        return True
-    return _exhausted(log, f"{ATTEMPT_STATUS_PREFIX}{event_id}")
 
 
 def _project_id(event: AutopilotOutboxEvent, run: AutopilotRun) -> str:

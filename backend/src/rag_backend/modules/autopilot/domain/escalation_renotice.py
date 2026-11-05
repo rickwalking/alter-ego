@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.notify_constants import (
 from rag_backend.modules.autopilot.renotice_constants import (
     RENOTICE_KEY,
     RENOTICE_KEY_FORMAT,
+    RENOTICE_MAX_REQUEUES,
     RENOTICE_SENDING_KEY,
     RENOTICE_STATES,
     RESOLVED_REASONS,
@@ -45,11 +46,11 @@ class RenoticeClaims(Protocol):
     """The durable claim on one notice's send."""
 
     async def take(self, run_id: UUID, event_id: str) -> bool:
-        """Claim the send and commit; False when it is claimed or delivered."""
+        """Claim the send and commit; False when the notice is closed."""
         ...
 
     async def release(self, run_id: UUID, event_id: str) -> None:
-        """Drop the claim: the send certainly did not happen. The caller commits."""
+        """Drop the claim and commit: the send certainly did not happen."""
         ...
 
 
@@ -60,7 +61,14 @@ def renotice_due(run: AutopilotRun) -> bool:
     if run.state_reason in RESOLVED_REASONS or is_dead_letter(run.state_reason):
         return False
     log = run.notice_log
+    if renotice_capped(log):
+        return False
     return all(_given_up(log, event_id) for event_id in _queued(log))
+
+
+def renotice_capped(log: NoticeLog) -> bool:
+    """The last notice the cap allows is queued; no run gets another."""
+    return len(_queued(log)) > RENOTICE_MAX_REQUEUES
 
 
 def carried_retry(notice: PastNotice) -> bool:
@@ -90,6 +98,13 @@ def mark_renoticed(log: NoticeLog, event_id: str) -> NoticeLog:
 def send_claimed(log: NoticeLog, event_id: str) -> bool:
     """True when a send of ``event_id`` started and may have been delivered."""
     return _claim(event_id) in log.statuses
+
+
+def notice_closed(log: NoticeLog, event_id: str) -> bool:
+    """Delivered, out of attempts, or a claimed send that may have been delivered."""
+    if event_id in log.statuses or send_claimed(log, event_id):
+        return True
+    return _out_of_attempts(log, event_id)
 
 
 def claim_send(log: NoticeLog, event_id: str) -> NoticeLog:
@@ -128,6 +143,10 @@ def _given_up(log: NoticeLog, event_id: str) -> bool:
     """Certainly undelivered: not recorded, no send in doubt, no attempt left."""
     if event_id in log.statuses or send_claimed(log, event_id):
         return False
+    return _out_of_attempts(log, event_id)
+
+
+def _out_of_attempts(log: NoticeLog, event_id: str) -> bool:
     key = f"{ATTEMPT_STATUS_PREFIX}{event_id}"
     return attempt_count(log, key) >= NOTIFY_MAX_ATTEMPTS
 
@@ -138,7 +157,9 @@ __all__ = [
     "carried_retry",
     "claim_send",
     "mark_renoticed",
+    "notice_closed",
     "release_send",
+    "renotice_capped",
     "renotice_due",
     "renotice_payload",
     "send_claimed",

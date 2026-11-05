@@ -8,7 +8,10 @@ from pathlib import Path
 
 import httpx
 
-from rag_backend.modules.autopilot.domain.exceptions import TelegramDeliveryError
+from rag_backend.modules.autopilot.domain.exceptions import (
+    TelegramDeliveryError,
+    TelegramDeliveryUnknownError,
+)
 from rag_backend.modules.autopilot.domain.messages import InlineButton, InlineKeyboard
 from rag_backend.modules.autopilot.notify_constants import (
     ATTACH_SCHEME,
@@ -113,13 +116,17 @@ def message_data(
 
 
 def accepted_payload(response: httpx.Response) -> object:
-    """JSON body of a successful call, or a token-free error."""
+    """JSON body of a successful call, or a token-free error.
+
+    Past the status check the message went out, so what an unreadable answer
+    raises says "may have been delivered", here and when its ids are read.
+    """
     if not response.is_success:
         detail = DETAIL_HTTP_STATUS.format(status=response.status_code)
         raise TelegramDeliveryError(detail)
     payload = _json(response)
     if isinstance(payload, dict) and payload.get(FIELD_OK) is False:
-        raise TelegramDeliveryError(DETAIL_NOT_OK)
+        raise TelegramDeliveryUnknownError(DETAIL_NOT_OK)
     return payload
 
 
@@ -127,7 +134,7 @@ def group_ids(payload: object) -> tuple[int, ...]:
     """Message ids from a ``sendMediaGroup`` result list."""
     result = _result(payload)
     if not isinstance(result, list) or not result:
-        raise TelegramDeliveryError(DETAIL_BAD_RESPONSE)
+        raise TelegramDeliveryUnknownError(DETAIL_BAD_RESPONSE)
     return tuple(_message_id(item) for item in result)
 
 
@@ -175,16 +182,16 @@ def _button(button: InlineButton) -> dict[str, str]:
 
 def _result(payload: object) -> object:
     if not isinstance(payload, dict):
-        raise TelegramDeliveryError(DETAIL_BAD_RESPONSE)
+        raise TelegramDeliveryUnknownError(DETAIL_BAD_RESPONSE)
     return payload.get(FIELD_RESULT)
 
 
 def _message_id(item: object) -> int:
     if not isinstance(item, dict):
-        raise TelegramDeliveryError(DETAIL_BAD_RESPONSE)
+        raise TelegramDeliveryUnknownError(DETAIL_BAD_RESPONSE)
     value = item.get(FIELD_MESSAGE_ID)
     if isinstance(value, bool) or not isinstance(value, int):
-        raise TelegramDeliveryError(DETAIL_BAD_RESPONSE)
+        raise TelegramDeliveryUnknownError(DETAIL_BAD_RESPONSE)
     return value
 
 

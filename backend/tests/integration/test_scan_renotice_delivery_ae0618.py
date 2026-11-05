@@ -314,14 +314,14 @@ async def test_a_released_notice_too_far_behind_is_not_read(
     await tick(engine, FakeTelegram())
     queued = (await renotices(engine, run_id))[0].created_at
     no_notice: dict[str, object] = {"state": "generating"}
-    near = queued + timedelta(hours=23)
+    near = queued + timedelta(days=6)
     await past_notice(engine, run_id, (STATE_CHANGED, no_notice), near)
     await tick(engine, FakeTelegram())
     async with _sessions(engine)() as session:
         read = await SqlAutopilotEventSource(session).recent()
     assert RENOTICE in [event.event_type for event in read]
 
-    far = queued + timedelta(hours=25)
+    far = queued + timedelta(days=8)
     await past_notice(engine, run_id, (STATE_CHANGED, no_notice), far)
     await tick(engine, FakeTelegram())
     async with _sessions(engine)() as session:

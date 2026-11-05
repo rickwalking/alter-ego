@@ -27,12 +27,12 @@ from rag_backend.modules.autopilot.domain.escalation_renotice import (
     carried_retry,
     claim_send,
     mark_renoticed,
+    notice_closed,
     release_send,
     renotice_due,
-    send_claimed,
 )
 from rag_backend.modules.autopilot.domain.models import AutopilotRun
-from rag_backend.modules.autopilot.domain.notice_log import parse_stored
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog, parse_stored
 from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
@@ -74,8 +74,10 @@ class SqlEscalationRenotices:
         notified = await self._had_retry_notice(runs)
         return [run for run in runs if str(run.run_id) not in notified]
 
-    async def stage(self, run_id: UUID, carousel_open: CarouselOpen) -> bool:
-        """Stage the event and the marker; False when the run is no longer eligible.
+    async def stage(
+        self, run_id: UUID, carousel_open: CarouselOpen
+    ) -> NoticeLog | None:
+        """Stage the event and the marker; the new ledger, or None when not eligible.
 
         Every listing check runs again under the row lock, ``carousel_open`` on the
         same transaction: a run can change between the listing and this call.
@@ -88,23 +90,20 @@ class SqlEscalationRenotices:
         )
         row = result.scalar_one_or_none()
         if row is None:
-            return False
+            return None
         run = run_from_row(row)
         if not await self._still_eligible(run, carousel_open):
-            return False
+            return None
         record = renotice_record(run)
         audit, outbox = build_event_records(record)
         self._session.add(audit)
         self._session.add(outbox)
         await self._session.flush()
+        marked = mark_renoticed(run.notice_log, record.event_id)
         await SqlNoticeLogStore(self._session).save(
-            SaveNoticeLog(
-                run_id=run.run_id,
-                log=mark_renoticed(run.notice_log, record.event_id),
-                base=run.notice_log,
-            )
+            SaveNoticeLog(run_id=run.run_id, log=marked, base=run.notice_log)
         )
-        return True
+        return marked
 
     async def _still_eligible(
         self, run: AutopilotRun, carousel_open: CarouselOpen
@@ -144,20 +143,24 @@ class SqlEscalationRenotices:
 class SqlRenoticeClaims:
     """``RenoticeClaims`` on the run's ledger.
 
-    ``take`` commits the tick's session, so the claim outlives a crash and a
-    rollback of anything that step does after the send.
+    ``take`` and ``release`` commit the tick's session, so neither is undone by a
+    crash or a rollback of anything that step does afterwards.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def take(self, run_id: UUID, event_id: str) -> bool:
-        """Claim the send under the row lock and commit; False when already taken."""
+        """Claim the send under the row lock and commit; False when it is closed.
+
+        The ledger read under the lock decides, not the caller's copy: once the
+        scan has given a notice up and queued a new one, the old one can never go.
+        """
         stored = await self._session.scalar(
             select(_R.telegram_message_ids).where(_R.id == run_id).with_for_update()
         )
         log = parse_stored(stored)
-        if event_id in log.statuses or send_claimed(log, event_id):
+        if notice_closed(log, event_id):
             await self._session.commit()
             return False
         await SqlNoticeLogStore(self._session).save(
@@ -167,7 +170,7 @@ class SqlRenoticeClaims:
         return True
 
     async def release(self, run_id: UUID, event_id: str) -> None:
-        """Drop the claim of a send that did not happen. The caller commits."""
+        """Drop the claim of a send that did not happen, and commit."""
         stored = await self._session.scalar(
             select(_R.telegram_message_ids).where(_R.id == run_id).with_for_update()
         )
@@ -175,6 +178,7 @@ class SqlRenoticeClaims:
         await SqlNoticeLogStore(self._session).save(
             SaveNoticeLog(run_id=run_id, log=release_send(log, event_id), base=log)
         )
+        await self._session.commit()
 
 
 def _mapping(payload: object) -> Mapping[str, object]:
