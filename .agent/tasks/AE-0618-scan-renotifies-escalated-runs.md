@@ -52,7 +52,10 @@ without the button and never get another, so they stay stuck unless the owner op
       publish notice that offered Retry counts as a Retry notice, on any run and at any date.
 - [x] A run or carousel that changes between the listing and the stage gets no notice: every check runs again under
       the row lock.
-- [x] Rows shaped like the seven production rows select exactly the three runs Pedro approved.
+- [x] Rows shaped like the seven production rows select exactly the three runs Pedro approved, with each skipped row
+      exercising its exclusion on a carousel that is otherwise open.
+- [x] A notice the notifier gave up on is queued again by the next scan; a delivered, pending or in-doubt one is not.
+- [x] No run gets two delivered notices through a crash after the send, an outbox replay, two scans or two workers.
 - [x] A failing item is logged and reported and does not stop the others; a failing listing does not stop the scan.
 - [x] The summary carries the count.
 - [x] Nothing changes run state, reason, `updated_at`, or the carousel.
@@ -126,7 +129,11 @@ Ticket created. `.feature` and failing tests first, then the code. Implementatio
 - Tests: the new feature, unit and integration files; `DailyScanDependencies` gained a required field, so four
   existing test files pass it; `tests/integration/queue_flow_db_support.py` adds the notifier's cursor table.
 
-`notifications.py`, `status_keyboard.py`, `queue_bridge.py`, `dispatcher.py`, `infrastructure/repository.py`,
+Third round: `application/notifications.py` (the claim; `status_notice` moved out to keep it under the file limit),
+`application/renotice_send.py`, `application/status_notice.py`, `bootstrap_telegram.py`, `domain/exceptions.py`,
+`infrastructure/telegram_notifier.py`.
+
+`status_keyboard.py`, `queue_bridge.py`, `dispatcher.py`, `infrastructure/repository.py`,
 `generation_queue/constants.py` and `frontend/` are unchanged.
 
 ## Test Evidence
@@ -143,6 +150,16 @@ Ticket created. `.feature` and failing tests first, then the code. Implementatio
 - Line and branch coverage: 100% on the new files and `recovery_scan.py` (targeted run, 99 passed).
 - Second round: 1,425 passed across `tests/unit/modules/autopilot`, `tests/unit/modules/generation_queue` and the
   daily-scan integration files, on Postgres; 100% line and branch coverage on the files it changed.
+- Third round, failing first at `2d01a845`: on assertions, the second chance, the once-per-scan repeat, two scans after
+  a give-up, the crash after the send (the notice went out twice) and the ledger of a delivered notice. The unit tests
+  of the claim and the transport classes need names that did not exist there. Passing there already, so regression
+  pins: a notice still being retried, a run that moved on, a rate limited send, an outbox replay, and the seven-row
+  selection. The unknown outcome and real claim tests were added with the fix.
+- Third round, seven-row selection: removing `REASON_OWNER_CANCELLED` from `RESOLVED_REASONS` fails it at the selection
+  assert, because the owner-cancelled row now has an open carousel. The constant was restored.
+- Third round: 1,460 passed across `tests/unit/modules/autopilot`, `tests/unit/modules/generation_queue` and the
+  daily-scan integration files, plus 34 in the six autopilot notifier integration files, on Postgres; 100% line and
+  branch coverage on `notifications.py`, `renotice_send.py`, `status_notice.py` and both `escalation_renotice.py` files.
 - PR #360 CI at `8ade4019`: all checks passed, mutation included.
 - PR #360 CI at `7011e232`: all checks passed, `backend-gate` on its second attempt. The first failed on
   `test_cancelled_event_writes_leave_the_workflow_intact` (`assert events == []`), a timing test this change does not
@@ -163,11 +180,12 @@ Pending.
    - any other escalation at or after `CAROUSEL_RETRY_SHIPPED_AT` (2026-11-04T09:21:21Z, the end of the deploy of #351,
      `f81c4cc9`). An escalation in the merge-to-deploy gap counts as before Retry, so that run gets the notice.
    A `failed` notice with any other reason offered no Retry and does not count: its run stays eligible.
-2. **Marker written at emit, not at delivery.** The marker goes into `statuses` in the transaction that writes the
-   outbox row, under a row lock, the way `daily_recovery` already does. If it were written at delivery, a notice still
-   waiting in the outbox the next day would be emitted again. The notifier then records the event id in `statuses` as
-   for any status notice, so `scan_renotified` plus the event id is the sent proof. The cost: a notice dropped after
-   three failed sends is not offered again. That is what "at most once" asks for.
+2. **Marker written at emit, not at delivery; an undelivered notice gets another chance.** The marker
+   (`scan_renotified:<event id>`) goes into `statuses` in the transaction that writes the outbox row, under the row
+   lock, so a notice still waiting in the outbox the next day is not emitted again. This reverses the first version,
+   where a notice dropped after three failed sends was never offered again: per Pedro's decision (2026-11-04), one
+   notice per run, once ever, means one delivered, and a notice that was never delivered must get another chance. See
+   decision 13.
 3. **New event type instead of a second `state_changed`.** No state changed, and `state_changed` means a transition
    to anything reading the outbox or the audit log. A dedicated type also makes a failed run's notice KIND_ESCALATED,
    as asked; a `state_changed` with `state=failed` would be KIND_FAILED, which has no Retry.
@@ -207,6 +225,23 @@ Pending.
     passes `carousel_open`, which runs on the staging transaction. It takes a shared lock (`FOR SHARE`) on the carousel
     row until the commit: a write in flight is waited for and a later one waits for the marker, without blocking inserts
     that only reference the carousel.
+
+13. **Another chance comes from the next daily scan.** The notifier has no mechanism that retries a dropped event type,
+    and keeping one event open would stop its cursor, so a new event is the smallest change. `renotice_due` allows a new
+    event only when every queued one is certainly undelivered: no event id in `statuses`, no claim, and no attempt left.
+    A notice that keeps failing is queued once per scan. Each new event passes every check of decisions 1, 7 and 12.
+14. **A claim before the send keeps it to one delivered.** The notifier records a send when its worker step commits, and
+    that step goes on after the send, so a crash or a later failure in the step forgot a delivered notice and the next
+    tick sent it again. Only for this event type, `SqlRenoticeClaims.take` commits `scan_renotice_sending:<event id>`
+    under the row lock before the send. It is released only when the send certainly did not happen. A claim that stays
+    closes that event and stops any new one. The early commit publishes only that step's own progress, since each
+    worker step has its own commit. Other notices keep their behaviour.
+15. **What counts as not sent.** A connect failure, a connect or pool timeout, a Telegram error answer, a rate limit and
+    an unconfigured bot release the claim. A failure after the request left (read or write timeout, read error, protocol
+    error) raises `TelegramDeliveryUnknownError`, a subclass, so every other caller behaves as before; it keeps the
+    claim, as does any unexpected exception. When delivery is in doubt the notice is not repeated, so two limits remain:
+    a worker that dies between the claim's commit and the send loses that notice, and a 5xx answer is read as not sent
+    although a gateway error cannot prove it.
 
 ## Blockers
 
