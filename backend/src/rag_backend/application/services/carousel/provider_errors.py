@@ -19,16 +19,32 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_PROVIDER_RATE_LIMITED,
     ERR_PROVIDER_UNAVAILABLE,
 )
+from rag_backend.domain.llm_errors import AllModelsUnavailableError
 
 _RATE_LIMIT_ERRORS: tuple[type[Exception], ...] = (
     openai.RateLimitError,
     anthropic.RateLimitError,
 )
 
-_PROVIDER_ERRORS: tuple[type[Exception], ...] = (
+PROVIDER_ERRORS: tuple[type[Exception], ...] = (
     openai.APIError,
     anthropic.APIError,
 )
+
+LLM_CALL_FAILED_ERRORS: tuple[type[Exception], ...] = (
+    ValueError,
+    TypeError,
+    TimeoutError,
+    *PROVIDER_ERRORS,
+    AllModelsUnavailableError,
+)
+"""What a failed LLM call raises, so a caller can fail closed and bugs stay loud.
+
+``ValueError``/``TypeError`` once the answer does not parse (the ``JsonAnswers``
+contract, after the retries and the fallback model), the provider SDK's
+``APIError`` (connection, timeout, status), a ``TimeoutError``, and
+``AllModelsUnavailableError`` when the model queue has no model left to answer.
+"""
 
 
 _RETRY_AFTER_HEADER = "retry-after"
@@ -42,7 +58,7 @@ def classify_provider_error(exc: BaseException) -> str | None:
     """
     if isinstance(exc, _RATE_LIMIT_ERRORS):
         return ERR_PROVIDER_RATE_LIMITED
-    if isinstance(exc, _PROVIDER_ERRORS):
+    if isinstance(exc, PROVIDER_ERRORS):
         return ERR_PROVIDER_UNAVAILABLE
     return None
 
@@ -61,4 +77,9 @@ def provider_retry_after(exc: BaseException) -> str | None:
     return str(value) if value else None
 
 
-__all__ = ["classify_provider_error", "provider_retry_after"]
+__all__ = [
+    "LLM_CALL_FAILED_ERRORS",
+    "PROVIDER_ERRORS",
+    "classify_provider_error",
+    "provider_retry_after",
+]

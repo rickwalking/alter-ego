@@ -19,7 +19,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from rag_backend.agents import carousel_editorial_orchestrator as orchestrator_module
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
-from rag_backend.application.services.carousel import phase_artifact_runner
+from rag_backend.application.services.carousel import content_review_step
 from rag_backend.application.services.carousel.content_budget_step import (
     BudgetStepInput,
     ContentBudgetContext,
@@ -119,7 +119,7 @@ class _OrderedFitter(FakeFitter):
 def events(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
     log: list[str] = []
     monkeypatch.setattr(GENERATE_TARGET, _Drafter())
-    real = getattr(phase_artifact_runner, _REVIEW_TARGET)
+    real = getattr(content_review_step, _REVIEW_TARGET)
 
     def spy(
         command: object,
@@ -127,7 +127,7 @@ def events(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
         log.append("review")
         return cast(Callable[[object], Awaitable[dict[str, object]]], real)(command)
 
-    monkeypatch.setattr(phase_artifact_runner, _REVIEW_TARGET, spy)
+    monkeypatch.setattr(content_review_step, _REVIEW_TARGET, spy)
     yield log
 
 

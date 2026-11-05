@@ -218,6 +218,7 @@ _COPY_EXTRAS_KEYS: tuple[str, ...] = (
     "tldr_strip",
 )
 _TRANSLATION_EN_KEY = "translation_en"
+_CONTENT_KIND_KEY = "content_kind"
 
 
 def _merged_extras(
@@ -251,13 +252,16 @@ def _symmetric_translation(
     The PT side never stores an empty list (``pack_extras``), so an empty EN
     list, or a stale EN list the fresh copy no longer has, is dropped too:
     prod 98a2e2f0 had PT without ``features`` and EN ``features == []``, and
-    ``translation_shape_mismatch`` fired on 6 slides.
+    ``translation_shape_mismatch`` fired on 6 slides. The PT side stores no
+    ``content_kind`` either and the fresh copy brings none, so the old translation's
+    goes too: a re-drafted slide kept ``insight`` after its card was gone.
     """
     for key in _COPY_EXTRAS_KEYS:
         value = merged.get(key)
         stale = key not in extras and key not in fresh
         if not value or stale:
             merged.pop(key, None)
+    merged.pop(_CONTENT_KIND_KEY, None)
     return merged
 
 

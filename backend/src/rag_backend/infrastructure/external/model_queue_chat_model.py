@@ -31,6 +31,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables.config import merge_configs
 from pydantic import ConfigDict, Field
 
+from rag_backend.domain.llm_errors import AllModelsUnavailableError
 from rag_backend.infrastructure.config.llm_queue_constants import (
     ERR_ALL_MODELS_DOWN,
     ERR_EMPTY_QUEUE,
@@ -74,10 +75,6 @@ _GIVE_UP_AT_ONCE = frozenset({FailureClass.FATAL, FailureClass.QUOTA})
 AllDownHook = Callable[[str, str], None]
 _RANDOM = random.SystemRandom()
 _MIN_MODELS_FOR_FALLBACK = 2
-
-
-class AllModelsUnavailableError(RuntimeError):
-    """No model in the queue could answer (each one's state is named)."""
 
 
 class _GaveUpError(RuntimeError):
