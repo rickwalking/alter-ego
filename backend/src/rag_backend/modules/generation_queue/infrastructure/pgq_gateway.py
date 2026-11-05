@@ -33,6 +33,10 @@ _ACCELERATE_SQL = (
     "UPDATE {table} SET priority = GREATEST(priority, $2), execute_after = NOW()"
     " WHERE id = $1 AND dedupe_key = $3 AND status = 'queued' RETURNING id"
 )
+_RAISE_SQL = (
+    "UPDATE {table} SET priority = GREATEST(priority, $2)"
+    " WHERE id = $1 AND dedupe_key = $3 AND status = 'queued'"
+)
 _PICKED_SQL = (
     "SELECT id FROM {table} WHERE id = $1 AND dedupe_key = $2"
     " AND status = 'picked' FOR UPDATE"
@@ -106,6 +110,18 @@ class PgQueuerJobQueue:
         if job_id in await self.existing([job_id]):
             return job_id
         return await self._find_or_enqueue(run)
+
+    async def raise_priority(self, run: GenerationRun) -> None:
+        """Raise a queued job, never demoting it; a picked job stays as it is.
+
+        ``execute_after`` is kept: a drive waiting for a render stays due when it was.
+        """
+        await self._queries.driver.execute(
+            _RAISE_SQL.format(table=self._table),
+            run.pgq_job_id,
+            priority_of(run.payload),
+            run.dedupe_key,
+        )
 
     async def _accelerate(self, run: GenerationRun) -> bool:
         rows = await self._queries.driver.fetch(

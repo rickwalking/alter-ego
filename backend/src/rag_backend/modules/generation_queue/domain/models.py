@@ -10,7 +10,7 @@ its counter, so a run that keeps advancing is never taken for poison.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
@@ -25,6 +25,8 @@ from rag_backend.modules.generation_queue.constants import (
     ERR_PAYLOAD_FIELD,
     KIND_AUTOPILOT_DRIVE,
     KIND_WORKFLOW_RESUME,
+    PAYLOAD_MANUAL_PRIORITY,
+    REVIEW_REFRESH_PRIORITY,
     STATUS_CANCELLED,
     STATUS_DEAD_LETTER,
     STATUS_QUEUED,
@@ -223,6 +225,13 @@ def autopilot_stage(run_id: str, project_id: str | None = None) -> StageCommand:
         autopilot_run_id=run_id,
         carousel_project_id=project_id,
     )
+
+
+def review_refresh_stage(run_id: str, project_id: str | None) -> StageCommand:
+    """Drive a run that only owes the final-review refresh, ahead of full drives."""
+    stage = autopilot_stage(run_id, project_id)
+    payload = {**stage.payload, PAYLOAD_MANUAL_PRIORITY: REVIEW_REFRESH_PRIORITY}
+    return replace(stage, payload=payload)
 
 
 def adopt_stage(project_id: str, project_title: str) -> StageCommand:
