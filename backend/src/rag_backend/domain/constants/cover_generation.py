@@ -17,6 +17,7 @@ from __future__ import annotations
 TABLE_COVER_GENERATIONS = "carousel_cover_generations"
 INDEX_COVER_GENERATIONS_PROJECT = "idx_carousel_cover_generations_project"
 INDEX_COVER_GENERATIONS_OWNER_CREATED = "idx_carousel_cover_generations_owner_created"
+TABLE_COVER_AUTOPILOT_BASELINES = "carousel_cover_autopilot_baselines"
 
 COVER_GENERATION_PER_CAROUSEL_CAP = 4
 COVER_GENERATION_MONTHLY_CAP = 40
@@ -122,6 +123,7 @@ __all__ = [
     "REFERENCE_PHOTO_MIME_TYPE",
     "REFERENCE_PHOTO_SIDES",
     "STATUS_LENGTH",
+    "TABLE_COVER_AUTOPILOT_BASELINES",
     "TABLE_COVER_GENERATIONS",
     "TASK_NAME_PREFIX",
 ]

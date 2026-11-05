@@ -327,6 +327,9 @@ def runner_dependencies(
     from rag_backend.modules.editorial.public import CheckpointEngineReopener
 
     repo = SqlAlchemyAutopilotRepository(session)
+    auto_cover = EditorialAutoCoverScheduler(
+        lambda: get_session_maker()(), consent=config.cover_consent
+    )
     driver = InProcessEditorialDriver(
         EditorialDriverConfig(
             session=session,
@@ -360,9 +363,8 @@ def runner_dependencies(
         cover_switch=EditorialCoverSwitcher(
             session, CheckpointEngineReopener(config.checkpointer)
         ),
-        auto_cover=EditorialAutoCoverScheduler(
-            lambda: get_session_maker()(), consent=config.cover_consent
-        ),
+        auto_cover=auto_cover,
+        cover_apply=auto_cover,
         spacing=StartSpacing(
             starts=SqlStartHistory(session),
             clock=SystemClock(),

@@ -5,6 +5,10 @@ Owned by the editorial module (its own unit of work: ``commit``).
 ``lock_owner`` takes the owner's user row ``FOR UPDATE`` so the cap check
 and the insert of one generation are serialised per owner (a no-op on
 SQLite). Settling is conditional on the row still being ``pending``.
+
+The autopilot's generation also records slide 1's cover fields at scheduling
+(``record_autopilot_baseline``); ``autopilot_selection`` reads the carousel's
+newest succeeded one back, so the drive's gates need no process memory.
 """
 
 from __future__ import annotations
@@ -16,13 +20,20 @@ from uuid import UUID
 from sqlalchemy import CursorResult, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.cover_autoselect import (
+    AutoCoverSelection,
+    CoverBaseline,
+)
 from rag_backend.domain.constants.cover_generation import FAILURE_INTERRUPTED
 from rag_backend.domain.models.cover_generation import (
     CoverGeneration,
     CoverGenerationOutcome,
     CoverGenerationStatus,
 )
-from rag_backend.infrastructure.database.models import UserModel
+from rag_backend.infrastructure.database.models import (
+    CarouselCoverAutopilotBaselineModel,
+    UserModel,
+)
 from rag_backend.infrastructure.database.models.carousel_cover_generation import (
     CarouselCoverGenerationModel,
 )
@@ -31,6 +42,7 @@ _PENDING = CoverGenerationStatus.PENDING.value
 _FAILED = CoverGenerationStatus.FAILED.value
 _SUCCEEDED = CoverGenerationStatus.SUCCEEDED.value
 _Row = CarouselCoverGenerationModel
+_Baseline = CarouselCoverAutopilotBaselineModel
 
 
 class SqlCoverGenerationRepository:
@@ -137,6 +149,46 @@ class SqlCoverGenerationRepository:
         row = await self._session.get(_Row, str(generation_id))
         return row.to_entity() if row is not None else None
 
+    async def record_autopilot_baseline(
+        self, generation_id: UUID, baseline: CoverBaseline
+    ) -> None:
+        """Mark the autopilot's generation and keep slide 1's fields (flushed)."""
+        self._session.add(
+            _Baseline(
+                generation_id=str(generation_id),
+                slide_cover_asset_id=_id_or_none(baseline.slide_cover_asset_id),
+                hook_asset_id=_id_or_none(baseline.hook_asset_id),
+            )
+        )
+        await self._session.flush()
+
+    async def autopilot_selection(self, project_id: str) -> AutoCoverSelection | None:
+        """The carousel's newest succeeded autopilot generation, with its baseline."""
+        found = (
+            await self._session.execute(
+                select(_Row.id, _Baseline.slide_cover_asset_id, _Baseline.hook_asset_id)
+                .join(_Baseline, _Baseline.generation_id == _Row.id)
+                .where(
+                    _Row.project_id == project_id,
+                    _Row.status == _SUCCEEDED,
+                    _Row.result_asset_id.is_not(None),
+                )
+                .order_by(_Row.created_at.desc(), _Row.id)
+                .limit(1)
+            )
+        ).first()
+        if found is None:
+            return None
+        generation_id, slide_cover, hook = found
+        return AutoCoverSelection(
+            project_id=project_id,
+            generation_id=UUID(generation_id),
+            baseline=CoverBaseline(
+                slide_cover_asset_id=_uuid_or_none(slide_cover),
+                hook_asset_id=_uuid_or_none(hook),
+            ),
+        )
+
     async def commit(self) -> None:
         """Commit the session."""
         await self._session.commit()
@@ -146,4 +198,27 @@ class SqlCoverGenerationRepository:
         await self._session.rollback()
 
 
-__all__ = ["SqlCoverGenerationRepository"]
+class AutopilotCoverGenerationRepository(SqlCoverGenerationRepository):
+    """The generation rows, with the autopilot's baseline row added to the very
+    flush that creates the generation: the service's one commit stores both, and
+    a failed baseline write rolls the generation back with it."""
+
+    def __init__(self, session: AsyncSession, baseline: CoverBaseline) -> None:
+        super().__init__(session)
+        self._baseline = baseline
+
+    async def create(self, generation: CoverGeneration) -> None:
+        """Insert the generation and its baseline (flushed, not committed)."""
+        await super().create(generation)
+        await self.record_autopilot_baseline(generation.id, self._baseline)
+
+
+def _id_or_none(value: UUID | None) -> str | None:
+    return str(value) if value is not None else None
+
+
+def _uuid_or_none(value: str | None) -> UUID | None:
+    return UUID(value) if value else None
+
+
+__all__ = ["AutopilotCoverGenerationRepository", "SqlCoverGenerationRepository"]

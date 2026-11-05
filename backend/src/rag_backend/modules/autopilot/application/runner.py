@@ -51,6 +51,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_TOPIC_MISSING,
     RUN_SCAN_LIMIT,
 )
+from rag_backend.modules.autopilot.domain.cover_autostart import cover_at_gate
 from rag_backend.modules.autopilot.domain.cover_hold import hold_active
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
@@ -280,6 +281,8 @@ class AutopilotRunner:
 
     async def _resume(self, step: _Step, action: str, feedback: str) -> int:
         project_id = step.run.carousel_project_id or ""
+        if await cover_at_gate(self._deps.cover_apply, project_id):
+            return 1
         result = await self._deps.editorial.resume(
             ResumeCommand(
                 project_id=project_id,

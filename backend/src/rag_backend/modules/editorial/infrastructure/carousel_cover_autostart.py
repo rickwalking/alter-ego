@@ -11,7 +11,10 @@ retried run never enqueues a second job.
 
 Once the run settles ``succeeded`` the cover becomes slide 1's cover, unless
 a cover was already chosen or the owner chose one since the job was
-scheduled (see ``carousel_cover_autoselect``).
+scheduled (see ``carousel_cover_autoselect``). The generation row records
+that the autopilot started it and slide 1's cover fields at scheduling, so
+the drive also asks for it at each gate, after any restart (see
+``carousel_cover_gate_select``).
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.cover_autoselect import cover_baseline
 from rag_backend.domain.constants.cover_generation import (
     COVER_GENERATION_MAX_PHOTOS,
     COVER_GENERATION_PROMPT_MIN_LEN,
@@ -32,6 +36,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
     selecting_cover_task,
+)
+from rag_backend.modules.editorial.infrastructure.carousel_cover_gate_select import (
+    select_cover_at_gate,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
@@ -117,9 +124,13 @@ async def _record_generation(
         CoverGenerationError,
         StartCoverGeneration,
     )
+    from rag_backend.modules.editorial.infrastructure.cover_generations import (
+        AutopilotCoverGenerationRepository,
+    )
 
+    store = AutopilotCoverGenerationRepository(session, cover_baseline(project))
     try:
-        return await cover_generation_service(session).start(
+        return await cover_generation_service(session, store).start(
             StartCoverGeneration(
                 project=project,
                 user_id=project.owner_id or "",
@@ -164,4 +175,5 @@ __all__ = [
     "REASON_AUTO_COVER_UNAVAILABLE",
     "AutoCoverOutcome",
     "schedule_autopilot_cover",
+    "select_cover_at_gate",
 ]
