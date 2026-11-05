@@ -46,6 +46,7 @@ async def run_daily_scan(
     logger.info(
         LOG_SCAN_DONE,
         recovered=report.recovered,
+        renotified=report.renotified,
         still_dead=report.still_dead,
         queued=report.queued,
         purged_runs=report.purged_runs,

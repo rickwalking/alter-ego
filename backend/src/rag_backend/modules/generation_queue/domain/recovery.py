@@ -2,8 +2,9 @@
 
 The scan retries once the autopilot runs the queue parked for a transient-class
 reason in the last 7 days, resumes autopilot runs escalated as stale in the last
-72 hours, lists the dashboard projects left in progress with nothing queued (they
-stay parked: Pedro resumes them from the editor), purges old succeeded runs and
+72 hours, re-sends once the escalation notice with Retry to stuck runs, lists the
+dashboard projects left in progress with nothing queued (they stay parked: Pedro
+resumes them from the editor), purges old succeeded runs and
 PgQueuer log rows, and sends Pedro one summary.
 """
 
@@ -33,6 +34,14 @@ class RecoveryFailure:
 
 
 @dataclass(frozen=True, kw_only=True)
+class RenotifyFailure:
+    """One stuck run whose notice could not be staged; nothing was written."""
+
+    run_id: str
+    reason: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class ScanReport:
     """What one scan did; ``interactive`` holds the parked dashboard projects."""
 
@@ -43,6 +52,8 @@ class ScanReport:
     purged_logs: int = 0
     interactive: tuple[str, ...] = field(default_factory=tuple)
     failures: tuple[RecoveryFailure, ...] = field(default_factory=tuple)
+    renotified: int = 0
+    renotify_failures: tuple[RenotifyFailure, ...] = field(default_factory=tuple)
 
 
 class RecoveryStore(Protocol):
@@ -85,6 +96,18 @@ class ParkedAutopilot(Protocol):
         ...
 
 
+class EscalationRenotifier(Protocol):
+    """The stuck autopilot runs that never got the owner's Retry."""
+
+    async def stuck_runs(self) -> list[str]:
+        """Autopilot run ids due their one re-sent notice, oldest first."""
+        ...
+
+    async def renotify(self, run_id: str) -> bool:
+        """Stage the run's one notice; False when it is no longer eligible."""
+        ...
+
+
 _REASON_SEPARATOR = ": "
 _SQLSTATE_PATTERN = re.compile(r"[A-Z0-9]{5}")
 
@@ -115,11 +138,13 @@ def failure_metadata(exc: Exception) -> FailureMetadata:
 
 
 __all__ = [
+    "EscalationRenotifier",
     "FailureMetadata",
     "ParkedAutopilot",
     "ParkedDrive",
     "RecoveryFailure",
     "RecoveryStore",
+    "RenotifyFailure",
     "ScanReport",
     "failure_metadata",
 ]

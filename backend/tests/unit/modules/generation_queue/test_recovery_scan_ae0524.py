@@ -17,6 +17,7 @@ from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyScanDependencies,
     summary_text,
 )
+from rag_backend.modules.generation_queue.bootstrap import _NoEscalationRenotifier
 from rag_backend.modules.generation_queue.constants import (
     SCAN_CRON_UTC,
     SCAN_ENTRYPOINT,
@@ -98,7 +99,12 @@ class _Autopilot:
 def _scan(store: _Store, autopilot: _Autopilot) -> DailyRecoveryScan:
     autopilot.store = store
     return DailyRecoveryScan(
-        DailyScanDependencies(store=store, autopilot=autopilot, clock=_Clock())
+        DailyScanDependencies(
+            store=store,
+            autopilot=autopilot,
+            renotifier=_NoEscalationRenotifier(),
+            clock=_Clock(),
+        )
     )
 
 

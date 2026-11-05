@@ -78,6 +78,9 @@ def _notification_deps(
     from rag_backend.modules.autopilot.infrastructure.cover_offers import (
         cover_review_facts,
     )
+    from rag_backend.modules.autopilot.infrastructure.escalation_renotice import (
+        SqlRenoticeClaims,
+    )
     from rag_backend.modules.autopilot.infrastructure.notice_source import (
         SqlAutopilotEventSource,
         SqlNoticeLogStore,
@@ -103,6 +106,7 @@ def _notification_deps(
         notifier=TelegramNotifier(
             TelegramClientConfig(token=config.token, sleeper=AsyncSleeper())
         ),
+        claims=SqlRenoticeClaims(db),
         clock=SystemClock(),
         chat_id=config.chat_id,
         configured=configured,

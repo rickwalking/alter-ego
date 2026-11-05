@@ -12,25 +12,29 @@ from datetime import datetime, timedelta
 
 import structlog
 
+from rag_backend.modules.autopilot.application.renotice_send import status_sender
+from rag_backend.modules.autopilot.application.status_notice import (
+    StatusJob,
+    status_notice,
+)
 from rag_backend.modules.autopilot.constants import (
     PAYLOAD_PROJECT_ID,
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import profile_line
-from rag_backend.modules.autopilot.domain.dead_letter import status_body
-from rag_backend.modules.autopilot.domain.escalation_detail import detail_of
+from rag_backend.modules.autopilot.domain.escalation_renotice import (
+    RenoticeClaims,
+    notice_closed,
+)
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
+    RenoticeClaimedError,
     TelegramDeliveryError,
     TelegramRateLimitedError,
 )
 from rag_backend.modules.autopilot.domain.messages import (
     StatusCopy,
-    days_remaining_of,
     notice_kind,
-    owner_ui_link,
-    permalink_of,
     persona_score_of,
-    reason_of,
     review_keyboard,
     revision_of,
     sources_count_of,
@@ -65,8 +69,6 @@ from rag_backend.modules.autopilot.domain.ports import (
     ReviewFactsSource,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
-from rag_backend.modules.autopilot.domain.published_copy import post_extras_of
-from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
 from rag_backend.modules.autopilot.notify_constants import (
     ATTEMPT_REMINDER_PREFIX,
     ATTEMPT_REVIEW_PREFIX,
@@ -94,6 +96,7 @@ class NotificationDependencies:
     facts: ReviewFactsSource
     notices: NoticeLogStore
     notifier: Notifier
+    claims: RenoticeClaims
     clock: Clock
     chat_id: str
     configured: bool
@@ -108,13 +111,6 @@ class _ReviewJob:
     key: str
     revision: int
     facts: ReviewFacts
-
-
-@dataclass(frozen=True, kw_only=True)
-class _StatusJob:
-    event: AutopilotOutboxEvent
-    run: AutopilotRun
-    kind: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -173,8 +169,7 @@ class OwnerNotificationService:
             revision = revision_of(event.payload)
             key = f"{ATTEMPT_REVIEW_PREFIX}{revision}"
             return is_review_complete(log, revision) or _exhausted(log, key)
-        key = f"{ATTEMPT_STATUS_PREFIX}{event.event_id}"
-        return event.event_id in log.statuses or _exhausted(log, key)
+        return notice_closed(log, event.event_id)
 
     async def _one(self, event: AutopilotOutboxEvent) -> bool:
         kind = notice_kind(event.event_type, event.payload)
@@ -235,14 +230,16 @@ class OwnerNotificationService:
     ) -> bool:
         log = run.notice_log
         key = f"{ATTEMPT_STATUS_PREFIX}{event.event_id}"
-        if event.event_id in log.statuses or _exhausted(log, key):
+        if notice_closed(log, event.event_id):
             return False
-        notice = _status_notice(self._deps, _StatusJob(event=event, run=run, kind=kind))
+        job = StatusJob(event=event, run=run, kind=kind)
+        notice = status_notice(self._deps.chat_id, self._deps.web_base_url, job)
+        sender = status_sender(self._deps.notifier, self._deps.claims, event)
         try:
-            result = await self._deps.notifier.send_status(notice)
+            result = await sender.send_status(notice)
         except TelegramRateLimitedError:
             return False
-        except NotifierUnconfiguredError:
+        except (NotifierUnconfiguredError, RenoticeClaimedError):
             return False
         except TelegramDeliveryError as exc:
             failure = _Failure(run=run, log=log, key=key, detail=exc.detail)
@@ -364,27 +361,6 @@ def _review_notice(
 
 def _profile(facts: ReviewFacts) -> str:
     return profile_line(facts.audience, facts.niche, facts.image_style)
-
-
-def _status_notice(deps: NotificationDependencies, job: _StatusJob) -> StatusNotice:
-    return StatusNotice(
-        chat_id=deps.chat_id,
-        run_id=job.run.run_id,
-        text=status_body(job.kind, _copy(deps.web_base_url, job.event, job.run)),
-        keyboard=status_keyboard(job.kind, job.run.run_id, job.event.payload),
-    )
-
-
-def _copy(base_url: str, event: AutopilotOutboxEvent, run: AutopilotRun) -> StatusCopy:
-    project_id = run.carousel_project_id or ""
-    return StatusCopy(
-        reason=reason_of(event.payload),
-        link=owner_ui_link(base_url, project_id),
-        permalink=permalink_of(event.payload),
-        days_remaining=days_remaining_of(event.payload),
-        extras=post_extras_of(event.payload),
-        detail=detail_of(event.payload),
-    )
 
 
 def _empty_copy() -> StatusCopy:
