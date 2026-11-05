@@ -35,8 +35,16 @@ fit (prompt YAML), cover prompt ideas (`IDEAS_MAX_TOKENS`) and palette generatio
 (`GENERATION_MAX_TOKENS`). Every other `max_tokens` in a prompt YAML is never sent: the caller drops
 the model block, so outline 2048, hook 1024, caption 512, slide fix 2048, refinement 512-1024 and gate
 repair 4096 all run at 32000. A caller that starts binding one of those brings the AE-0607 failure
-back. `LLMService.generate(max_tokens=...)` does not reach the provider either: `with_config` puts it
-(and `temperature`) in the run config, not in the request.
+back. `LLMService.generate` has no `max_tokens` argument, so its callers always run at 32000. Its
+`temperature` is bound on the model and reaches the provider. An answer with no visible text raises
+`EmptyLLMResponseError`. Blog suggest and improve answer it with a 503 and the `provider_unavailable`
+code, and store nothing. Improve with a persona calls `chat_model` through `PersonaAgent.enforce`, not
+`generate`, so the service raises the same error on a blank rewrite.
+
+Blog suggest, improve and translation and the conversation title use the role-less
+`container.llm_service()`, so they run on `GLM_MODEL` with no fallback and no per-call timeout.
+LinkedIn and the refine image / design tools use `fast_llm_service`. All `LLMService` calls are
+Langfuse generations.
 
 With 32000 the call's deadline is the real bound. At the measured ~117 tok/s, palette generation's
 90 s fits ~10k tokens. Cover ideas' 12 s fits only ~1.4k, about the size of the visible answer on its

@@ -23,6 +23,7 @@ from rag_backend.application.services.blog_workflow_observability import (
 )
 from rag_backend.domain.constants.blog_ai import (
     ERR_INVALID_AI_ACTION,
+    ERR_PERSONA_REWRITE_EMPTY,
     PROMPT_AI_IMPROVE,
     PROMPT_AI_SUGGEST,
     SUGGEST_DEFAULT_EXPLANATION,
@@ -38,6 +39,7 @@ from rag_backend.domain.constants.blog_editor import (
 )
 from rag_backend.domain.constants.input_sanitizer import MAX_LLM_INPUT_LENGTH
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.protocols.ai import EmptyLLMResponseError
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 
 
@@ -106,7 +108,6 @@ class LLMServiceProtocol(Protocol):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int | None = None,
     ) -> str: ...
 
     @property
@@ -134,7 +135,9 @@ class BlogPostAIService:
         trace_context = _start_action_trace(input_data.action, input_data.trace)
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
-        with blog_ai_propagate(trace_context.post_id or "unknown", "ai_suggest"):
+        with blog_ai_propagate(
+            trace_context.post_id or "unknown", "ai_suggest", trace_context.user_id
+        ):
             prompt = PROMPT_AI_SUGGEST.format(
                 action=input_data.action,
                 context=safe_context,
@@ -160,16 +163,24 @@ class BlogPostAIService:
         self,
         input_data: _ImproveInput,
     ) -> dict[str, str]:
-        """Improve selected blog text, optionally enforcing a persona voice."""
+        """Improve selected blog text, optionally enforcing a persona voice.
+
+        ``PersonaAgent.enforce`` calls the chat model directly, so a blank rewrite
+        raises ``EmptyLLMResponseError`` here, as ``generate`` does on the other path.
+        """
         trace_context = _start_action_trace(input_data.action, input_data.trace)
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
 
-        with blog_ai_propagate(trace_context.post_id or "unknown", "ai_improve"):
+        with blog_ai_propagate(
+            trace_context.post_id or "unknown", "ai_improve", trace_context.user_id
+        ):
             persona = await self._load_persona(input_data.db, input_data.persona_id)
             if persona is not None:
                 agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
                 improved = await agent.enforce(safe_text, context=safe_context)
+                if not improved.strip():
+                    raise EmptyLLMResponseError(ERR_PERSONA_REWRITE_EMPTY)
                 return {
                     "original_text": safe_text,
                     "improved_text": improved,
@@ -211,10 +222,13 @@ class BlogPostAIService:
         persona = await self._resolve_persona(input_data)
         if persona is None:
             raise ValueError(ERR_BLOG_PERSONA_REQUIRED)
-        post_id = (input_data.trace or BlogAiTraceContext()).post_id or "unknown"
+        trace_context = input_data.trace or BlogAiTraceContext()
+        post_id = trace_context.post_id or "unknown"
         agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
         context = _rewrite_context(input_data.heading)
-        with blog_ai_propagate(post_id, PHASE_BLOG_SECTION_REWRITE):
+        with blog_ai_propagate(
+            post_id, PHASE_BLOG_SECTION_REWRITE, trace_context.user_id
+        ):
             rewritten = await agent.enforce(input_data.body_md, context=context)
         return _checked_rewrite(strip_heading_echo(rewritten, input_data.heading))
 

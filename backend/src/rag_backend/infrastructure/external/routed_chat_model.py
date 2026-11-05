@@ -31,6 +31,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable, RunnableBinding, RunnableConfig
 from langchain_core.runnables.config import merge_configs
 
+from rag_backend.domain.protocols import EmptyLLMResponseError
 from rag_backend.infrastructure.config.llm_routing_constants import (
     AUTH_STATUS_CODES,
     FALLBACK_REASON_EMPTY,
@@ -58,10 +59,6 @@ _MODEL_NAME_ATTRS = ("model_name", "model")
 _UNKNOWN_MODEL = "unknown"
 _ERROR_PREVIEW_CHARS = 200
 _ERR_NO_ATTEMPTS = "routed chat model configured with no attempts"
-
-
-class EmptyLLMResponseError(RuntimeError):
-    """The primary model returned no content and no tool call."""
 
 
 def model_id_of(model: BaseChatModel) -> str:

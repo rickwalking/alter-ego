@@ -77,7 +77,7 @@ Models: fast = `deepseek-v4.1-flash`, then `qwen3.8-flash`; reasoning = `deepsee
 | Refine copy, `refine_copy` | fast | `refinement/v1/copy_rewrite` 1024, dropped | 32000 | No | Checked |
 | Refine image / design, `LLMService.generate` | fast | `refinement/v1` 512 / 1024, dropped | 32000 | No | Checked |
 | LinkedIn, `LinkedInPostGenerator` | fast | none | 32000 | No | Checked |
-| Blog AI suggest / improve, translation | fast | none; `max_tokens` argument never passed | 32000 | No | Checked |
+| Blog AI suggest / improve, translation | `GLM_MODEL` (corrected in AE-0610) | none; `max_tokens` argument never passed | 32000 | No | Checked |
 | Blog writer draft / rewrite / judge | fast / reasoning | none | 32000 | No | Checked |
 | Rubric judge, quality, source synthesis | reasoning | none | 32000 | No | Checked |
 | Chat / RAG agents | `GLM_MODEL` | `rag/v1/config.yaml` 4096, file never loaded | 32000 | No | Checked |
