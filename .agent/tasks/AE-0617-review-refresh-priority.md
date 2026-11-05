@@ -122,12 +122,18 @@ Ticket created, root cause verified in code.
 
 Fix, tests and ADR note done; PR opened.
 
+### 2026-11-05 00:30
+
+Review round: the refresh batch now returns up to `limit` real refreshes, and the refresh fakes moved to
+`queue_fakes_refresh.py` so `queue_fakes.py` stays within 400 lines. The `retry_wait` path is pinned on Postgres.
+
 ## Files Touched
 
 - `backend/src/rag_backend/modules/autopilot/queue_bridge.py`
 - `backend/src/rag_backend/modules/generation_queue/`: `application/dispatcher.py`, `bootstrap.py`, `constants.py`,
   `domain/models.py`, `domain/ports.py`, `infrastructure/pgq_gateway.py`, `infrastructure/repository.py`
-- `backend/tests/features/review_refresh_priority_ae0617.feature`, four new `*_ae0617.py` test files, `queue_fakes.py`
+- `backend/tests/features/review_refresh_priority_ae0617.feature`, four new `*_ae0617.py` test files, `queue_fakes.py`,
+  `queue_fakes_refresh.py`
 - `docs/decisions/0026-carousel-generation-queue.md`
 
 ## Test Evidence
@@ -166,6 +172,12 @@ Pending.
   rework tap, so a raised drive does not gain work while it waits.
 - **The raise keeps `execute_after`.** The manual accelerate resets it; here that would turn a 60-second render wait
   into a poll on every 10-second pass.
+- **The refresh batch pages over the candidates instead of joining editorial's table.** The first attempt put the
+  reopened check in the query. That reads `carousel_projects` on every dispatcher pass, also with nothing reworking, so
+  a failing editorial read would stop the pass that marks the worker alive
+  (`test_worker_factory_wires_the_queue` caught it on its one-column stub table). Reading candidates first touches
+  carousels only when a run is a candidate. The order gained `id` as a tiebreak so pages cannot skip or repeat a run.
+  The cost is one query per candidate, and reworking runs are few.
 - **The priority is a hint, not a guard.** A stale read can at worst put one drive early; the drive's own decisions
   do not read it.
 
