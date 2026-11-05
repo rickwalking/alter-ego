@@ -1,6 +1,6 @@
 # AE-0613 — Content gate records its violation codes in the event details
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
