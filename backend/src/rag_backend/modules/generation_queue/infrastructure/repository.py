@@ -20,11 +20,13 @@ from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunMode
 from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
     KIND_WORKFLOW_RESUME,
+    PAYLOAD_MANUAL_PRIORITY,
     STATUS_DEAD_LETTER,
     STATUS_QUEUED,
     STATUS_RETRY_WAIT,
     STATUS_RUNNING,
     STATUS_SUCCEEDED,
+    WAITING_STATUSES,
 )
 from rag_backend.modules.generation_queue.domain import budget
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
@@ -100,20 +102,18 @@ def _attempt_matches(attempt_id: UUID) -> ColumnElement[bool]:
     return value == str(attempt_id)
 
 
-def _attempt_payload(
-    dialect: str, attempt_id: UUID
+def _payload_with(
+    dialect: str, key: str, value: str | int
 ) -> ColumnElement[dict[str, object]]:
     if dialect == "postgresql":
         expression = func.jsonb_set(
             GenerationRunModel.payload,
-            pg_array([ATTEMPT_ID_KEY], type_=Text),
-            func.to_jsonb(str(attempt_id)),
+            pg_array([key], type_=Text),
+            func.to_jsonb(value),
             true(),
         )
     else:
-        expression = func.json_set(
-            GenerationRunModel.payload, "$." + ATTEMPT_ID_KEY, str(attempt_id)
-        )
+        expression = func.json_set(GenerationRunModel.payload, "$." + key, value)
     return cast(ColumnElement[dict[str, object]], expression)
 
 
@@ -182,6 +182,32 @@ class SqlGenerationRunStore:
         await self._cas(
             run_id, ACTIVE_STATUSES, {"pgq_job_id": None, "status": STATUS_QUEUED}
         )
+
+    async def raise_priority(
+        self, dedupe_key: str, priority: int
+    ) -> GenerationRun | None:
+        """Raise the run waiting under ``dedupe_key``; None when none waits.
+
+        A running run is not touched: its job stays as picked.
+        """
+        async with self._sessions() as session:
+            row = await session.scalar(
+                update(GenerationRunModel)
+                .where(
+                    GenerationRunModel.dedupe_key == dedupe_key,
+                    GenerationRunModel.status.in_(WAITING_STATUSES),
+                )
+                .values(
+                    payload=_payload_with(
+                        session.get_bind().dialect.name,
+                        PAYLOAD_MANUAL_PRIORITY,
+                        priority,
+                    )
+                )
+                .returning(GenerationRunModel)
+            )
+            await session.commit()
+            return None if row is None else run_from_row(row)
 
     async def mark_running(self, run_id: UUID) -> UUID | None:
         """Active → running with a fresh UUID rotated into the payload."""
@@ -303,8 +329,10 @@ class SqlGenerationRunStore:
                     status=STATUS_RUNNING,
                     started_at=self._clock.now(),
                     next_attempt_at=None,
-                    payload=_attempt_payload(
-                        session.get_bind().dialect.name, attempt_id
+                    payload=_payload_with(
+                        session.get_bind().dialect.name,
+                        ATTEMPT_ID_KEY,
+                        str(attempt_id),
                     ),
                     updated_at=self._clock.now(),
                 )

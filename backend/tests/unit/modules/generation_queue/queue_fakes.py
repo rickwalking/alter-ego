@@ -26,6 +26,7 @@ from rag_backend.modules.generation_queue.domain.models import (
     WorkflowResumePayload,
 )
 from rag_backend.modules.generation_queue.domain.ports import StepOutcome, StepTracker
+from tests.unit.modules.generation_queue import queue_fakes_refresh as refresh
 
 NOW = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
 
@@ -74,7 +75,7 @@ def _owns_attempt(run: GenerationRun, attempt_id: UUID) -> bool:
 
 
 @dataclass
-class FakeStore:
+class FakeStore(refresh.RaisingStore):
     """``GenerationRunStore`` in memory."""
 
     runs: dict[UUID, GenerationRun] = field(default_factory=dict)
@@ -340,7 +341,7 @@ class FakeRecovery:
 
 
 @dataclass
-class FakeQueue:
+class FakeQueue(refresh.RaisingQueue):
     """``JobQueue`` in memory."""
 
     jobs: dict[str, int] = field(default_factory=dict)
@@ -389,7 +390,7 @@ class FakeQueue:
 
 
 @dataclass
-class FakeActiveAutopilot:
+class FakeActiveAutopilot(refresh.RefreshSource):
     """Active autopilot runs."""
 
     runs: list[tuple[str, str | None]] = field(default_factory=list)

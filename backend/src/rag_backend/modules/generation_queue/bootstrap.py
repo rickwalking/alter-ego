@@ -89,6 +89,12 @@ class _NoAutopilot:
         del limit
         return []
 
+    @staticmethod
+    async def review_refresh_run_ids(limit: int) -> list[tuple[str, str | None]]:
+        """No run owes a final-review refresh."""
+        del limit
+        return []
+
 
 @dataclass(frozen=True, kw_only=True)
 class HandlerParts:

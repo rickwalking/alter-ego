@@ -4,6 +4,9 @@ One pass (every 10 s in the worker):
 
 1. Safety net: every autopilot run in an active state with no active generation
    run gets one staged (runs from before the deploy, a stage that was missed).
+   A run that only owes the final-review refresh is staged ahead of full drives;
+   its drive may already wait at ordinary priority (staged during a website cover
+   hold), so that one is raised. It runs next, and nothing running is pre-empted.
 2. Hand-over: queued rows without a job are enqueued; a crash between the enqueue
    and recording the job id is resolved by looking the job up by dedupe key first.
 3. Lost jobs: an active row whose job no longer exists (deleted by an operator, a
@@ -44,6 +47,7 @@ from rag_backend.modules.generation_queue.constants import (
     MESSAGE_GENERATION_RETRY,
     OUTCOME_DEAD_LETTER,
     OUTCOME_QUEUED,
+    REVIEW_REFRESH_PRIORITY,
 )
 from rag_backend.modules.generation_queue.domain.generation_events import (
     GenerationEventInput,
@@ -57,6 +61,7 @@ from rag_backend.modules.generation_queue.domain.models import (
     HeldJob,
     autopilot_stage,
     is_active,
+    review_refresh_stage,
 )
 from rag_backend.modules.generation_queue.domain.ports import (
     ActiveAutopilotSource,
@@ -129,13 +134,30 @@ class Dispatcher:
         )
 
     async def _stage_missing(self) -> int:
-        staged = 0
+        staged = await self._stage_refreshes()
         for run_id, project_id in await self._deps.autopilot.active_run_ids(
             DISPATCH_BATCH
         ):
             if await self._deps.store.stage(autopilot_stage(run_id, project_id)):
                 staged += 1
         return staged
+
+    async def _stage_refreshes(self) -> int:
+        staged = 0
+        for run_id, project_id in await self._deps.autopilot.review_refresh_run_ids(
+            DISPATCH_BATCH
+        ):
+            stage = review_refresh_stage(run_id, project_id)
+            if await self._deps.store.stage(stage):
+                staged += 1
+                continue
+            await self._raise(stage.dedupe_key)
+        return staged
+
+    async def _raise(self, dedupe_key: str) -> None:
+        run = await self._deps.store.raise_priority(dedupe_key, REVIEW_REFRESH_PRIORITY)
+        if run is not None and run.pgq_job_id is not None:
+            await self._deps.queue.raise_priority(run)
 
     async def _hand_over(self) -> int:
         dispatched = 0
