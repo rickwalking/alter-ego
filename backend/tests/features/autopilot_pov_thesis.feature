@@ -70,6 +70,12 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
     When the Telegram tick runs twice
     Then exactly one prompt with Confirmar, Editar and Descartar is sent
 
+  Scenario: A new run is asked even when older runs still wait
+    Given ten runs awaiting their thesis that were already asked
+    And a newer run awaiting its thesis that was not asked
+    When the Telegram tick runs
+    Then exactly one prompt is sent, for the newer run
+
   Scenario: Owner confirms the draft thesis
     Given a POV run with a draft thesis
     When the owner taps Confirmar

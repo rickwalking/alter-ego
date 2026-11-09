@@ -4,6 +4,12 @@ Runs on the worker's Telegram tick, after the runner moved a POV run to
 ``awaiting_thesis``. The prompt is sent once per run: the run's notice ledger
 records it, so a replayed tick never asks twice. A failed send is logged and
 retried on the next tick (the run waits; it expires after 72 hours).
+
+The scan covers every waiting run, not just a first page: prompted runs keep
+their ``updated_at`` (the ledger write leaves it alone), so a short oldest-first
+page fills up with runs the owner was already asked about and a new run behind
+them is never prompted. Waiting runs expire after 72 hours, so the full set
+stays small; ``THESIS_SCAN_LIMIT`` only guards against a runaway backlog.
 """
 
 from __future__ import annotations
@@ -43,7 +49,7 @@ from rag_backend.modules.autopilot.pov_constants import LOG_THESIS
 
 logger = structlog.get_logger()
 
-THESIS_SCAN_LIMIT = 10
+THESIS_SCAN_LIMIT = 200
 LOG_PROMPT_SENT = "prompt_sent"
 LOG_PROMPT_FAILED = "prompt_failed"
 
