@@ -183,6 +183,7 @@ export {
 } from "./workspace/lib/presentation-slide-resolution";
 
 export {
+  CHECKLIST_BODY_FIELD,
   CHECKLIST_ITEM_FIELD,
   checklistItemEdit,
   checklistItemText,

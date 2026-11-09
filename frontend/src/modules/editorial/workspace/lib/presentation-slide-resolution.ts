@@ -54,18 +54,13 @@ export interface SlideStructuredItemEdit {
   itemIndex: number;
   field: StructuredItemField;
   value: string;
-  /** Fields of the same item emptied by the same edit (a checklist line clears the hidden body). */
-  clearFields?: readonly StructuredItemField[];
 }
 
 function editedItem(
   item: Record<string, unknown>,
   edit: SlideStructuredItemEdit,
 ): Record<string, unknown> {
-  const cleared = Object.fromEntries(
-    (edit.clearFields ?? []).map((field) => [field, ""]),
-  );
-  return { ...item, ...cleared, [edit.field]: edit.value };
+  return { ...item, [edit.field]: edit.value };
 }
 
 /** The locale payload plus the structure the other locale has. */

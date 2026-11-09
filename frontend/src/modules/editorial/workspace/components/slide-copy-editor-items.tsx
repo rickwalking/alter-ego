@@ -9,7 +9,6 @@ import {
 } from "@/modules/editorial/workspace/lib/presentation-copy-budgets";
 import {
   CHECKLIST_ITEM_FIELD,
-  checklistItemEdit,
   checklistItemText,
   checklistLines,
   DISPLAYED_ITEM_FIELDS,
@@ -24,10 +23,7 @@ import {
   fieldErrorKey,
   structuredItemFieldPath,
 } from "@/modules/editorial/workspace/lib/slide-field-errors";
-import type {
-  LocalizedSlideReview,
-  SlideValidationViolation,
-} from "@/modules/editorial/workspace/types-ai";
+import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
 import { FlaggableTextarea, ListErrors } from "./slide-field-errors";
 import type {
   ShownItems,
@@ -40,6 +36,25 @@ const ITEM_FIELD_LABEL_KEYS: Record<StructuredItemField, string> = {
   title: "structuredItemTitleLabel",
   body: "structuredItemLabel",
 };
+
+/** A checklist slide labels the drawn line and the body it does not draw. */
+const CHECKLIST_FIELD_LABEL_KEYS: Record<StructuredItemField, string> = {
+  title: "checklistItemLabel",
+  body: "checklistItemBodyLabel",
+};
+
+/** The field's text; a checklist line shows the title, else the body, as drawn. */
+function itemFieldText(
+  item: Record<string, unknown>,
+  field: StructuredItemField,
+  checklist: boolean | undefined,
+): string {
+  if (checklist && field === CHECKLIST_ITEM_FIELD) {
+    return checklistItemText(item);
+  }
+  const value = item[field];
+  return typeof value === "string" ? value : "";
+}
 
 export function resolveStructuredList(
   presentation: Record<string, unknown>,
@@ -82,14 +97,6 @@ export function BudgetHint({
   );
 }
 
-function itemViolations(
-  props: SlideCopyEditorProps,
-  keys: readonly string[],
-): SlideValidationViolation[] | undefined {
-  const found = keys.flatMap((key) => props.fieldErrors?.get(key) ?? []);
-  return found.length > 0 ? found : undefined;
-}
-
 function StructuredItemFields({
   slide,
   locale,
@@ -114,21 +121,9 @@ function StructuredItemFields({
     itemIndex,
   };
   const index = position + 1;
-  if (slide.checklist) {
-    const key = keyOf(CHECKLIST_ITEM_FIELD);
-    return (
-      <FlaggableTextarea
-        id={fieldDomId(props.idPrefix, key)}
-        violations={itemViolations(props, DISPLAYED_ITEM_FIELDS.map(keyOf))}
-        aria-label={t("checklistItemLabel", { index })}
-        value={checklistItemText(item)}
-        rows={2}
-        onChange={(event) =>
-          onChange(checklistItemEdit({ ...base, value: event.target.value }))
-        }
-      />
-    );
-  }
+  const labels = slide.checklist
+    ? CHECKLIST_FIELD_LABEL_KEYS
+    : ITEM_FIELD_LABEL_KEYS;
   return (
     <>
       {DISPLAYED_ITEM_FIELDS.map((field) => (
@@ -136,8 +131,8 @@ function StructuredItemFields({
           key={field}
           id={fieldDomId(props.idPrefix, keyOf(field))}
           violations={props.fieldErrors?.get(keyOf(field))}
-          aria-label={t(ITEM_FIELD_LABEL_KEYS[field], { index })}
-          value={typeof item[field] === "string" ? item[field] : ""}
+          aria-label={t(labels[field], { index })}
+          value={itemFieldText(item, field, slide.checklist)}
           rows={field === CHECKLIST_ITEM_FIELD ? 1 : 2}
           onChange={(event) =>
             onChange({ ...base, field, value: event.target.value })
@@ -175,7 +170,8 @@ function shownItems(
 
 /**
  * The slide's structured items, editing exactly what the slide shows: one
- * line per drawn item on a checklist slide, else title and body; list errors on top.
+ * line plus its undrawn body per drawn item on a checklist slide, else title and
+ * body; list errors on top.
  */
 export function StructuredItemsEditor({
   slide,

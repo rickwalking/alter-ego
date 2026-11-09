@@ -1028,6 +1028,7 @@
       "structuredItemLabel": "Item {index} body",
       "structuredItemTitleLabel": "Item {index} title",
       "checklistItemLabel": "Checklist line {index}",
+      "checklistItemBodyLabel": "Checklist line {index} body (not shown on the slide)",
       "autoRepair": {
         "button": "Fix issues automatically",
         "pending": "Fixing…",
@@ -1159,6 +1160,7 @@
         "itemTitle": "Item title",
         "itemBody": "Item body",
         "checklistLine": "Checklist line (as shown on the slide)",
+        "checklistLineBody": "Line body (not shown on the slide)",
         "addItem": "Add {list}",
         "removeItem": "Remove {list} {index}",
         "itemSlotsHint": "Adding or removing an item changes PT and EN together.",

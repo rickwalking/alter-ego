@@ -6,13 +6,21 @@ Feature: The slide editor edits exactly the text each slide shows
   Scenario: A checklist slide edits one line per item
     Given a slide the workflow state lists as a checklist slide
     When the owner opens the slide editor on the publish page or at content review
-    Then each item shows a single "Checklist line" field holding the text on the slide
+    Then each item shows a "Checklist line" field holding the text on the slide
     And an item without a title shows its body, as the slide does
+    And each item also shows its body in a field marked as not shown on the slide
 
   Scenario: Editing a checklist line writes the displayed field
     Given a checklist slide item
     When the owner edits its line in Portuguese or in English
-    Then the edit sets the item title and empties the hidden body in that language
+    Then the edit sets the item title and keeps the body in that language
+
+  Scenario: The owner fixes a summary point that has no body
+    Given a checklist summary slide whose point has a title and an empty body
+    And the summary rule flags that point's body
+    When the owner opens the slide editor on the publish page or at content review
+    Then the error shows under that point's body field
+    And typing in the body field sets the point's body in that language
 
   Scenario: Grid and list slides edit the title and the body
     Given a slide whose layout shows each item's title and body
