@@ -45,7 +45,7 @@ describe("checklist items", () => {
 
   /** Scenario: Editing a checklist line writes the displayed field */
   it.each(["presentation_pt", "presentation_en"] as const)(
-    "sets the title and empties the body in %s",
+    "sets the title and keeps the body in %s",
     (locale) => {
       const [edited] = applySlideStructuredItemEdit(
         [slide(8)],
@@ -58,7 +58,7 @@ describe("checklist items", () => {
         }),
       );
       expect(edited?.[locale].summary_points).toEqual([
-        { icon_name: "check", title: "Revise o contrato", body: "" },
+        { icon_name: "check", title: "Revise o contrato", body: "Oculto" },
       ]);
     },
   );

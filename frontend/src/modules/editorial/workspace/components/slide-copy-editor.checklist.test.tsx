@@ -3,6 +3,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { createElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { SlideStructuredItemEdit } from "@/modules/editorial/workspace/lib/presentation-slide-resolution";
+import { fieldErrorKey } from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
 import { SlideCopyEditor } from "./slide-copy-editor";
 
@@ -58,11 +59,60 @@ describe("SlideCopyEditor structured items", () => {
     expect(fields(container, "checklistItemLabel").map((f) => f.value)).toEqual(
       ["Gerado", "Só corpo", "Generated"],
     );
+    expect(
+      fields(container, "checklistItemBodyLabel").map((f) => f.value),
+    ).toEqual(["Editado pelo dono", "Só corpo", "Owner edit"]);
     expect(fields(container, "structuredItemLabel")).toHaveLength(0);
   });
 
+  /** Scenario: The owner fixes a summary point that has no body */
+  it("shows a body error under the body field and edits the body", () => {
+    const empty: LocalizedSlideReview = {
+      ...slide(true),
+      presentation_pt: {
+        heading: "Salve",
+        summary_points: [{ title: "Mapeie fornecedores", body: "" }],
+      },
+    };
+    const onStructuredItemChange =
+      vi.fn<(edit: SlideStructuredItemEdit) => void>();
+    const violation = {
+      code: "summary_points_missing",
+      message: "Summary slide needs at least 3 points",
+      locale: "pt",
+      field: "summary_points[0].body",
+    };
+    const { container } = render(
+      createElement(SlideCopyEditor, {
+        slides: [empty],
+        idPrefix: "publish-edit",
+        onCopyChange: vi.fn(),
+        onStructuredItemChange,
+        fieldErrors: new Map([
+          [
+            fieldErrorKey(8, "presentation_pt", "summary_points[0].body"),
+            [violation],
+          ],
+        ]),
+      }),
+    );
+    const [line] = fields(container, "checklistItemLabel");
+    const [body] = fields(container, "checklistItemBodyLabel");
+    expect(line?.getAttribute("aria-invalid")).not.toBe("true");
+    expect(body?.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(body!, { target: { value: "Infra ou arquitetura." } });
+    expect(onStructuredItemChange).toHaveBeenCalledWith({
+      slideIndex: 8,
+      locale: "presentation_pt",
+      listKey: "summary_points",
+      itemIndex: 0,
+      field: "body",
+      value: "Infra ou arquitetura.",
+    });
+  });
+
   /** Scenario: Editing a checklist line writes the displayed field */
-  it("writes the title and clears the body when a line is edited", () => {
+  it("writes the title and keeps the body when a line is edited", () => {
     const { container, onStructuredItemChange } = renderEditor(true);
     const [first] = fields(container, "checklistItemLabel");
     fireEvent.change(first!, { target: { value: "Revise o contrato" } });
@@ -72,7 +122,6 @@ describe("SlideCopyEditor structured items", () => {
       listKey: "summary_points",
       itemIndex: 0,
       field: "title",
-      clearFields: ["body"],
       value: "Revise o contrato",
     });
   });
@@ -87,9 +136,6 @@ describe("SlideCopyEditor structured items", () => {
     expect(onStructuredItemChange).toHaveBeenCalledWith(
       expect.objectContaining({ field: "title", value: "Novo título" }),
     );
-    expect(
-      onStructuredItemChange.mock.calls[0]?.[0].clearFields,
-    ).toBeUndefined();
   });
 
   /** Scenario: The checklist editor offers the lines the slide draws */

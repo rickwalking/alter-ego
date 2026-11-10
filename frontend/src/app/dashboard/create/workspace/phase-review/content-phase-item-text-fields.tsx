@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import {
+  CHECKLIST_BODY_FIELD,
   CHECKLIST_ITEM_FIELD,
   checklistItemEdit,
   checklistItemText,
@@ -12,7 +13,6 @@ import {
   resolveItemBudget,
   structuredItemFieldPath,
   type SlideFieldErrors,
-  type SlideValidationViolation,
 } from "@/modules/editorial";
 
 import { ContentCopyField } from "./content-phase-copy-field";
@@ -43,23 +43,10 @@ export function fieldProps(
   };
 }
 
-function checklistViolations(
-  context: StructuredEditContext,
-  listKey: string,
-  itemIndex: number,
-): SlideValidationViolation[] | undefined {
-  const found = DISPLAYED_ITEM_FIELDS.flatMap(
-    (field) =>
-      fieldProps(context, structuredItemFieldPath(listKey, itemIndex, field))
-        .violations ?? [],
-  );
-  return found.length > 0 ? found : undefined;
-}
-
 /**
  * The text fields of one item, as the slide shows them: the single line of a
- * checklist slide (title, else body; editing it clears the hidden body), else
- * the title and the body. ``icon_name`` stays as generated.
+ * checklist slide (title, else body) plus the body it does not draw, else the
+ * title and the body. ``icon_name`` stays as generated.
  */
 export function ItemTextFields({
   context,
@@ -78,23 +65,40 @@ export function ItemTextFields({
     resolveItemBudget(listKey, field, context.policyVersion);
   if (context.slide.checklist) {
     return (
-      <ContentCopyField
-        id={
-          fieldProps(
+      <>
+        <ContentCopyField
+          {...fieldProps(
             context,
             structuredItemFieldPath(listKey, itemIndex, CHECKLIST_ITEM_FIELD),
-          ).id
-        }
-        violations={checklistViolations(context, listKey, itemIndex)}
-        label={tCopy("checklistLine")}
-        value={checklistItemText(item)}
-        rows={2}
-        localeKey={context.localeKey}
-        budget={budgetOf(CHECKLIST_ITEM_FIELD)}
-        onChange={(value) =>
-          context.onItemChange(checklistItemEdit({ ...base, value }))
-        }
-      />
+          )}
+          label={tCopy("checklistLine")}
+          value={checklistItemText(item)}
+          rows={2}
+          localeKey={context.localeKey}
+          budget={budgetOf(CHECKLIST_ITEM_FIELD)}
+          onChange={(value) =>
+            context.onItemChange(checklistItemEdit({ ...base, value }))
+          }
+        />
+        <ContentCopyField
+          {...fieldProps(
+            context,
+            structuredItemFieldPath(listKey, itemIndex, CHECKLIST_BODY_FIELD),
+          )}
+          label={tCopy("checklistLineBody")}
+          value={asText(item[CHECKLIST_BODY_FIELD])}
+          rows={2}
+          localeKey={context.localeKey}
+          budget={budgetOf(CHECKLIST_BODY_FIELD)}
+          onChange={(value) =>
+            context.onItemChange({
+              ...base,
+              field: CHECKLIST_BODY_FIELD,
+              value,
+            })
+          }
+        />
+      </>
     );
   }
   return (

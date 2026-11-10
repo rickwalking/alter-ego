@@ -44,6 +44,8 @@ describe("ItemTextFields at content review", () => {
     const line = screen.getByLabelText(/Checklist line/);
     expect(line).toHaveValue("Gerado");
     expect(screen.queryByLabelText("Item body")).toBeNull();
+    const body = screen.getByLabelText(/Line body/);
+    expect(body).toHaveValue("Editado");
     fireEvent.change(line, { target: { value: "Review the contract" } });
     expect(onItemChange).toHaveBeenCalledWith({
       slideIndex: 8,
@@ -51,8 +53,23 @@ describe("ItemTextFields at content review", () => {
       listKey: "summary_points",
       itemIndex: 0,
       field: "title",
-      clearFields: ["body"],
       value: "Review the contract",
+    });
+  });
+
+  /** Scenario: The owner fixes a summary point that has no body */
+  it("edits the body a checklist slide does not draw", () => {
+    const onItemChange = renderItem(true);
+    fireEvent.change(screen.getByLabelText(/Line body/), {
+      target: { value: "Infra or architecture." },
+    });
+    expect(onItemChange).toHaveBeenCalledWith({
+      slideIndex: 8,
+      locale: "presentation_en",
+      listKey: "summary_points",
+      itemIndex: 0,
+      field: "body",
+      value: "Infra or architecture.",
     });
   });
 

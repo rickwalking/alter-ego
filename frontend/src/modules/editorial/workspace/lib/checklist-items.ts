@@ -37,12 +37,12 @@ export const DISPLAYED_ITEM_FIELDS: readonly StructuredItemField[] = [
   "body",
 ];
 
-/** The field a checklist slide shows only when the item has no title. */
-const CHECKLIST_FALLBACK_FIELD: StructuredItemField = "body";
-
-const HIDDEN_CHECKLIST_FIELDS: readonly StructuredItemField[] = [
-  CHECKLIST_FALLBACK_FIELD,
-];
+/**
+ * The item field a checklist slide draws only when the item has no title. The
+ * editor still offers it, because the summary rule counts a point complete only
+ * with a title and a body.
+ */
+export const CHECKLIST_BODY_FIELD: StructuredItemField = "body";
 
 function itemString(item: Record<string, unknown>, field: string): string {
   const value = item[field];
@@ -56,7 +56,7 @@ function itemString(item: Record<string, unknown>, field: string): string {
 export function checklistItemText(item: Record<string, unknown>): string {
   return (
     itemString(item, CHECKLIST_ITEM_FIELD) ||
-    itemString(item, CHECKLIST_FALLBACK_FIELD)
+    itemString(item, CHECKLIST_BODY_FIELD)
   );
 }
 
@@ -92,13 +92,9 @@ export function checklistLines(
   return null;
 }
 
-/** An edit of a checklist line: it writes the title and empties the hidden body. */
+/** An edit of a checklist line: it writes the title and keeps the body. */
 export function checklistItemEdit(
-  edit: Omit<SlideStructuredItemEdit, "field" | "clearFields">,
+  edit: Omit<SlideStructuredItemEdit, "field">,
 ): SlideStructuredItemEdit {
-  return {
-    ...edit,
-    field: CHECKLIST_ITEM_FIELD,
-    clearFields: HIDDEN_CHECKLIST_FIELDS,
-  };
+  return { ...edit, field: CHECKLIST_ITEM_FIELD };
 }
