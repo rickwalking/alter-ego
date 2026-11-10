@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe("Public carousel viewer page metadata (AE-0444)", () => {
   it("uses the English title, subtitle and cover", async () => {
-    // Scenario: A carousel share image uses the production domain
+    // Scenario: The viewer shares the cover in the shown language
     mockFetch.mockResolvedValueOnce(carousel());
 
     const metadata = await generateMetadata(props("meta-en", "en"));
@@ -71,7 +71,7 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
     expect(metadata.description).toBe("Subtitle EN");
     expect(metadata.openGraph).toMatchObject({
       type: "article",
-      images: ["https://marinssolutions.com/pt-1.jpg"],
+      images: ["https://marinssolutions.com/en-1.jpg"],
     });
   });
 
@@ -86,8 +86,8 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
     ].map(String);
 
     expect(shareImages).toEqual([
-      "https://marinssolutions.com/pt-1.jpg",
-      "https://marinssolutions.com/pt-1.jpg",
+      "https://marinssolutions.com/en-1.jpg",
+      "https://marinssolutions.com/en-1.jpg",
     ]);
     expect(shareImages.some((url) => url.includes("alterego.app"))).toBe(false);
   });
@@ -102,7 +102,13 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
 
   it("falls back to the generic description and omits the OG image", async () => {
     mockFetch.mockResolvedValueOnce(
-      carousel({ subtitle: null, subtitle_en: null, cover_url: null }),
+      carousel({
+        subtitle: null,
+        subtitle_en: null,
+        cover_url: null,
+        available_languages: ["pt"],
+        slides_by_language: {},
+      }),
     );
 
     const metadata = await generateMetadata(props("meta-empty", "pt"));

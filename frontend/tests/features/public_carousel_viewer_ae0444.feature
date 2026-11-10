@@ -58,3 +58,8 @@ Feature: Public carousel slide viewer
     Given an unknown or private carousel id
     When a visitor opens its viewer
     Then the page returns not found
+
+  Scenario: The viewer shares the cover in the shown language
+    Given a carousel rendered in Portuguese and in English
+    When the viewer shows the English slides
+    Then the share image is the English slide 1

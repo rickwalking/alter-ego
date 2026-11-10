@@ -31,3 +31,9 @@ Feature: Public carousel gallery
     Given the public feed request fails
     When a visitor opens /carousels
     Then the page renders the empty state instead of throwing
+
+  Scenario: The gallery shows each cover in the reader's language
+    Given a carousel rendered in Portuguese and in English
+    When an English reader opens the gallery
+    Then the card shows the English slide 1 as its cover
+    And a carousel without an English render shows its Portuguese cover

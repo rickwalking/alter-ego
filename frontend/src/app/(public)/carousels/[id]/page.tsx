@@ -13,6 +13,7 @@ import { formatPublicDate } from "@/lib/public-blog-text";
 import {
   carouselLanguageTag,
   carouselNeighbors,
+  publicCarouselCoverUrl,
   publicCarouselSubtitle,
   publicCarouselTitle,
   resolveCarouselLanguage,
@@ -72,7 +73,7 @@ export async function generateMetadata({
   const description = subtitle
     ? truncateDescription(subtitle)
     : t("metaDescription");
-  const image = absoluteCoverUrl(carousel.cover_url);
+  const image = absoluteCoverUrl(publicCarouselCoverUrl(carousel, language));
   const metaTitle = `${title}${META_TITLE_SEPARATOR}${t("metaTitleSuffix")}`;
 
   return {
