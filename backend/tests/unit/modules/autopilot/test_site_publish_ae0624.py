@@ -11,6 +11,7 @@ from typing import cast
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot import approve_for_site_publish
 from rag_backend.modules.autopilot.application.owner_approval import (
@@ -55,13 +56,14 @@ class _Runs:
     moves: list[tuple[AutopilotRunState, AutopilotRunState]] = field(
         default_factory=list
     )
+    lose_cas: bool = False
 
     async def find_by_carousel(self, project_id: str) -> AutopilotRun | None:
         del project_id
         return self.run
 
     async def transition(self, command: TransitionCommand) -> bool:
-        if self.run is None or self.run.state is not command.expected:
+        if self.lose_cas or self.run is None or self.run.state is not command.expected:
             return False
         self.moves.append((command.expected, command.new))
         self.run = replace(self.run, state=command.new)
@@ -185,15 +187,8 @@ class TestSitePublishApproval:
     @pytest.mark.asyncio
     async def test_a_lost_compare_and_set_refuses(self) -> None:
         """A Telegram tap moved the run first: the site click changes nothing."""
-        run = _run(_S.AWAITING_OWNER)
-        runs = _Runs(run=run)
+        runs = _Runs(run=_run(_S.AWAITING_OWNER), lose_cas=True)
         approval = _Approval()
-
-        async def lost(command: TransitionCommand) -> bool:
-            del command
-            return False
-
-        runs.transition = lost  # type: ignore[method-assign]
         assert not await _service(runs, approval).approve_for_publish(_PROJECT)
         assert approval.calls == []
 
@@ -204,9 +199,5 @@ class TestApproveForSitePublish:
     @pytest.mark.asyncio
     async def test_unwired_engine_refuses(self) -> None:
         """Without the editorial engine on the app state nothing is approved."""
-        session = cast("object", SimpleNamespace())
-        assert not await approve_for_site_publish(
-            session,  # type: ignore[arg-type]
-            SimpleNamespace(),
-            _PROJECT,
-        )
+        session = cast(AsyncSession, SimpleNamespace())
+        assert not await approve_for_site_publish(session, SimpleNamespace(), _PROJECT)
