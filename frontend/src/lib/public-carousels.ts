@@ -58,14 +58,28 @@ function listLength(value: unknown): number {
   return value.filter(isNonEmptyString).length;
 }
 
-function projectCoverUrl(project: CarouselProjectItem): string | null {
+const RENDERED_SLIDES_KEY: Record<SupportedLocale, string> = {
+  pt: "rendered_slides_pt",
+  en: "rendered_slides_en",
+};
+
+function firstImage(value: unknown): string | null {
+  return Array.isArray(value) ? (value.find(isNonEmptyString) ?? null) : null;
+}
+
+/**
+ * The card cover in the reader's language: slide 1 rendered in that language,
+ * else the hero, else the first slide (the hero and ``slides`` are Portuguese).
+ */
+function projectCoverUrl(
+  project: CarouselProjectItem,
+  locale: SupportedLocale,
+): string | null {
   const images = designImages(project);
   if (!images) return null;
+  const localized = firstImage(images[RENDERED_SLIDES_KEY[locale]]);
   const hero = isNonEmptyString(images.hero) ? images.hero : null;
-  const firstSlide = Array.isArray(images.slides)
-    ? images.slides.find(isNonEmptyString)
-    : null;
-  const url = hero ?? firstSlide;
+  const url = localized ?? hero ?? firstImage(images.slides);
   return url ? toPublicCarouselImageUrl(url) : null;
 }
 
@@ -165,7 +179,7 @@ export function toPublicCarouselCard(
   return {
     id: project.id,
     title: carouselTitle(localizedTitles, fallbackTitle),
-    coverUrl: projectCoverUrl(project),
+    coverUrl: projectCoverUrl(project, locale),
     createdAt: project.created_at,
     language: project.language,
     slideCount: projectSlideCount(project),
@@ -203,6 +217,15 @@ export function publicCarouselSubtitle(
   return locale === BLOG_LANGUAGES.ENGLISH
     ? carouselSubtitle([carousel.subtitle_en, carousel.subtitle])
     : carouselSubtitle([carousel.subtitle, carousel.subtitle_en]);
+}
+
+/** The share image in the shown language: its slide 1, else the API cover. */
+export function publicCarouselCoverUrl(
+  carousel: CarouselPublicResponse,
+  language: string,
+): string | null {
+  const first = carousel.slides_by_language[language]?.[0];
+  return first?.image_url ?? carousel.cover_url;
 }
 
 export function resolveCarouselLanguage(

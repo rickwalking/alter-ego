@@ -7,6 +7,7 @@ import {
   carouselTitle,
   publicCarouselSubtitle,
   publicCarouselTitle,
+  publicCarouselCoverUrl,
   resolveCarouselLanguage,
   toPublicCarouselCard,
 } from "@/lib/public-carousels";
@@ -92,8 +93,58 @@ describe("public carousel cards (AE-0444)", () => {
       language: "pt-BR",
       slideCount: 3,
       href: "/carousels/proj-1",
-      coverUrl: "/api/carousels/proj-1/images/slide_1.jpg?lang=pt",
+      coverUrl: "/api/carousels/proj-1/slide-images/pt/slide_1.jpg",
     });
+  });
+
+  // Scenario: The gallery shows each cover in the reader's language
+  it("uses the English slide 1 as the cover for an English reader", () => {
+    const card = toPublicCarouselCard(project(), "en", "Untitled");
+
+    expect(card.coverUrl).toBe(
+      "/api/carousels/proj-1/slide-images/en/slide_1.jpg",
+    );
+  });
+
+  // Scenario: The gallery shows each cover in the reader's language
+  it("maps a stored preview cover to the public route in that language", () => {
+    const card = toPublicCarouselCard(
+      project({
+        design_tokens: {
+          images: {
+            hero: "/api/carousels/proj-1/preview/images/slide_1.jpg?lang=pt",
+            rendered_slides_en: [
+              "/api/carousels/proj-1/preview/images/slide_1.jpg?lang=en",
+            ],
+          },
+        },
+      }),
+      "en",
+      "Untitled",
+    );
+
+    expect(card.coverUrl).toBe(
+      "/api/carousels/proj-1/images/slide_1.jpg?lang=en",
+    );
+  });
+
+  // Scenario: The gallery shows each cover in the reader's language
+  it("falls back to the hero when the reader's language has no render", () => {
+    const card = toPublicCarouselCard(
+      project({
+        design_tokens: {
+          images: {
+            hero: "/api/carousels/proj-1/preview/images/slide_1.jpg?lang=pt",
+          },
+        },
+      }),
+      "en",
+      "Untitled",
+    );
+
+    expect(card.coverUrl).toBe(
+      "/api/carousels/proj-1/images/slide_1.jpg?lang=pt",
+    );
   });
 
   it("prefers the English title and falls back to the topic", () => {
@@ -161,6 +212,23 @@ describe("public carousel cards (AE-0444)", () => {
     );
 
     expect(cards.map((card) => card.id)).toEqual(["proj-1", "proj-2"]);
+  });
+});
+
+describe("public carousel share image", () => {
+  // Scenario: The viewer shares the cover in the shown language
+  it("uses slide 1 of the shown language", () => {
+    expect(publicCarouselCoverUrl(publicCarousel(), "en")).toBe("/en-1.jpg");
+    expect(publicCarouselCoverUrl(publicCarousel(), "pt")).toBe("/pt-1.jpg");
+  });
+
+  // Scenario: The viewer shares the cover in the shown language
+  it("falls back to the API cover when the language has no slides", () => {
+    const carousel = publicCarousel({
+      slides_by_language: {},
+      cover_url: "/cover.jpg",
+    });
+    expect(publicCarouselCoverUrl(carousel, "en")).toBe("/cover.jpg");
   });
 });
 
