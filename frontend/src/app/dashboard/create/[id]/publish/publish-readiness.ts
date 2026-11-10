@@ -2,6 +2,7 @@ import {
   EDITORIAL_PHASES,
   EDITORIAL_WORKFLOW_STATUS,
 } from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 
@@ -29,6 +30,28 @@ export function isPublishReady(
     workflow.workflow_status ===
       EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH ||
     READY_PHASES.has(workflow.current_phase)
+  );
+}
+
+/**
+ * "Publicar agora" on Instagram is offered once the carousel is approved for
+ * publish, and while it waits for the owner's final review: the backend then
+ * approves the final review before it posts, as the Telegram button does.
+ */
+export function canPublishInstagram(
+  workflow: EditorialWorkflowState | null | undefined,
+): boolean {
+  if (!workflow) {
+    return false;
+  }
+  if (
+    workflow.workflow_status === EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH
+  ) {
+    return true;
+  }
+  return (
+    workflow.current_phase === EDITORIAL_PHASES.FINAL_REVIEW &&
+    workflow.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN
   );
 }
 

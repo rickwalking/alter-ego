@@ -55,7 +55,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const data = usePublishPageData();
   const { projectId, projectQuery, workflowState } = data;
   const site = usePublishToSite(projectId, data.refreshAll);
-  const instagram = useInstagramPublish(projectId);
+  const instagram = useInstagramPublish(projectId, data.refreshAll);
   const { saveCopy, copyHistory } = usePublishCopy(
     projectId,
     workflowState,
@@ -118,7 +118,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                   workflowState,
                 )}
                 onPublishInstagram={
-                  canPublishToSite
+                  data.canPublishInstagram
                     ? instagram.handlePublishInstagram
                     : undefined
                 }

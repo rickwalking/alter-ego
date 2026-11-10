@@ -16752,7 +16752,7 @@
     },
     "/api/carousels/{project_id}/publish/instagram": {
       "post": {
-        "description": "Publish the carousel's slides to Instagram with the saved caption.\n\nReturns 409 when an autopilot run owns the carousel, a publish is running,\nthe saved caption is empty, or the request carries a caption that differs\nfrom the saved one (``caption_not_saved``).",
+        "description": "Publish the carousel's slides to Instagram with the saved caption.\n\nA carousel still at final review is approved first, as the Telegram\n\"Publicar agora\" does, once every other check passed. Returns 409 when that\napprove is refused, an autopilot run owns the carousel, a publish is running,\nthe saved caption is empty, or the request carries a caption that differs\nfrom the saved one (``caption_not_saved``).",
         "operationId": "publish_to_instagram_api_carousels__project_id__publish_instagram_post",
         "parameters": [
           {

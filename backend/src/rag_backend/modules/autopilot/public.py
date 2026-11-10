@@ -85,6 +85,7 @@ __all__ = [
     "TelegramNotifyTickAdapter",
     "TelegramTickConfig",
     "TransitionCommand",
+    "approve_for_site_publish",
     "bootstrap_module",
     "build_autopilot_runner_tick",
     "build_credential_refresh_tick",
@@ -101,6 +102,38 @@ __all__ = [
     "project_cover_offer",
     "register_persistence_models",
 ]
+
+
+async def approve_for_site_publish(
+    session: AsyncSession, app_state: object, project_id: str
+) -> bool:
+    """Approve a final-review carousel for an Instagram publish from the site.
+
+    Runs the Telegram "Publicar agora" steps on the request session (``app_state``
+    holds the editorial engine factory). False when the approve was refused or the
+    engine is not wired; the caller publishes only after True.
+    """
+    from typing import cast
+
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.modules.autopilot.bootstrap_site_publish import (
+        EditorialBuild,
+        build_site_publish_approval,
+    )
+    from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
+        EngineFactory,
+    )
+    from rag_backend.modules.autopilot.webhook_constants import APP_STATE_ENGINE
+
+    factory = getattr(app_state, APP_STATE_ENGINE, None)
+    if not callable(factory):
+        return False
+    build = EditorialBuild(
+        session=session,
+        settings=get_settings(),
+        engine_factory=cast(EngineFactory, factory),
+    )
+    return await build_site_publish_approval(build).approve_for_publish(project_id)
 
 
 def project_cover_offer(session: AsyncSession) -> ProjectCoverOffer:

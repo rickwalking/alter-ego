@@ -76,7 +76,12 @@ class FinalReviewApproval:
 
         Without ``revision`` (no tapped message) the current lock version is used.
         """
-        project_id = run.carousel_project_id or ""
+        return await self.approve_project(run.carousel_project_id or "", revision)
+
+    async def approve_project(
+        self, project_id: str, revision: int | None = None
+    ) -> ResumeStatus:
+        """Approve the final review of a carousel, with or without an autopilot run."""
         if await self._already_approved(project_id):
             return ResumeStatus.APPLIED
         if revision is None:
