@@ -58,7 +58,7 @@ None.
 
 ### 2026-11-11
 
-Requested via the chief-of-staff session for Pedro (Meta ads unblock). Implemented; frontend gates green.
+Requested by Pedro (Meta ads unblock). Implemented; frontend gates green.
 
 ## Files Touched
 
