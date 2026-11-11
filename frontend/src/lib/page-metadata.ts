@@ -26,7 +26,8 @@ export type PageTitleKey =
   | "analytics"
   | "createCarousel"
   | "adminUsers"
-  | "changePassword";
+  | "changePassword"
+  | "privacy";
 
 /**
  * "<Page> · Pedro Marins" in the interface language, as title and og:title.

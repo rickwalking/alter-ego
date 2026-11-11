@@ -36,6 +36,9 @@ export function isPublicRoute(pathname: string): boolean {
   if (pathname === PUBLIC_ROUTE_PATHS.CHAT) {
     return true;
   }
+  if (pathname === PUBLIC_ROUTE_PATHS.PRIVACY) {
+    return true;
+  }
   if (pathname === PUBLIC_ROUTE_PATHS.LOGOUT) {
     return true;
   }

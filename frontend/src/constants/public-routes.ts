@@ -6,6 +6,8 @@ export const PUBLIC_ROUTE_PATHS = {
   CAROUSELS: "/carousels",
   CAROUSEL_VIEWER: (id: string) => `/carousels/${id}`,
   CHAT: "/chat",
+  /** The privacy policy (Portuguese only), linked from the marketing footer. */
+  PRIVACY: "/privacidade",
   LOGIN: "/login",
   /**
    * Session-expired logout handler. Must NOT live under `/api`: nginx proxies

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { NEON_CYAN, NEON_TEAL, TEXT_MUTED } from "@/constants/neon";
 import type { MarketingAboutProps } from "@/app/(public)/(marketing)/types";
+import { SOCIAL_LINKS } from "@/constants/social";
 
 const ABOUT_SKILLS = [
   "Python",
@@ -26,11 +27,11 @@ function AboutSocialLinks({
   const links = [
     {
       label: t("about.socialLinkedIn"),
-      href: "https://www.linkedin.com/in/pedro-marins-179971ba",
+      href: SOCIAL_LINKS.LINKEDIN,
     },
     {
       label: t("about.socialGitHub"),
-      href: "https://github.com/rickwalking",
+      href: SOCIAL_LINKS.GITHUB,
     },
     {
       label: t("about.socialInstagram"),

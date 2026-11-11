@@ -49,7 +49,13 @@ function feeds(
   mockCarousels.mockResolvedValue(carouselPage(carousels));
 }
 
-const PAGES = [SITE, `${SITE}/blog`, `${SITE}/carousels`, `${SITE}/chat`];
+const PAGES = [
+  SITE,
+  `${SITE}/blog`,
+  `${SITE}/carousels`,
+  `${SITE}/chat`,
+  `${SITE}/privacidade`,
+];
 
 async function sitemapUrls(): Promise<string[]> {
   return (await sitemap()).map((entry) => entry.url);

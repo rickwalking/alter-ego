@@ -109,6 +109,9 @@
       "socialLinkedIn": "LinkedIn",
       "socialGitHub": "GitHub",
       "socialInstagram": "Instagram"
+    },
+    "footer": {
+      "privacy": "Privacy"
     }
   },
   "chat": {
@@ -2389,7 +2392,8 @@
     "createCarousel": "Create Carousel",
     "adminUsers": "Users",
     "queue": "Queue",
-    "changePassword": "Change password"
+    "changePassword": "Change password",
+    "privacy": "Privacy Policy"
   },
   "personas": {
     "page": {

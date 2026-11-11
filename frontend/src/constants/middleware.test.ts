@@ -21,6 +21,12 @@ describe("middleware route helpers", () => {
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.CHAT)).toBe(true);
     });
 
+    // Scenario: The privacy policy is public
+    it("Then the privacy policy is public", () => {
+      expect(isPublicRoute(PUBLIC_ROUTE_PATHS.PRIVACY)).toBe(true);
+      expect(isPublicRoute(`${PUBLIC_ROUTE_PATHS.PRIVACY}/other`)).toBe(false);
+    });
+
     it("Then the session-expired logout route is public (AE-0429)", () => {
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.LOGOUT)).toBe(true);
       expect(PUBLIC_ROUTE_PATHS.LOGOUT.startsWith("/api/")).toBe(false);

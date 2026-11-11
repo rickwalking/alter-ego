@@ -34,7 +34,7 @@ function HomePageContent({
       <MarketingFeatures t={t} />
       <MarketingLatestPosts t={t} tb={tb} cards={cards} locale={locale} />
       <MarketingAbout t={t} />
-      <MarketingFooter />
+      <MarketingFooter privacyLabel={t("footer.privacy")} />
     </>
   );
 }
