@@ -60,6 +60,13 @@ None.
 
 Requested by Pedro (Meta ads unblock). Implemented; frontend gates green.
 
+### 2026-11-11 18:30
+
+Live check after deploy: an English visitor saw raw keys (`privacy.title`). `i18n/request.ts` ignored the explicit
+`getTranslations({ locale })` and loaded the visitor's locale, whose file has no policy. Hotfix: the request config
+honours an explicit supported locale. Verified on a local production build: the policy renders for `locale=en` and
+`locale=pt`.
+
 ## Files Touched
 
 - `frontend/src/app/(public)/(marketing)/privacidade/page.tsx` (new) and test
@@ -68,6 +75,7 @@ Requested by Pedro (Meta ads unblock). Implemented; frontend gates green.
 - `frontend/src/lib/page-metadata.ts`, `frontend/src/i18n/locales/{pt,en}.json`
 - `frontend/src/app/sitemap.test.ts`, `frontend/src/constants/middleware.test.ts`
 - `frontend/scripts/url-inventory.snapshot.json`, `frontend/tests/features/public-privacy-page.feature`
+- Hotfix: `frontend/src/i18n/request.ts`, `frontend/src/i18n/request.test.ts` (new)
 
 ## Test Evidence
 
