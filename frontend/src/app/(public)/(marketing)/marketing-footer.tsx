@@ -1,10 +1,15 @@
+import Link from "next/link";
 import { TEXT_DIM } from "@/constants/neon";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 /**
- * Also defines the landing particle drift keyframes, distinct from the
- * `particle-float` in globals.css used elsewhere.
+ * Copyright and the privacy policy link. Also defines the landing particle
+ * drift keyframes, distinct from the `particle-float` in globals.css used
+ * elsewhere.
  */
-export function MarketingFooter(): React.ReactElement {
+export function MarketingFooter({
+  privacyLabel,
+}: Readonly<{ privacyLabel: string }>): React.ReactElement {
   return (
     <>
       <footer
@@ -28,7 +33,16 @@ export function MarketingFooter(): React.ReactElement {
             color: TEXT_DIM,
           }}
         >
-          <span>© 2026 Pedro Marins</span>
+          <span style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <span>© 2026 Pedro Marins</span>
+            <Link
+              href={PUBLIC_ROUTE_PATHS.PRIVACY}
+              className="underline-offset-4 hover:underline"
+              style={{ color: TEXT_DIM }}
+            >
+              {privacyLabel}
+            </Link>
+          </span>
         </div>
       </footer>
 

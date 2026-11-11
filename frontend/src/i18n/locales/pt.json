@@ -109,6 +109,9 @@
       "socialLinkedIn": "LinkedIn",
       "socialGitHub": "GitHub",
       "socialInstagram": "Instagram"
+    },
+    "footer": {
+      "privacy": "Privacidade"
     }
   },
   "chat": {
@@ -2389,7 +2392,8 @@
     "createCarousel": "Criar carrossel",
     "adminUsers": "Usuários",
     "queue": "Fila",
-    "changePassword": "Alterar senha"
+    "changePassword": "Alterar senha",
+    "privacy": "Política de Privacidade"
   },
   "personas": {
     "page": {
@@ -2493,6 +2497,30 @@
         "tooMany": "Muitas tentativas. Espere um minuto e tente de novo.",
         "failed": "Não foi possível alterar a senha. Tente de novo."
       }
+    }
+  },
+  "privacy": {
+    "title": "Política de Privacidade",
+    "updated": "Última atualização: 11/11/2026",
+    "about": {
+      "heading": "O que é este site",
+      "intro": "O marinssolutions.com é o site pessoal de Pedro Marins. Aqui eu publico artigos e carrosséis sobre engenharia de software e IA, e há um chat com uma IA que responde com base no meu trabalho.",
+      "metaApp": "O site também tem um aplicativo da Meta, usado só por mim, para publicar e impulsionar posts na <strong>minha própria</strong> conta de Instagram e Página do Facebook. Ele não acessa contas, perfis ou anúncios de outras pessoas."
+    },
+    "data": {
+      "heading": "Quais dados são usados",
+      "visits": "<strong>Visitas ao site:</strong> dados técnicos normais (endereço IP, navegador, páginas acessadas), usados para o site funcionar, para segurança e para estatísticas gerais.",
+      "chat": "<strong>Chat:</strong> as mensagens que você escreve, usadas para gerar a resposta. Elas são processadas por um provedor de IA (por exemplo, Google Gemini).",
+      "meta": "<strong>Meta (Instagram/Facebook):</strong> posts e métricas da minha própria conta, e números agregados de alcance dos anúncios. Nenhum dado pessoal de quem vê os anúncios.",
+      "closing": "Não há cadastro, não vendo dados, não uso cookies de publicidade e não uso os dados para nada além do que está descrito aqui."
+    },
+    "retention": {
+      "heading": "Por quanto tempo",
+      "body": "Registros técnicos e conversas do chat são guardados apenas pelo tempo necessário para operar o site e depois apagados. Dados da Meta são apagados quando o aplicativo é desconectado."
+    },
+    "rights": {
+      "heading": "Seus direitos (LGPD)",
+      "body": "Você pode pedir acesso, correção ou exclusão dos seus dados por mensagem no <link>LinkedIn</link>, e também pode reclamar à ANPD."
     }
   }
 }

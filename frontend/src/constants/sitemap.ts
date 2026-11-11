@@ -9,4 +9,5 @@ export const SITEMAP = {
   HOME_PRIORITY: 1,
   SECTION_PRIORITY: 0.8,
   CONTENT_PRIORITY: 0.6,
+  LEGAL_PRIORITY: 0.3,
 } as const;
