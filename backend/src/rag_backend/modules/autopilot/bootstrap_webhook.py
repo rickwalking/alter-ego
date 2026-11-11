@@ -13,6 +13,10 @@ from rag_backend.modules.autopilot.application.owner_actions import (
     OwnerActionService,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.bootstrap_site_publish import (
+    EditorialBuild,
+    editorial_driver,
+)
 from rag_backend.modules.autopilot.infrastructure.audience_gateway import (
     build_audience_gateway,
 )
@@ -39,9 +43,7 @@ from rag_backend.modules.autopilot.infrastructure.dead_letter_runs import (
     SqlDeadLetterRuns,
 )
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
-    EditorialDriverConfig,
     EngineFactory,
-    InProcessEditorialDriver,
 )
 from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
     SettingsCampaignPauser,
@@ -82,12 +84,11 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
     The cover service backs “Usar capa do Grok” on the thesis and review messages.
     """
     repo = SqlAlchemyAutopilotRepository(build.session)
-    driver = InProcessEditorialDriver(
-        EditorialDriverConfig(
+    driver = editorial_driver(
+        EditorialBuild(
             session=build.session,
+            settings=build.settings,
             engine_factory=build.engine_factory,
-            clock=SystemClock(),
-            stale_after_seconds=build.settings.workflow_run_heartbeat_stale_seconds,
         )
     )
     token = build.settings.telegram_bot_token.get_secret_value()

@@ -32,7 +32,10 @@ from rag_backend.domain.constants.carousel_copy_edit import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
+    ERR_FINAL_REVIEW_APPROVE_REFUSED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
+    PHASE_FINAL_REVIEW,
+    PHASE_STATUS_AWAITING_HUMAN,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.rate_limits import (
@@ -49,6 +52,7 @@ from rag_backend.modules.autopilot import (
     AutopilotBootstrapDeps,
     ManualInstagramPublishRequest,
     ManualPublishRefusedError,
+    approve_for_site_publish,
     bootstrap_module,
     manual_instagram_publish,
 )
@@ -177,7 +181,9 @@ async def publish_to_instagram(
 ) -> InstagramPublishResponse:
     """Publish the carousel's slides to Instagram with the saved caption.
 
-    Returns 409 when an autopilot run owns the carousel, a publish is running,
+    A carousel still at final review is approved first, as the Telegram
+    "Publicar agora" does, once every other check passed. Returns 409 when that
+    approve is refused, an autopilot run owns the carousel, a publish is running,
     the saved caption is empty, or the request carries a caption that differs
     from the saved one (``caption_not_saved``).
     """
@@ -188,7 +194,8 @@ async def publish_to_instagram(
     model = await db.get(CarouselProjectModel, str(project_id))
     if model is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
-    if model.workflow_status != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
+    approved = model.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+    if not approved and not _at_final_review(model):
         raise HTTPException(
             status_code=403,
             detail=ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
@@ -216,6 +223,11 @@ async def publish_to_instagram(
             detail=ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED,
         ) from None
 
+    if not approved and not await approve_for_site_publish(
+        db, request.app.state, str(project_id)
+    ):
+        raise HTTPException(status_code=409, detail=ERR_FINAL_REVIEW_APPROVE_REFUSED)
+
     try:
         outcome = await manual_instagram_publish(
             ManualInstagramPublishRequest(
@@ -233,6 +245,14 @@ async def publish_to_instagram(
         status=outcome.status,
         ig_post_id=outcome.ig_post_id,
         error_message=outcome.error_message,
+    )
+
+
+def _at_final_review(model: CarouselProjectModel) -> bool:
+    """The carousel waits for the owner's final review."""
+    return (
+        model.current_phase == PHASE_FINAL_REVIEW
+        and model.phase_status == PHASE_STATUS_AWAITING_HUMAN
     )
 
 

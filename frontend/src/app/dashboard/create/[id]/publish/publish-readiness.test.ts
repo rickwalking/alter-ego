@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 import {
+  canPublishInstagram,
   isPublishReady,
   offersCoverPicker,
   offersRadarTemplates,
@@ -89,5 +90,38 @@ describe("offersCoverPicker", () => {
     expect(offersCoverPicker({ content_mode: "pov_news" })).toBe(true);
     expect(offersCoverPicker({ content_mode: "news_analysis" })).toBe(false);
     expect(offersCoverPicker({})).toBe(false);
+  });
+});
+
+describe("canPublishInstagram", () => {
+  /** Scenario: A carousel at final review without an autopilot run is approved and published */
+  it("offers the publish at final review and once approved", () => {
+    expect(
+      canPublishInstagram(workflow({ current_phase: "final_review" })),
+    ).toBe(true);
+    expect(
+      canPublishInstagram(
+        workflow({
+          current_phase: "published",
+          workflow_status: "approved_for_publish",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  /** Scenario: A carousel before final review is still refused */
+  it("refuses before the final review, while it runs, or without state", () => {
+    expect(canPublishInstagram(workflow({ current_phase: "content" }))).toBe(
+      false,
+    );
+    expect(
+      canPublishInstagram(
+        workflow({
+          current_phase: "final_review",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+        }),
+      ),
+    ).toBe(false);
+    expect(canPublishInstagram(null)).toBe(false);
   });
 });

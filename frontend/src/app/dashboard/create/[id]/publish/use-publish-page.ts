@@ -18,6 +18,7 @@ import {
   type LocalizedSlideReview,
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { canPublishInstagram } from "./publish-readiness";
 
 export interface PublishResult {
   status: "idle" | "success" | "error";
@@ -42,8 +43,10 @@ export interface PublishPageData {
   handleRebuilt: (artifactVersion: string | null) => void;
   /** Republish after a repair, then cache-bust. */
   republishAfterRepair: () => void;
-  /** Approved for publish: the site and Instagram publishes are offered. */
+  /** Approved for publish: the site publish is offered. */
   canPublishToSite: boolean;
+  /** Approved, or waiting at final review: Instagram "Publicar agora" is offered. */
+  canPublishInstagram: boolean;
   localizedSlides: LocalizedSlideReview[];
 }
 
@@ -129,6 +132,7 @@ export function usePublishPageData(): PublishPageData {
     canPublishToSite:
       workflowState?.workflow_status ===
       EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH,
+    canPublishInstagram: canPublishInstagram(workflowState),
     localizedSlides: workflowState ? resolveLocalizedSlides(workflowState) : [],
   };
 }
@@ -199,8 +203,15 @@ export function usePublishToSite(
   };
 }
 
-/** Publish (or queue) the carousel on Instagram and report the outcome. */
-export function useInstagramPublish(projectId: string): {
+/**
+ * Publish (or queue) the carousel on Instagram and report the outcome. A
+ * publish from final review also approves it, so ``onPublished`` refreshes the
+ * page's workflow state.
+ */
+export function useInstagramPublish(
+  projectId: string,
+  onPublished?: () => Promise<unknown>,
+): {
   publishResult: PublishResult;
   isPublishing: boolean;
   handlePublishInstagram: (caption: string) => Promise<void>;
@@ -220,6 +231,7 @@ export function useInstagramPublish(projectId: string): {
         });
         return;
       }
+      void onPublished?.();
       setPublishResult({
         status: "success",
         message:

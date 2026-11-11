@@ -61,11 +61,19 @@ vi.mock("@/components/organisms/neon-top-bar", () => ({
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (...args: unknown[]) => m.fetch(...args),
 }));
-vi.mock("@/app/dashboard/create/[id]/publish/publish-readiness", () => ({
-  isPublishReady: () => m.ready,
-  offersCoverPicker: () => m.coverPicker,
-  offersRadarTemplates: () => m.radar,
-}));
+vi.mock(
+  "@/app/dashboard/create/[id]/publish/publish-readiness",
+  async (importOriginal) => ({
+    canPublishInstagram: (
+      await importOriginal<
+        typeof import("@/app/dashboard/create/[id]/publish/publish-readiness")
+      >()
+    ).canPublishInstagram,
+    isPublishReady: () => m.ready,
+    offersCoverPicker: () => m.coverPicker,
+    offersRadarTemplates: () => m.radar,
+  }),
+);
 vi.mock("@/modules/editorial", () => ({
   useCarouselProject: () => m.project(),
   useEditorialWorkflow: () => ({
@@ -304,11 +312,12 @@ describe("DashboardCreatePublishPage", () => {
     expect(screen.queryByTestId("publish-not-ready")).not.toBeInTheDocument();
   });
 
-  it("awaits the final approval before any publish", async () => {
+  /** Scenario: A carousel at final review without an autopilot run is approved and published */
+  it("offers only the Instagram publish while the final review waits", async () => {
     await renderLoaded();
     expect(screen.getByText("awaitingFinalApproval")).toBeInTheDocument();
     expect(screen.queryByText("publishToSite")).not.toBeInTheDocument();
-    expect(screen.queryByText("publish-instagram")).not.toBeInTheDocument();
+    expect(screen.getByText("publish-instagram")).toBeInTheDocument();
     expect(screen.getByText("slides:1,2")).toBeInTheDocument();
     expect(screen.getByText("AI topic")).toBeInTheDocument();
     expect(screen.getByText("blog-from-carousel:true")).toBeInTheDocument();
@@ -431,6 +440,34 @@ describe("DashboardCreatePublishPage", () => {
       projectId: "p1",
       caption: "cap",
     });
+  });
+
+  /** Scenario: A carousel at final review without an autopilot run is approved and published */
+  it("refreshes the workflow after publishing from the final review", async () => {
+    m.publishInstagram.mockResolvedValue({ status: "published" });
+    await renderLoaded();
+    m.refreshState.mockClear();
+    fireEvent.click(screen.getByText("publish-instagram"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("result:success:instagram.published"),
+      ).toBeInTheDocument(),
+    );
+    expect(m.refreshState).toHaveBeenCalled();
+  });
+
+  /** Scenario: A refused final-review approve publishes nothing */
+  it("does not refresh after a failed Instagram publish", async () => {
+    m.publishInstagram.mockResolvedValue({ status: "failed" });
+    await renderLoaded();
+    m.refreshState.mockClear();
+    fireEvent.click(screen.getByText("publish-instagram"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("result:error:instagram.failed"),
+      ).toBeInTheDocument(),
+    );
+    expect(m.refreshState).not.toHaveBeenCalled();
   });
 
   it("reports a thrown Instagram publish", async () => {
