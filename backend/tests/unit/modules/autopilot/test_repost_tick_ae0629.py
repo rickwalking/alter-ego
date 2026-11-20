@@ -63,6 +63,7 @@ class _Studio:
             cover=self.root / "cover.jpg",
             original_cover=self.root / "original_cover.jpg",
             fits_telegram=self.fits,
+            source_size=(360, 640),
         )
 
     def public_url(self, repost: Repost, file_name: str) -> str:
@@ -188,6 +189,7 @@ async def test_pending_draft_is_rendered_and_sent(tmp_path: Path) -> None:
     assert saved.preview_ready_at == NOW and saved.telegram_message_id == 55
     delivery = world.prompts.delivered[0]
     assert delivery.notice.metrics.views == 10 and delivery.notice.preview_link is None
+    assert delivery.notice.source_size == (360, 640)
     assert world.studio.jobs[0].reel.video_url
 
 
@@ -226,6 +228,7 @@ async def test_render_failure_fails_silently(tmp_path: Path) -> None:
     await world.tick().run()
     saved = world.store.rows[draft.id]
     assert (saved.status, saved.error_code) == (STATUS_FAILED, "render_failed")
+    assert saved.error_message == "ffmpeg could not render the preview."
     assert world.prompts.delivered == [] and world.prompts.tells == []
 
 

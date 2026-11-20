@@ -55,6 +55,46 @@ jobs:
           # the "Prune stale tracked source" step above instead. The deploy
           # checkout has no node_modules/.venv/.next to copy.
 
+      # Notes for the SSH deploy script below, kept out of it because GitHub caps the
+      # script (one expression, it reads secrets) at 21000 characters (AE-0633).
+      #
+      # --- Database migrations (AE-0207) --------------------------------
+      # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
+      # an existing table — so every model column added later silently 500'd
+      # prod (caught live: caption_en, origin, distribution). Run Alembic
+      # migrations to head BEFORE the app serves traffic, then assert the
+      # live schema actually matches the mapped ORM columns. Both steps run
+      # against the running Postgres only; the app containers are not up yet.
+      # NOTE: a one-time operator reconcile (alembic stamp of the existing
+      # drifted prod DB) is required ONCE before the first migrated deploy —
+      # see docs/deployment/prod-migration-reconcile.md.
+      #
+      # DISABLED (AE-0207 rework): migrate-on-deploy + the pre-stack drift gate
+      # removed. The read-only drift check now runs after the stack is up
+      # (AE-0578, below), where it cannot keep prod down.
+      # The alembic chain has TWO heads (0011_drop_audit_stream_entry_id +
+      # e5f6a7b8c9d0) so `alembic upgrade head` errors, and prod was never
+      # stamped — this TOOK PROD DOWN on 2026-06-18 (deploy aborted before
+      # the app stack came up). Re-enable ONLY after the two heads are merged
+      # AND the one-time prod `alembic stamp` reconcile is done
+      # (docs/deployment/prod-migration-reconcile.md). Prod uses create_all
+      # bootstrap until then.
+      #
+      # --- Blog document cutover (AE-0423, ADR-0025) ---------------------
+      # One-shot, idempotent data rewrite of blog_posts.content v1 -> blog.v2
+      # (no DDL, no Alembic). Runs with the FRESHLY BUILT backend image while
+      # only Postgres is up (no old/new app overlap). It NEVER blocks the
+      # stack: the stack is already down here, so aborting would repeat the
+      # 2026-06-18 outage. Its exit code (a --verify hit, a DB error mid-batch,
+      # an import/settings error) is captured, the stack ALWAYS comes back up,
+      # and the job fails at the very end so the deploy is red and alerts.
+      # AE-0428 REMOVED the backend read fail-safe, so a failed cutover now
+      # leaves non-v2 rows failing closed (public 404 / editor 422) until the
+      # command is re-run. Merging was therefore gated on the owner running
+      # `blog_v1_to_v2 --verify` on prod — DONE on 2026-10-19, exit 0 (zero
+      # non-v2 rows, translations included).
+      # Safe to re-run ad hoc.
+
       - name: Deploy to DigitalOcean via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -215,16 +255,6 @@ jobs:
             docker compose -f docker-compose.prod.yml stop -t 60 generation-worker || true
             docker compose -f docker-compose.prod.yml down -t 120 --remove-orphans
 
-            # --- Database migrations (AE-0207) --------------------------------
-            # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
-            # an existing table — so every model column added later silently 500'd
-            # prod (caught live: caption_en, origin, distribution). Run Alembic
-            # migrations to head BEFORE the app serves traffic, then assert the
-            # live schema actually matches the mapped ORM columns. Both steps run
-            # against the running Postgres only; the app containers are not up yet.
-            # NOTE: a one-time operator reconcile (alembic stamp of the existing
-            # drifted prod DB) is required ONCE before the first migrated deploy —
-            # see docs/deployment/prod-migration-reconcile.md.
             docker compose -f docker-compose.prod.yml up -d postgres
             echo "--- Waiting for Postgres to be healthy ---"
             for _ in $(seq 1 30); do
@@ -234,31 +264,7 @@ jobs:
               sleep 2
             done
 
-            # DISABLED (AE-0207 rework): migrate-on-deploy + the pre-stack drift gate
-            # removed. The read-only drift check now runs after the stack is up
-            # (AE-0578, below), where it cannot keep prod down.
-            # The alembic chain has TWO heads (0011_drop_audit_stream_entry_id +
-            # e5f6a7b8c9d0) so `alembic upgrade head` errors, and prod was never
-            # stamped — this TOOK PROD DOWN on 2026-06-18 (deploy aborted before
-            # the app stack came up). Re-enable ONLY after the two heads are merged
-            # AND the one-time prod `alembic stamp` reconcile is done
-            # (docs/deployment/prod-migration-reconcile.md). Prod uses create_all
-            # bootstrap until then.
 
-            # --- Blog document cutover (AE-0423, ADR-0025) ---------------------
-            # One-shot, idempotent data rewrite of blog_posts.content v1 -> blog.v2
-            # (no DDL, no Alembic). Runs with the FRESHLY BUILT backend image while
-            # only Postgres is up (no old/new app overlap). It NEVER blocks the
-            # stack: the stack is already down here, so aborting would repeat the
-            # 2026-06-18 outage. Its exit code (a --verify hit, a DB error mid-batch,
-            # an import/settings error) is captured, the stack ALWAYS comes back up,
-            # and the job fails at the very end so the deploy is red and alerts.
-            # AE-0428 REMOVED the backend read fail-safe, so a failed cutover now
-            # leaves non-v2 rows failing closed (public 404 / editor 422) until the
-            # command is re-run. Merging was therefore gated on the owner running
-            # `blog_v1_to_v2 --verify` on prod — DONE on 2026-10-19, exit 0 (zero
-            # non-v2 rows, translations included).
-            # Safe to re-run ad hoc.
             set +e
             docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
               python -m rag_backend.scripts.blog_v1_to_v2 --apply --verify

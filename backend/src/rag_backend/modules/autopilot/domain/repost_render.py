@@ -62,7 +62,8 @@ def wrap_hook(text: str) -> tuple[str, ...]:
 def video_filter(hook: HookOverlay | None) -> str:
     """Scale and pad to 9:16, fix the frame rate, then draw the hook."""
     base = (
-        f"scale={RENDER_WIDTH}:{RENDER_HEIGHT}:force_original_aspect_ratio=decrease,"
+        f"scale={RENDER_WIDTH}:{RENDER_HEIGHT}:force_original_aspect_ratio=decrease"
+        ":flags=lanczos,"
         f"pad={RENDER_WIDTH}:{RENDER_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,"
         f"setsar=1,fps={RENDER_FPS}"
     )
@@ -112,6 +113,32 @@ def _probe(source: str, protocols: str) -> list[str]:
         "default=noprint_wrappers=1:nokey=1",
         source,
     ]
+
+
+def ffprobe_size_args(path: str) -> list[str]:
+    """Read the first video stream's width and height of a local file."""
+    return [
+        FFPROBE_BINARY,
+        "-v",
+        "error",
+        "-protocol_whitelist",
+        _PROTOCOLS_FILE,
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=p=0:s=x",
+        path,
+    ]
+
+
+def parse_size(output: str) -> tuple[int, int] | None:
+    """ffprobe's ``WIDTHxHEIGHT`` line, or None."""
+    width, _sep, height = output.strip().partition("x")
+    if not (width.isdigit() and height.isdigit()):
+        return None
+    return int(width), int(height)
 
 
 def parse_duration(output: str) -> float | None:

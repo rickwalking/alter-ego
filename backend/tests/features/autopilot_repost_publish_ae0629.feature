@@ -2,7 +2,7 @@ Feature: Repost worker: render, notify, expire and publish (AE-0629)
 
   Scenario: The render command
     Given a draft with hook "Sua IA aprova o próprio código ruim." for 2.5 s and a 1-6.5 s trim
-    Then ffmpeg trims, scales and pads to 1080x1920 at 30 fps, encodes H.264/AAC with a bitrate cap
+    Then ffmpeg trims, scales (Lanczos) and pads to 1080x1920 at 30 fps, encodes H.264 (CRF 20, medium preset, bitrate cap) and AAC
     And draws each hook line from a text file with expansion disabled until t=2.5
 
   Scenario: A pending draft is rendered and sent to the owner
@@ -16,9 +16,15 @@ Feature: Repost worker: render, notify, expire and publish (AE-0629)
     Given a rendered preview over 49 MB
     Then the prompt carries the preview link instead of the video
 
+  Scenario: The prompt shows the source video's size and warns when it is low
+    Given Graph serves a downloadable copy of the original Reel
+    When the preview is rendered and the owner prompt is sent
+    Then the prompt names the source size, e.g. "Fonte do vídeo: 720x1280"
+    And below 720p it warns that Instagram only offers a low-quality copy, so the repost will look blurry
+
   Scenario: A failed render ends the draft without messaging the owner
     When the download, ffmpeg or the duration check fails
-    Then the draft is failed with the render error code and no prompt is sent
+    Then the draft is failed with the render error code and a readable error_message, and no prompt is sent
 
   Scenario: An unanswered draft expires after 12 hours
     Given a pending draft past expires_at
@@ -55,3 +61,4 @@ Feature: Repost worker: render, notify, expire and publish (AE-0629)
     When Graph fetches /r/{id}/preview.mp4 of a pending, approved or published repost
     Then the file is served as video/mp4
     But an unknown file name, an unknown id, a rejected or expired repost answers 404
+    And every answer, 200 or 404, carries Cache-Control no-store so a CDN never keeps a stale 404 or a dead file

@@ -263,9 +263,23 @@ async def test_unknown_reel_is_not_found() -> None:
     assert error.value.problem.status == 404
 
 
-async def test_no_probe_leaves_duration_unknown() -> None:
+# Scenario: A Reel whose video Instagram withholds is refused
+async def test_withheld_video_is_refused_without_a_draft() -> None:
     store = MemoryStore()
     reels = FakeReels(items={MEDIA: replace(reel(), video_url=None)})
+    service, *_ = _service(store=store, reels=reels)
+    with pytest.raises(RepostError) as error:
+        await service.create(draft())
+    assert (error.value.problem.code, error.value.problem.status) == (
+        "source_unavailable",
+        422,
+    )
+    assert store.rows == {} and store.commits == 0
+
+
+async def test_no_probe_leaves_duration_unknown() -> None:
+    store = MemoryStore()
+    reels = FakeReels(items={MEDIA: reel()})
     service = RepostDraftService(
         RepostDeps(
             store=store,
