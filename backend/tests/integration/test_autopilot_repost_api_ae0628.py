@@ -373,6 +373,7 @@ async def test_public_files(api: _Api) -> None:
         (folder / "preview.mp4").write_bytes(b"mp4")
     ok = await api.client.get(f"/r/{live.id}/preview.mp4")
     assert ok.status_code == 200 and ok.headers["content-type"] == "video/mp4"
+    assert ok.headers["cache-control"] == "no-store"
     head = await api.client.head(f"/r/{live.id}/preview.mp4")
     assert head.status_code == 200 and head.content == b""
     for path in (
@@ -381,7 +382,9 @@ async def test_public_files(api: _Api) -> None:
         f"/r/{gone.id}/preview.mp4",
         f"/r/{uuid4()}/preview.mp4",
     ):
-        assert (await api.client.get(path)).status_code == 404
+        missing = await api.client.get(path)
+        assert missing.status_code == 404
+        assert missing.headers["cache-control"] == "no-store"
 
 
 # Scenario: Too many calls answer the 429 envelope

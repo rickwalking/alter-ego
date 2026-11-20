@@ -28,6 +28,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     ERR_ALREADY_REPOSTED,
     ERR_ASSET_INVALID,
     ERR_REEL_NOT_FOUND,
+    ERR_SOURCE_UNAVAILABLE,
     ERR_TOO_RECENT,
     ERR_WEEKLY_CAP,
     FIELD_CAPTION,
@@ -105,6 +106,8 @@ def check_eligibility(draft: RepostDraft, facts: EligibilityFacts) -> None:
         raise _refuse(ERR_REEL_NOT_FOUND, HTTP_NOT_FOUND)
     if age_days(reel.posted_at, facts.now) < MIN_AGE_DAYS:
         raise _refuse(ERR_TOO_RECENT, HTTP_UNPROCESSABLE)
+    if not reel.video_url:
+        raise _refuse(ERR_SOURCE_UNAVAILABLE, HTTP_UNPROCESSABLE)
     if facts.live_repost:
         raise _refuse(ERR_ALREADY_REPOSTED, HTTP_CONFLICT)
     if facts.recent_drafts >= WEEKLY_CAP:

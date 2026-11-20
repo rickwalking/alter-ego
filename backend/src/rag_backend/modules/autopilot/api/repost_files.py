@@ -21,6 +21,7 @@ from rag_backend.modules.autopilot.bootstrap_repost import repost_files_root
 from rag_backend.modules.autopilot.infrastructure.repost_store import SqlRepostStore
 from rag_backend.modules.autopilot.infrastructure.repost_video import repost_dir
 from rag_backend.modules.autopilot.repost_constants import (
+    NO_STORE_HEADERS,
     PATH_PUBLIC_FILE,
     PATH_PUBLIC_PREFIX,
     PUBLIC_FILES,
@@ -58,11 +59,18 @@ async def get_repost_file(
     media_type = PUBLIC_FILES.get(file_name)
     repost = await files.store.get(repost_id)
     if media_type is None or repost is None or repost.status not in SERVED_STATUSES:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise _not_found()
     path = repost_dir(files.root, repost_id) / file_name
     if not path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return FileResponse(path, media_type=media_type)
+        raise _not_found()
+    return FileResponse(path, media_type=media_type, headers=NO_STORE_HEADERS)
+
+
+def _not_found() -> HTTPException:
+    """A 404 no cache keeps: the file may exist on the next fetch."""
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, headers=NO_STORE_HEADERS
+    )
 
 
 __all__ = ["RepostFiles", "repost_files", "router"]

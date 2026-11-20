@@ -18,7 +18,7 @@ Feature: Repost worker: render, notify, expire and publish (AE-0629)
 
   Scenario: A failed render ends the draft without messaging the owner
     When the download, ffmpeg or the duration check fails
-    Then the draft is failed with the render error code and no prompt is sent
+    Then the draft is failed with the render error code and a readable error_message, and no prompt is sent
 
   Scenario: An unanswered draft expires after 12 hours
     Given a pending draft past expires_at
@@ -55,3 +55,4 @@ Feature: Repost worker: render, notify, expire and publish (AE-0629)
     When Graph fetches /r/{id}/preview.mp4 of a pending, approved or published repost
     Then the file is served as video/mp4
     But an unknown file name, an unknown id, a rejected or expired repost answers 404
+    And every answer, 200 or 404, carries Cache-Control no-store so a CDN never keeps a stale 404 or a dead file

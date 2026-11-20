@@ -226,6 +226,7 @@ async def test_render_failure_fails_silently(tmp_path: Path) -> None:
     await world.tick().run()
     saved = world.store.rows[draft.id]
     assert (saved.status, saved.error_code) == (STATUS_FAILED, "render_failed")
+    assert saved.error_message == "ffmpeg could not render the preview."
     assert world.prompts.delivered == [] and world.prompts.tells == []
 
 

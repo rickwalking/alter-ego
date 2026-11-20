@@ -96,15 +96,19 @@ same key with the same body returns the original 202. The same key with a differ
 | `reason` | 10–600 characters |
 | `publish_window` | both bounds carry a timezone; `latest` is after `earliest` and in the future |
 
-The other refusals are listed in the spec's error table. Two codes are added: 503 `instagram_not_configured` and 503
-`instagram_unavailable`. Failed drafts do not count toward the weekly cap.
+The other refusals are listed in the spec's error table. Three codes are added: 503 `instagram_not_configured`, 503
+`instagram_unavailable`, and 422 `source_unavailable` for a Reel whose video Graph withholds (no `media_url`, usually
+licensed audio): such a Reel cannot be reposted, and it shows `video_url: null` in `GET /reels`, so skip it there.
+Failed drafts do not count toward the weekly cap.
 
 The 202 body matches the spec. `preview_url` points to `/r/{id}/preview.mp4`, which answers 404 until the preview is
-rendered.
+rendered. Every `/r/` answer, 200 or 404, carries `Cache-Control: no-store`, so a CDN never keeps an early 404.
 
 ## 3. `GET /api/autopilot/repost/{id}` and `GET /api/autopilot/reposts`
 
-The fields are the spec's, plus `permalink`, `publish_at`, `preview_url` (once rendered) and `expires_at`. `cover_used`
+The fields are the spec's, plus `permalink`, `publish_at`, `preview_url` and `expires_at`. `preview_url` is `null`
+until the preview is rendered and again once the draft is rejected or expired, when its files are no longer served. A
+failed draft carries `error_code` and a readable `error_message`. `cover_used`
 is `grok` or `original`, and stays `null` until Pedro approves. `GET /reposts` accepts a repeatable `status`, `since`
 (ISO 8601 with a timezone) and `limit` (1–100, default 20). Results are newest first.
 

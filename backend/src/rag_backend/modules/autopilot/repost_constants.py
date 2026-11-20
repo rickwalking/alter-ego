@@ -137,6 +137,14 @@ MESSAGE_BY_CODE: dict[str, str] = {
     ERR_WEEKLY_CAP: "Two repost drafts were already created in the last 7 days.",
     ERR_UNAVAILABLE: "Instagram could not be reached.",
     ERR_NOT_CONFIGURED: "Instagram is not configured.",
+    ERR_SOURCE_UNAVAILABLE: (
+        "Instagram does not share this Reel's video (usually licensed audio), "
+        "so it cannot be reposted."
+    ),
+    ERR_RENDER_FAILED: "ffmpeg could not render the preview.",
+    ERR_RENDER_UNAVAILABLE: "ffmpeg is not available on the server.",
+    ERR_RENDER_TOO_LARGE: "The rendered video is over 100 MB.",
+    ERR_RENDER_DURATION: "The rendered video does not last 3-90 s.",
 }
 
 FIELD_IDEMPOTENCY = "Idempotency-Key"
@@ -286,5 +294,7 @@ LOG_PROCESSING = "processing"
 LOG_PUBLISHED = "published"
 LOG_PUBLISH_FAILED = "publish_failed"
 LOG_TICK_FAILED = "tick_failed"
+
+NO_STORE_HEADERS: dict[str, str] = {"Cache-Control": "no-store"}
 
 __all__ = [name for name in dir() if name.isupper()]
