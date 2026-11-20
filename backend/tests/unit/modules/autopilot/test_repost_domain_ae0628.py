@@ -155,7 +155,7 @@ def _facts(**changes: object) -> EligibilityFacts:
         recent_drafts=0,
         cover=None,
     )
-    return replace(base, **changes)  # type: ignore[arg-type]
+    return replace(base, **changes)
 
 
 # Scenario: A foreign id or a non-Reel is not found

@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 )
 from rag_backend.modules.autopilot.domain.recommend import ScheduleSignals
 from rag_backend.modules.autopilot.domain.repost import Repost
+from rag_backend.modules.autopilot.domain.repost_ports import StatusChange
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate
 from rag_backend.modules.autopilot.repost_constants import (
     STATUS_APPROVED,
@@ -251,7 +252,7 @@ async def test_lost_race_answers_gone() -> None:
     repost = _ready()
 
     class _Racing(MemoryStore):
-        async def save(self, change):  # type: ignore[no-untyped-def]
+        async def save(self, change: StatusChange) -> bool:
             return False
 
     for action in ("ok", "no", "cap"):

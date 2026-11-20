@@ -78,7 +78,7 @@ def draft(**changes: object) -> RepostDraft:
         window=None,
         idempotency_key="scout-key-0001",
     )
-    return replace(base, **changes)  # type: ignore[arg-type]
+    return replace(base, **changes)
 
 
 def window(hours_from: int = 1, hours_to: int = 27) -> PublishWindow:
@@ -113,7 +113,7 @@ def stored(**changes: object) -> Repost:
         expires_at=NOW + timedelta(hours=12),
         updated_at=NOW,
     )
-    return replace(base, **changes)  # type: ignore[arg-type]
+    return replace(base, **changes)
 
 
 def reel_cover(**changes: object) -> CoverAsset:
@@ -128,7 +128,7 @@ def reel_cover(**changes: object) -> CoverAsset:
         created_at=NOW - timedelta(minutes=10),
         purpose=COVER_PURPOSE_REEL,
     )
-    return replace(base, **changes)  # type: ignore[arg-type]
+    return replace(base, **changes)
 
 
 @dataclass

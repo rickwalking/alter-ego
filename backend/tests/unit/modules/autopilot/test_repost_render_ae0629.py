@@ -253,12 +253,12 @@ def _studio(tmp_path: Path, **changes: object) -> FileRepostStudio:
     config = StudioConfig(
         root=tmp_path / "reposts",
         public_base_url="https://site/",
-        downloader=_FakeDownloader(),  # type: ignore[arg-type]
-        renderer=_FakeRenderer(),  # type: ignore[arg-type]
+        downloader=_FakeDownloader(),
+        renderer=_FakeRenderer(),
         covers=_Covers(cover),
         font_file=_FONT,
     )
-    return FileRepostStudio(replace(config, **changes))  # type: ignore[arg-type]
+    return FileRepostStudio(replace(config, **changes))
 
 
 # Scenario: A pending draft is rendered and sent to the owner
@@ -320,7 +320,9 @@ async def test_studio_render_failures(
     assert error.value.code == code
 
 
-@pytest.mark.skipif(not _HAS_FFMPEG, reason="ffmpeg is not installed")
+@pytest.mark.skipif(
+    not _HAS_FFMPEG, reason="ffmpeg is not installed"
+)  # integrity-ok: needs the ffmpeg binary, present in the prod image and dev machines, not on CI runners
 async def test_real_render_end_to_end(tmp_path: Path) -> None:
     source = tmp_path / "src.mp4"
     subprocess.run(

@@ -5,12 +5,14 @@ Gherkin: tests/features/autopilot_repost_publish_ae0629.feature
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import AsyncIterator
 from pathlib import Path
 from uuid import uuid4
 
 import httpx
 import pytest
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -38,7 +40,7 @@ from tests.unit.modules.autopilot.repost_fakes import NOW, stored
 
 @pytest.fixture
 async def session(tmp_path: Path) -> AsyncIterator[AsyncSession]:
-    import rag_backend.infrastructure.database.models  # noqa: F401
+    importlib.import_module("rag_backend.infrastructure.database.models")
     from rag_backend.infrastructure.database.config import Base
 
     engine = create_async_engine(
@@ -58,20 +60,17 @@ class _Settings:
     carousel_public_base_url = "https://site"
     telegram_owner_chat_id = ""
 
-    class telegram_bot_token:  # noqa: N801
-        @staticmethod
-        def get_secret_value() -> str:
-            return ""
+    telegram_bot_token = SecretStr("")
 
 
 async def test_factories_without_instagram(session: AsyncSession) -> None:
     settings = _Settings()
     async with httpx.AsyncClient() as client:
-        service = repost_draft_service(session, settings, client)  # type: ignore[arg-type]
-        tick = repost_tick(session, settings, client)  # type: ignore[arg-type]
+        service = repost_draft_service(session, settings, client)
+        tick = repost_tick(session, settings, client)
         assert await tick.run() == 0
     assert service is not None
-    assert repost_files_root(settings).name == "reposts"  # type: ignore[arg-type]
+    assert repost_files_root(settings).name == "reposts"
 
 
 async def test_factories_with_instagram(
@@ -119,7 +118,7 @@ class _Messenger:
 
 async def test_telegram_prompts_adapter(tmp_path: Path) -> None:
     messenger = _Messenger()
-    prompts = TelegramPrompts(messenger)  # type: ignore[arg-type]
+    prompts = TelegramPrompts(messenger)
     notice = ApprovalNotice(repost=stored(), metrics=InsightMetrics())
     for fits in (True, False):
         files = RenderedFiles(
@@ -142,7 +141,7 @@ async def test_telegram_prompts_adapter(tmp_path: Path) -> None:
 async def test_worker_adapter(session: AsyncSession) -> None:
     from rag_backend.bootstrap.autopilot_worker_factory import RepostRunAdapter
 
-    adapter = RepostRunAdapter(_Settings())  # type: ignore[arg-type]
+    adapter = RepostRunAdapter(_Settings())
     assert await adapter.tick(object()) == 0
     assert await adapter.tick(session) == 0
 
@@ -153,11 +152,11 @@ async def test_route_dependencies_build_real_services(session: AsyncSession) -> 
     from rag_backend.modules.autopilot.api.repost_files import repost_files
 
     settings = _Settings()
-    async for bundle in reels_bundle(session, settings):  # type: ignore[arg-type]
+    async for bundle in reels_bundle(session, settings):
         assert bundle.reels is None
-    async for repost in repost_bundle(session, settings):  # type: ignore[arg-type]
+    async for repost in repost_bundle(session, settings):
         assert repost.base == "https://site"
-    assert repost_files(session, settings).root.name == "reposts"  # type: ignore[arg-type]
+    assert repost_files(session, settings).root.name == "reposts"
 
 
 async def test_cover_files_finds_a_stored_cover(session: AsyncSession) -> None:

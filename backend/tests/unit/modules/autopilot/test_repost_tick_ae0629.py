@@ -24,6 +24,7 @@ from rag_backend.modules.autopilot.application.repost_tick_ports import (
 from rag_backend.modules.autopilot.domain.exceptions import InstagramCallError
 from rag_backend.modules.autopilot.domain.insights import InsightMetrics
 from rag_backend.modules.autopilot.domain.repost import Repost
+from rag_backend.modules.autopilot.domain.repost_ports import StatusChange
 from rag_backend.modules.autopilot.repost_constants import (
     STATUS_APPROVED,
     STATUS_EXPIRED,
@@ -394,7 +395,7 @@ async def test_poll_errors(tmp_path: Path) -> None:
 
 async def test_lost_race_moves_nothing(tmp_path: Path) -> None:
     class _Racing(MemoryStore):
-        async def save(self, change):  # type: ignore[no-untyped-def]
+        async def save(self, change: StatusChange) -> bool:
             return False
 
     rows = (

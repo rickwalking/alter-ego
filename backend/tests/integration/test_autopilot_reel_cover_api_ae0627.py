@@ -33,7 +33,7 @@ async def _purposes(engine: AsyncEngine) -> list[str]:
 # Scenario: A 9:16 reel cover is accepted at 1080x1920
 async def test_reel_and_carousel_uploads(api: _Api) -> None:
     client, engine, _clock = api
-    carousel = await _upload(client, _image((1080, 1350)), {"kind": "ai_image"})  # type: ignore[arg-type]
+    carousel = await _upload(client, _image((1080, 1350)), {"kind": "ai_image"})
     assert (carousel["status"], carousel["purpose"], carousel["height"]) == (
         201,
         "carousel_cover",
@@ -41,7 +41,7 @@ async def test_reel_and_carousel_uploads(api: _Api) -> None:
     )
     reel_cover = await _upload(
         client, _image((1440, 2560)), {"kind": "ai_image", "purpose": "reel_cover"}
-    )  # type: ignore[arg-type]
+    )
     assert (
         reel_cover["status"],
         reel_cover["purpose"],
@@ -77,5 +77,5 @@ async def test_reel_cover_refusals(api: _Api) -> None:
             "asset_kind_invalid",
         ),
     ):
-        result = await _upload(client, _image(size), form)  # type: ignore[arg-type]
+        result = await _upload(client, _image(size), form)
         assert (result["status"], result["detail"]) == (422, detail)

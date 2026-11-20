@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -175,7 +175,7 @@ async def test_lost_claim_race_is_asset_invalid() -> None:
     cover = reel_cover()
 
     class _Racing(FakeCovers):
-        async def claim_for_repost(self, asset_id, repost_id):  # type: ignore[no-untyped-def]
+        async def claim_for_repost(self, asset_id: UUID, repost_id: UUID) -> bool:
             return False
 
     service, store, *_ = _service(covers=_Racing(covers={cover.asset_id: cover}))

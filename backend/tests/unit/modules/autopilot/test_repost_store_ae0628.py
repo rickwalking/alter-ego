@@ -6,6 +6,7 @@ tests/features/reel_cover_asset_ae0627.feature
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import timedelta
@@ -37,7 +38,7 @@ from tests.unit.modules.autopilot.repost_fakes import NOW, stored, window
 
 @pytest.fixture
 async def session(tmp_path: Path) -> AsyncIterator[AsyncSession]:
-    import rag_backend.infrastructure.database.models  # noqa: F401
+    importlib.import_module("rag_backend.infrastructure.database.models")
     from rag_backend.infrastructure.database.config import Base
 
     engine = create_async_engine(

@@ -196,7 +196,7 @@ class _Insights:
         return []
 
     async def snapshots(self, media_ids: object) -> dict[str, InsightSnapshot]:
-        return {m: self.rows[m] for m in media_ids if m in self.rows}  # type: ignore[attr-defined]
+        return {m: self.rows[m] for m in media_ids if m in self.rows}
 
     async def save(self, snapshot: InsightSnapshot) -> None:
         self.saved.append(snapshot)
@@ -234,7 +234,7 @@ class _World:
             ReelsDeps(
                 reels=self.reels if graph else None,
                 insights_gateway=self.gateway if graph else None,
-                insights=self.insights,  # type: ignore[arg-type]
+                insights=self.insights,
                 facts=self.store,
                 reposts=self.store,
                 probe=self.probe,
@@ -244,9 +244,9 @@ class _World:
 
 
 def _world(*reels_: object) -> _World:
-    items = {r.media_id: r for r in reels_}  # type: ignore[attr-defined]
+    items = {r.media_id: r for r in reels_}
     return _World(
-        reels=FakeReels(items=items, collaborator_names={"2": ("rick",)}),  # type: ignore[arg-type]
+        reels=FakeReels(items=items, collaborator_names={"2": ("rick",)}),
         insights=_Insights(),
         gateway=_InsightsGateway(views={"1": 500, "2": 9000, "3": 50}),
         store=MemoryStore(),
@@ -371,7 +371,7 @@ async def test_no_insights_gateway_keeps_snapshots() -> None:
         ReelsDeps(
             reels=world.reels,
             insights_gateway=None,
-            insights=world.insights,  # type: ignore[arg-type]
+            insights=world.insights,
             facts=world.store,
             reposts=world.store,
             probe=None,

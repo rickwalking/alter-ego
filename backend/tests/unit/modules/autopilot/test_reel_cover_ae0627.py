@@ -164,7 +164,7 @@ async def test_upload_service_threads_the_purpose() -> None:
     service = CoverUploadService(
         CoverUploadDependencies(
             covers=covers, images=images, clock=Clock(), owner_user_id="owner"
-        )  # type: ignore[arg-type]
+        )
     )
     result = await service.upload(
         CoverUploadCommand(

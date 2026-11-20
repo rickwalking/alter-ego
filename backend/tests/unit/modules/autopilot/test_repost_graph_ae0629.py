@@ -7,11 +7,13 @@ tests/features/autopilot_repost_publish_ae0629.feature
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
 import pytest
+import respx
 
 from rag_backend.infrastructure.external.meta_instagram_publisher import (
     MetaInstagramPublisherConfig,
@@ -104,8 +106,10 @@ def test_parse_collaborators() -> None:
     assert parse_collaborators({}) == ()
 
 
-def _client(handler: object) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler))  # type: ignore[arg-type]
+def _client(
+    handler: Callable[[httpx.Request], httpx.Response],
+) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
 # Scenario: Only Reels inside the age window are listed
@@ -343,7 +347,7 @@ def _keyboard() -> InlineKeyboard:
 
 # Scenario: A pending draft is rendered and sent to the owner
 async def test_messenger_sends_cover_video_then_prompt(
-    tmp_path: Path, respx_mock: object
+    tmp_path: Path, respx_mock: respx.MockRouter
 ) -> None:
     from PIL import Image
 
@@ -351,7 +355,7 @@ async def test_messenger_sends_cover_video_then_prompt(
     Image.new("RGB", (10, 10)).save(cover)
     video = tmp_path / "preview.mp4"
     video.write_bytes(b"mp4")
-    router = respx_mock  # type: ignore[assignment]
+    router = respx_mock
     photo = router.post(url__regex=r".*/sendPhoto").respond(
         200, json={"ok": True, "result": {"message_id": 1}}
     )
@@ -376,8 +380,10 @@ async def test_messenger_sends_cover_video_then_prompt(
     assert fits_telegram(video)
 
 
-async def test_messenger_prompt_failure_and_unconfigured(respx_mock: object) -> None:
-    router = respx_mock  # type: ignore[assignment]
+async def test_messenger_prompt_failure_and_unconfigured(
+    respx_mock: respx.MockRouter,
+) -> None:
+    router = respx_mock
     router.post(url__regex=r".*/sendMessage").respond(500)
     messenger = TelegramRepostMessenger(token="t", chat_id="42")
     message = PreviewMessage(
@@ -391,8 +397,8 @@ async def test_messenger_prompt_failure_and_unconfigured(respx_mock: object) -> 
     await off.tell("x")
 
 
-async def test_messenger_bad_json_edit_and_tell(respx_mock: object) -> None:
-    router = respx_mock  # type: ignore[assignment]
+async def test_messenger_bad_json_edit_and_tell(respx_mock: respx.MockRouter) -> None:
+    router = respx_mock
     router.post(url__regex=r".*/sendMessage").respond(200, text="oops")
     edit = router.post(url__regex=r".*/editMessageText").respond(200, json={"ok": True})
     messenger = TelegramRepostMessenger(token="t", chat_id="42")
