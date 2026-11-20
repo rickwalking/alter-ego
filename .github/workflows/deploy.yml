@@ -356,6 +356,18 @@ jobs:
               echo "::error::users token_version exited $TOKEN_VERSION_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            # Reel cover columns (AE-0631): create_all made the repost tables but
+            # never adds columns to the existing autopilot_cover_assets table, so
+            # purpose and repost_id of migration c3d4e5f6a7b9 reach prod here.
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.reel_cover_columns --apply --verify
+            REEL_COVER_COLUMNS_EXIT=$?
+            set -e
+            if [ "$REEL_COVER_COLUMNS_EXIT" -ne 0 ]; then
+              echo "::error::reel cover columns exited $REEL_COVER_COLUMNS_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -483,6 +495,10 @@ jobs:
             fi
             if [ "$TOKEN_VERSION_EXIT" -ne 0 ]; then
               echo "::error::users token_version failed (exit $TOKEN_VERSION_EXIT): run 'python -m rag_backend.scripts.token_version_column --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$REEL_COVER_COLUMNS_EXIT" -ne 0 ]; then
+              echo "::error::reel cover columns failed (exit $REEL_COVER_COLUMNS_EXIT): run 'python -m rag_backend.scripts.reel_cover_columns --apply --verify' on the droplet"
               ONE_SHOT_FAILED=1
             fi
             if [ "$SCHEMA_DRIFT_EXIT" -ne 0 ]; then

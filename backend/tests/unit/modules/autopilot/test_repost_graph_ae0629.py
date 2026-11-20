@@ -1,7 +1,8 @@
 """Graph adapters: the Reels reader, the Reels publisher, the Telegram messenger.
 
 Gherkin: tests/features/autopilot_reels_list_ae0626.feature,
-tests/features/autopilot_repost_publish_ae0629.feature
+tests/features/autopilot_repost_publish_ae0629.feature,
+tests/features/reel_owner_alias_ae0632.feature
 """
 
 from __future__ import annotations
@@ -200,15 +201,23 @@ async def test_list_reels_stops_at_page_cap() -> None:
     assert len(found) == 20
 
 
+# Scenario: A Reel Graph attributes to the account's other id is the account's own
+# Scenario: A Reel owned by anyone else is still not found
 async def test_reel_lookup_owner_and_not_found() -> None:
+    account_lookups: list[str] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
         media = request.url.path.strip("/")
+        if media == _USER:
+            account_lookups.append(request.url.params["fields"])
+            return httpx.Response(200, json={"id": "39207367818909157"})
         if media == "404":
             return httpx.Response(400, json={"error": {"code": 100}})
         if media == "500":
             return httpx.Response(500, json={"error": {"code": 1}})
-        owner = {"id": "other"} if media == "222" else {"id": _USER}
-        body = _item(media, "2026-05-10T15:00:00Z") | {"owner": owner}
+        owners = {"222": "other", "444": "39207367818909157", "555": ""}
+        body = _item(media, "2026-05-10T15:00:00Z")
+        body["owner"] = {"id": owners.get(media, _USER)}
         if media == "333":
             body.pop("owner")
         return httpx.Response(200, json=body)
@@ -216,8 +225,12 @@ async def test_reel_lookup_owner_and_not_found() -> None:
     async with _client(handler) as client:
         gateway = GraphReelGateway(GraphJson(_config(), client))
         assert (await gateway.reel("111")) is not None
+        assert account_lookups == []
+        assert (await gateway.reel("444")) is not None
         assert await gateway.reel("222") is None
+        assert account_lookups == ["id"]
         assert await gateway.reel("333") is None
+        assert await gateway.reel("555") is None
         assert await gateway.reel("404") is None
         assert await gateway.reel("abc") is None
         with pytest.raises(InstagramCallError):
