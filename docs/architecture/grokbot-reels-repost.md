@@ -45,8 +45,12 @@ The response matches the spec, with these notes:
 - `stale: true` means the insight snapshot is older than 6 h and was not refreshed in this request. Each request
   re-reads at most 30 snapshots, missing ones first, so repeated calls converge.
 - `avg_watch_ratio` is `avg_watch_time_ms / 1000 / duration_s`. `duration_s` is probed once with ffprobe and cached;
-  it is `null` until the probe has run.
-- `collaborators` is read once from Graph's `/{media-id}/collaborators` and cached.
+  it is `null` until the probe has run. Each request probes at most 15 Reels, so a first page of 20 has some nulls
+  and repeated calls fill them in. A Reel whose video URL Graph withholds (for example licensed audio) stays `null`.
+- `collaborators` is read once from Graph's `/{media-id}/collaborators` and cached. The account's Instagram API
+  answers that edge with "nonexisting field", so the list is always empty today. Send `collaborators` explicitly on
+  a repost draft when the original was a collab.
+- `follows` comes back `null` for Reels: Graph does not report it for that media type.
 - `video_url_expires_at` is read from the CDN URL's `oe` parameter, and is `null` when the URL has none.
 - `baseline` holds the medians over every Reel in the age window, before reposted ones are hidden.
 - A Reel that is itself a published repost is never listed.
@@ -56,7 +60,7 @@ The response matches the spec, with these notes:
 
 ### 1b. `GET /api/autopilot/reels/{media_id}/video`
 
-Streams the MP4 (`video/mp4`). A feed post, a foreign id or an unknown id answers 404 `reel_not_found`; a Graph answer that does not name the configured account as `owner` counts as foreign. When the CDN
+Streams the MP4 (`video/mp4`). A feed post, a foreign id or an unknown id answers 404 `reel_not_found`; a Graph answer whose `owner` is neither the configured account id nor the id Graph reports for that account counts as foreign. When the CDN
 fails the route answers 503 `instagram_unavailable`.
 
 ## `POST /api/autopilot/assets` with `purpose`

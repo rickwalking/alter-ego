@@ -63,6 +63,7 @@ class GraphReelGateway:
 
     def __init__(self, graph: GraphJson) -> None:
         self._graph = graph
+        self._account_id: str | None = None
 
     @property
     def ig_user_id(self) -> str:
@@ -86,9 +87,26 @@ class GraphReelGateway:
     async def _reel(self, media_id: str) -> ReelMedia | None:
         path = GRAPH_PATH_OBJECT.format(object_id=media_id)
         payload = await self._found(path, {FIELD_FIELDS: MEDIA_FIELDS_ONE})
-        if payload is None or not _owned(payload, self.ig_user_id):
+        if payload is None or not await self._owned(payload):
             return None
         return parse_reel(payload)
+
+    async def _owned(self, payload: dict[str, object]) -> bool:
+        """The owner is the configured account, under either of its Graph ids."""
+        owner = _owner_id(payload)
+        if owner is None:
+            return False
+        if owner == self.ig_user_id:
+            return True
+        return owner == await self._account()
+
+    async def _account(self) -> str:
+        """The id Graph reports for the configured account (fetched once)."""
+        if self._account_id is None:
+            path = GRAPH_PATH_OBJECT.format(object_id=self.ig_user_id)
+            payload = await self._get(path, {FIELD_FIELDS: FIELD_ID})
+            self._account_id = str(payload.get(FIELD_ID, ""))
+        return self._account_id
 
     async def _collaborators(self, media_id: str) -> tuple[str, ...]:
         path = GRAPH_PATH_COLLABORATORS.format(media_id=media_id)
@@ -177,12 +195,13 @@ def parse_collaborators(payload: dict[str, object]) -> tuple[str, ...]:
     )
 
 
-def _owned(payload: dict[str, object], ig_user_id: str) -> bool:
-    """True only when Graph names the configured account as the owner."""
+def _owner_id(payload: dict[str, object]) -> str | None:
+    """The media's ``owner.id``; None when Graph did not name an owner."""
     owner = payload.get(FIELD_OWNER)
     if not isinstance(owner, dict):
-        return False
-    return str(owner.get(FIELD_ID, "")) == ig_user_id
+        return None
+    found = str(owner.get(FIELD_ID, ""))
+    return found or None
 
 
 def _not_found(exc: InstagramGraphError) -> bool:
