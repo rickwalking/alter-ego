@@ -13,6 +13,7 @@ from uuid import UUID
 from sqlalchemy import CursorResult, Select, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.slide_cover import COVER_PURPOSE_REEL
 from rag_backend.domain.models.carousel_creator_asset import CreatorAssetTopicUsage
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
@@ -48,6 +49,7 @@ class SqlCoverAssetStore:
                 width=cover.width,
                 height=cover.height,
                 created_at=cover.created_at,
+                purpose=cover.purpose,
             )
         )
         await self._session.flush()
@@ -74,12 +76,28 @@ class SqlCoverAssetStore:
         )
         return cast(CursorResult[object], result).rowcount == 1
 
+    async def claim_for_repost(self, asset_id: UUID, repost_id: UUID) -> bool:
+        """Mark an unused Reel cover as the repost's; False when it is taken."""
+        cover = AutopilotCoverAssetModel
+        result = await self._session.execute(
+            update(cover)
+            .where(
+                cover.id == asset_id,
+                cover.purpose == COVER_PURPOSE_REEL,
+                cover.topic_candidate_id.is_(None),
+                cover.repost_id.is_(None),
+            )
+            .values(repost_id=repost_id)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
     async def expired_covers(self, query: ExpiredCoverQuery) -> tuple[CoverAsset, ...]:
         """Unused covers older than the cutoff, oldest first."""
         result = await self._session.execute(
             _with_path()
             .where(
                 AutopilotCoverAssetModel.topic_candidate_id.is_(None),
+                AutopilotCoverAssetModel.repost_id.is_(None),
                 AutopilotCoverAssetModel.created_at < query.before,
             )
             .order_by(AutopilotCoverAssetModel.created_at)
@@ -158,6 +176,8 @@ def _cover(row: _Row) -> CoverAsset:
         created_at=created if created is not None else model.created_at,
         topic_candidate_id=model.topic_candidate_id,
         staged_path=path or "",
+        purpose=model.purpose,
+        repost_id=model.repost_id,
     )
 
 

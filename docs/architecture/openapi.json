@@ -1333,6 +1333,17 @@
             ],
             "title": "Kind"
           },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
           "source_url": {
             "anyOf": [
               {
@@ -4074,6 +4085,10 @@
             "title": "Kind",
             "type": "string"
           },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
           "width": {
             "title": "Width",
             "type": "integer"
@@ -4083,7 +4098,8 @@
           "asset_id",
           "kind",
           "width",
-          "height"
+          "height",
+          "purpose"
         ],
         "title": "CoverAssetResponse",
         "type": "object"
@@ -7234,6 +7250,45 @@
         "title": "KanbanColumnResponse",
         "type": "object"
       },
+      "LastRepostView": {
+        "description": "The newest repost of the Reel.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "repost_id": {
+            "format": "uuid",
+            "title": "Repost Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repost_id",
+          "status",
+          "created_at",
+          "published_at"
+        ],
+        "title": "LastRepostView",
+        "type": "object"
+      },
       "LocalizedSlideReview": {
         "description": "Bilingual slide copy exposed at content review.",
         "properties": {
@@ -9509,6 +9564,430 @@
         "title": "QuoteProposal",
         "type": "object"
       },
+      "ReelMetricsView": {
+        "description": "Counts from the latest insight snapshot.",
+        "properties": {
+          "avg_watch_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Watch Time Ms"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "total_watch_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Watch Time Ms"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "views",
+          "reach",
+          "likes",
+          "comments",
+          "saved",
+          "shares",
+          "follows",
+          "avg_watch_time_ms",
+          "total_watch_time_ms"
+        ],
+        "title": "ReelMetricsView",
+        "type": "object"
+      },
+      "ReelRatesView": {
+        "description": "Derived rates; null when an input is missing.",
+        "properties": {
+          "avg_watch_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Watch Ratio"
+          },
+          "engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Rate"
+          },
+          "follows_per_1000_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Per 1000 Reach"
+          },
+          "saves_per_100_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves Per 100 Reach"
+          },
+          "shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Per 100 Views"
+          }
+        },
+        "required": [
+          "shares_per_100_views",
+          "saves_per_100_reach",
+          "follows_per_1000_reach",
+          "engagement_rate",
+          "avg_watch_ratio"
+        ],
+        "title": "ReelRatesView",
+        "type": "object"
+      },
+      "ReelView": {
+        "description": "One Reel the scout may repost.",
+        "properties": {
+          "age_days": {
+            "title": "Age Days",
+            "type": "integer"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "collaborators": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Collaborators",
+            "type": "array"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "last_repost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastRepostView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "media_product_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Product Type"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ReelMetricsView"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "rates": {
+            "$ref": "#/components/schemas/ReelRatesView"
+          },
+          "shortcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortcode"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "video_url_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url Expires At"
+          }
+        },
+        "required": [
+          "media_id",
+          "shortcode",
+          "permalink",
+          "media_product_type",
+          "timestamp",
+          "age_days",
+          "caption",
+          "collaborators",
+          "duration_s",
+          "thumbnail_url",
+          "video_url",
+          "video_url_expires_at",
+          "metrics",
+          "rates",
+          "stale",
+          "last_repost"
+        ],
+        "title": "ReelView",
+        "type": "object"
+      },
+      "ReelsBaselineView": {
+        "description": "Medians over the Reels in the age window.",
+        "properties": {
+          "median_engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Engagement Rate"
+          },
+          "median_shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Shares Per 100 Views"
+          },
+          "median_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Views"
+          }
+        },
+        "required": [
+          "median_views",
+          "median_shares_per_100_views",
+          "median_engagement_rate"
+        ],
+        "title": "ReelsBaselineView",
+        "type": "object"
+      },
+      "ReelsView": {
+        "description": "``GET /reels``.",
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/ReelsBaselineView"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReelView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "baseline",
+          "next_cursor",
+          "generated_at"
+        ],
+        "title": "ReelsView",
+        "type": "object"
+      },
       "RefreshDesignTokensResponse": {
         "properties": {
           "errors": {
@@ -9678,6 +10157,237 @@
           }
         },
         "title": "RepairSlideDiffResponse",
+        "type": "object"
+      },
+      "RepostAccepted": {
+        "description": "The 202 body.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "preview_url": {
+            "title": "Preview Url",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "media_id",
+          "permalink",
+          "preview_url",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "RepostAccepted",
+        "type": "object"
+      },
+      "RepostListView": {
+        "description": "Newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RepostView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RepostListView",
+        "type": "object"
+      },
+      "RepostView": {
+        "description": "``GET /repost/{id}`` and each item of ``GET /reposts``.",
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "cover_used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Used"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "new_media_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Media Id"
+          },
+          "new_permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Permalink"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "preview_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Url"
+          },
+          "publish_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "media_id",
+          "permalink",
+          "new_media_id",
+          "new_permalink",
+          "cover_used",
+          "publish_at",
+          "preview_url",
+          "error_code",
+          "error_message",
+          "created_at",
+          "expires_at",
+          "approved_at",
+          "published_at"
+        ],
+        "title": "RepostView",
         "type": "object"
       },
       "ResearchSourceResponse": {
@@ -12096,6 +12806,157 @@
           }
         },
         "summary": "Get Ig Insights",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/reels": {
+      "get": {
+        "description": "Reels aged ``min_age_days``..``max_age_days`` with metrics, sorted, paged.",
+        "operationId": "get_reels_api_autopilot_reels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReelsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Reels",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/reels/{media_id}/video": {
+      "get": {
+        "description": "The Reel's original MP4, streamed; 404 ``reel_not_found`` otherwise.",
+        "operationId": "get_reel_video_api_autopilot_reels__media_id__video_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "title": "Media Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Reel Video",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/repost": {
+      "post": {
+        "description": "Store a pending draft. The worker renders it and asks the owner.",
+        "operationId": "post_repost_api_autopilot_repost_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepostAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Post Repost",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/repost/{repost_id}": {
+      "get": {
+        "description": "One draft's status, from Postgres only.",
+        "operationId": "get_repost_api_autopilot_repost__repost_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repost_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Repost Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepostView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Repost",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/reposts": {
+      "get": {
+        "description": "Newest first; ``status`` may repeat; ``since`` is ISO 8601.",
+        "operationId": "list_reposts_api_autopilot_reposts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepostListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Reposts",
         "tags": [
           "autopilot"
         ]
@@ -21694,6 +22555,57 @@
           }
         },
         "summary": "Readiness Check"
+      }
+    },
+    "/r/{repost_id}/{file_name}": {
+      "get": {
+        "description": "The file, or 404. HEAD is answered too, for fetchers that probe first.",
+        "operationId": "get_repost_file_r__repost_id___file_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repost_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Repost Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_name",
+            "required": true,
+            "schema": {
+              "title": "File Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Repost File",
+        "tags": [
+          "repost-files"
+        ]
       }
     }
   },

@@ -74,7 +74,14 @@ def test_rates_stay_null_without_a_divisor() -> None:
     assert empty.shares_per_100_views is None
     assert empty.engagement_rate is None
     full = rates_for(
-        InsightMetrics(views=5400, reach=3900, saved=140, shares=96, follows=22, total_interactions=466)
+        InsightMetrics(
+            views=5400,
+            reach=3900,
+            saved=140,
+            shares=96,
+            follows=22,
+            total_interactions=466,
+        )
     )
     assert full.shares_per_100_views == 1.78
     assert full.saves_per_100_reach == 3.59
@@ -84,7 +91,10 @@ def test_rates_stay_null_without_a_divisor() -> None:
 
 def test_baseline_median_ignores_null_rates() -> None:
     samples = (
-        BaselineSample(product_type=PRODUCT_FEED, metrics=InsightMetrics(reach=100, views=200, shares=2)),
+        BaselineSample(
+            product_type=PRODUCT_FEED,
+            metrics=InsightMetrics(reach=100, views=200, shares=2),
+        ),
         BaselineSample(product_type=PRODUCT_FEED, metrics=InsightMetrics(reach=300)),
         BaselineSample(product_type=PRODUCT_REELS, metrics=InsightMetrics()),
     )
@@ -180,7 +190,11 @@ class _Snaps:
         return []
 
     async def snapshots(self, media_ids: Sequence[str]) -> dict[str, InsightSnapshot]:
-        return {media_id: self.current[media_id] for media_id in media_ids if media_id in self.current}
+        return {
+            media_id: self.current[media_id]
+            for media_id in media_ids
+            if media_id in self.current
+        }
 
     async def save(self, snapshot: InsightSnapshot) -> None:
         self.saved.append(snapshot)
@@ -206,7 +220,9 @@ class _List:
 class _Graph:
     calls: list[tuple[str, tuple[str, ...]]] = field(default_factory=list)
 
-    async def media_insights(self, media_id: str, metrics: tuple[str, ...] = ()) -> InsightMetrics:
+    async def media_insights(
+        self, media_id: str, metrics: tuple[str, ...] = ()
+    ) -> InsightMetrics:
         self.calls.append((media_id, metrics))
         if "ig_reels_avg_watch_time" in metrics:
             return InsightMetrics(views=10, reach=8, avg_watch_time_ms=1500)

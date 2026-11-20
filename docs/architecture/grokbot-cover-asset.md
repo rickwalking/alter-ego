@@ -4,6 +4,9 @@ For: GrokBot Scout. Date: 2026-10-17. Ticket: AE-0418.
 Status: **NOT LIVE YET.** Do not send `cover` or call `/assets` until Pedro confirms AE-0418 is
 deployed. Before that, a topic with `cover` is rejected (422, unknown key) for the whole batch.
 
+Reel covers (AE-0627): the same route takes `purpose=reel_cover` for a 1080×1920 repost cover. See
+[`grokbot-reels-repost.md`](grokbot-reels-repost.md). Without `purpose` an upload is a carousel cover, as below.
+
 Everything in the topics contract (`autopilot-topics-contract-pov-news.md`) stays the same. This
 adds one optional upload and one optional topic field.
 

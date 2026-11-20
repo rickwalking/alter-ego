@@ -253,6 +253,7 @@ class CoverAssetResponse(BaseModel):
     kind: str
     width: int
     height: int
+    purpose: str
 
 
 class ScoutFailedBody(BaseModel):

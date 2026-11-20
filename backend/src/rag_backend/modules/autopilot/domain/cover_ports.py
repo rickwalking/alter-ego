@@ -13,6 +13,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.domain.constants.slide_cover import COVER_PURPOSE_CAROUSEL
 from rag_backend.domain.models.slide_cover import SlideCover
 from rag_backend.modules.autopilot.domain.cover import CoverAsset
 from rag_backend.modules.autopilot.domain.cover_offer import CoverOffer
@@ -26,6 +27,7 @@ class CoverImage:
     owner_id: str
     content: bytes
     kind: str
+    purpose: str = COVER_PURPOSE_CAROUSEL
 
 
 @dataclass(frozen=True, kw_only=True)

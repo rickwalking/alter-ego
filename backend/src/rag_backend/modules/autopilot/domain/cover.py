@@ -18,9 +18,14 @@ from uuid import UUID
 from rag_backend.domain.constants.slide_cover import (
     COVER_CREDIT_WWW_PREFIX,
     COVER_CREDIT_X_TEMPLATE,
+    COVER_KIND_AI_IMAGE,
     COVER_KIND_SCREENSHOT,
     COVER_KINDS,
+    COVER_PURPOSE_CAROUSEL,
+    COVER_PURPOSE_REEL,
+    COVER_PURPOSES,
     ERR_COVER_ASSET_KIND_INVALID,
+    ERR_COVER_ASSET_PURPOSE_INVALID,
     ERR_COVER_ASSET_SOURCE_MISSING,
 )
 from rag_backend.domain.models.slide_cover import SlideCover
@@ -43,7 +48,8 @@ class CoverAsset:
     """One uploaded cover: its creator asset, kind, source and first user.
 
     ``staged_path`` is the creator asset's artifact-relative path, where it is
-    staged.
+    staged. ``purpose`` is ``carousel_cover`` or ``reel_cover``; ``repost_id``
+    is set once a repost draft uses a Reel cover.
     """
 
     asset_id: UUID
@@ -55,11 +61,13 @@ class CoverAsset:
     created_at: datetime
     topic_candidate_id: UUID | None = None
     staged_path: str = ""
+    purpose: str = COVER_PURPOSE_CAROUSEL
+    repost_id: UUID | None = None
 
     @property
     def is_used(self) -> bool:
-        """True once a stored topic references the cover."""
-        return self.topic_candidate_id is not None
+        """True once a stored topic or a repost draft references the cover."""
+        return self.topic_candidate_id is not None or self.repost_id is not None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -68,6 +76,7 @@ class CoverForm:
 
     kind: str | None
     source_url: str | None
+    purpose: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -88,12 +97,24 @@ class CoverCheck:
 
 
 def form_problem(form: CoverForm) -> str | None:
-    """The upload code a bad ``kind`` / missing screenshot source earns."""
+    """The upload code a bad ``kind`` / purpose / screenshot source earns."""
     if form.kind not in COVER_KINDS:
+        return ERR_COVER_ASSET_KIND_INVALID
+    purpose = form_purpose(form)
+    if purpose not in COVER_PURPOSES:
+        return ERR_COVER_ASSET_PURPOSE_INVALID
+    if purpose == COVER_PURPOSE_REEL and form.kind != COVER_KIND_AI_IMAGE:
         return ERR_COVER_ASSET_KIND_INVALID
     if form.kind == COVER_KIND_SCREENSHOT and clean_source(form.source_url) is None:
         return ERR_COVER_ASSET_SOURCE_MISSING
     return None
+
+
+def form_purpose(form: CoverForm) -> str:
+    """The upload's purpose; a missing field is a carousel cover."""
+    if form.purpose is None:
+        return COVER_PURPOSE_CAROUSEL
+    return form.purpose.strip()
 
 
 def clean_source(source_url: str | None) -> str | None:
@@ -125,7 +146,7 @@ def cover_reason(check: CoverCheck, facts: CoverFacts) -> str | None:
     """Why the topic's cover is refused, or None when it may be attached."""
     asset_id = parse_asset_id(check.asset_id)
     asset = facts.assets.get(asset_id) if asset_id is not None else None
-    if asset is None:
+    if asset is None or asset.purpose != COVER_PURPOSE_CAROUSEL:
         return REASON_COVER_ASSET_UNKNOWN
     if facts.now is not None and is_expired(asset, facts.now):
         return REASON_COVER_ASSET_EXPIRED
@@ -186,6 +207,7 @@ __all__ = [
     "cover_reason",
     "expiry_cutoff",
     "form_problem",
+    "form_purpose",
     "is_expired",
     "parse_asset_id",
     "slide_cover_for",

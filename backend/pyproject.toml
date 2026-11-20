@@ -163,6 +163,7 @@ module = [
     "rag_backend.modules.autopilot.api.schemas",
     "rag_backend.modules.autopilot.api.ig_insights_schemas",
     "rag_backend.modules.autopilot.api.boost_schemas",
+    "rag_backend.modules.autopilot.api.repost_schemas",
 ]
 disable_error_code = ["explicit-any", "type-arg"]
 

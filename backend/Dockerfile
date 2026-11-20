@@ -68,8 +68,11 @@ COPY --from=builder --chown=fastapi:fastapi /app/.venv /app/.venv
 # JPEGs), so the headed build is dead weight (~60-90MB). The apt `--with-deps`
 # libs are shared and unchanged. VERIFY on staging: one carousel export renders
 # pixel-identical (fonts/gradients/2x) before relying on this in prod.
+# ffmpeg + fonts-dejavu-core render Reel reposts (hook text, trim, 1080x1920)
+# and probe Reel durations (ADR-0031).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl libpq5 postgresql-client \
+       ffmpeg fonts-dejavu-core \
     && playwright install --with-deps --only-shell \
     && chown -R fastapi:fastapi /app/ms-playwright \
     && apt-get clean \
