@@ -24,7 +24,9 @@ from rag_backend.modules.autopilot.domain.repost_render import (
     ffmpeg_args,
     ffprobe_args,
     ffprobe_file_args,
+    ffprobe_size_args,
     parse_duration,
+    parse_size,
 )
 from rag_backend.modules.autopilot.reels_constants import (
     FFMPEG_BINARY,
@@ -127,6 +129,14 @@ class FfmpegRenderer:
         except RenderError:
             return None
         return parse_duration(out)
+
+    async def size(self, path: str) -> tuple[int, int] | None:
+        """Width and height of a local file's video (the downloaded source)."""
+        try:
+            out = await _run(_Run(args=ffprobe_size_args(path), timeout=self._timeout))
+        except RenderError:
+            return None
+        return parse_size(out)
 
 
 class HttpDownloader:

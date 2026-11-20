@@ -165,6 +165,7 @@ class RepostTick:
             repost=repost,
             metrics=await self._deps.metrics.metrics(repost.media_id),
             preview_link=link,
+            source_size=files.source_size,
         )
         message_id = await self._deps.prompts.deliver(
             PromptDelivery(files=files, notice=notice)

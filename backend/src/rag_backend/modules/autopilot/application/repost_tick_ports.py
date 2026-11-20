@@ -28,6 +28,7 @@ class RenderedFiles:
     cover: Path | None
     original_cover: Path | None
     fits_telegram: bool
+    source_size: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

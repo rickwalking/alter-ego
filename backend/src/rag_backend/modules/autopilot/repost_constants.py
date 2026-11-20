@@ -192,6 +192,12 @@ TEXT_METRICS = (
     "Salvos {saved} · Compartilhamentos {shares} · Seguidores {follows}"
 )
 TEXT_HOOK = "Gancho: {hook}"
+TEXT_SOURCE = "Fonte do vídeo: {width}x{height}"
+TEXT_SOURCE_LOW = (
+    "⚠️ Fonte do vídeo: {width}x{height}. O Instagram só entrega esta versão em baixa "
+    "qualidade, então o repost sai borrado."
+)
+SOURCE_LOW_HEIGHT = 720
 TEXT_REASON = "Motivo: {reason}"
 TEXT_WINDOW = "Janela: {earliest} → {latest}"
 TEXT_CAPTION = "Legenda:\n{caption}"
@@ -234,8 +240,8 @@ RENDER_FPS = 30
 RENDER_MAX_BYTES = 100 * 1024 * 1024
 RENDER_MAXRATE = "6M"
 RENDER_BUFSIZE = "12M"
-RENDER_CRF = "23"
-RENDER_PRESET = "veryfast"
+RENDER_CRF = "20"
+RENDER_PRESET = "medium"
 RENDER_AUDIO_BITRATE = "128k"
 RENDER_AUDIO_RATE = "44100"
 RENDER_THREADS = "2"

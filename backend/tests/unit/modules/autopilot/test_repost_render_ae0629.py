@@ -234,6 +234,7 @@ class _FakeDownloader:
 class _FakeRenderer:
     seconds: float | None = 10.0
     fail: str | None = None
+    source_size: tuple[int, int] | None = (360, 640)
 
     async def render(self, plan: RenderPlan) -> int:
         if self.fail:
@@ -245,6 +246,10 @@ class _FakeRenderer:
     async def duration(self, path: str) -> float | None:
         del path
         return self.seconds
+
+    async def size(self, path: str) -> tuple[int, int] | None:
+        del path
+        return self.source_size
 
 
 def _studio(tmp_path: Path, **changes: object) -> FileRepostStudio:
