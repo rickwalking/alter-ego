@@ -38,6 +38,11 @@ Field report from the scout, 2026-11-20:
 - `/r/{id}/{file}`: `Cache-Control: no-store` on the 200 and on every 404.
 - Contract doc: the new 422, `video_url: null` meaning not repostable, `preview_url` semantics, the no-store header.
 
+## Non-Goals
+
+- No fallback video source (Graph offers none) and no change to the original Reel.
+- No new list field: `video_url: null` already marks a Reel that cannot be reposted.
+
 ## Acceptance Criteria
 
 - [x] AC1 A draft for a Reel without `video_url` answers 422 `source_unavailable`; no row, no commit, no quota used.
