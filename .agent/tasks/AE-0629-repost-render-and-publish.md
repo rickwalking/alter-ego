@@ -126,7 +126,7 @@ Local, Python 3.11 (prod), throwaway Postgres 16 for DB gates:
 
 ## QA Report
 
-Pending.
+[AE-0629.qa.md](../reports/AE-0629.qa.md), which points to the wave report [wave-reels-repost.qa.md](../reports/wave-reels-repost.qa.md). External QA (opencode) took 2 rounds and passed on `84bf6e408`; all findings are resolved. Still open in CI: `backend / Test & Coverage` and the backend mutation job.
 
 ## Decision Log
 
