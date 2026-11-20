@@ -56,7 +56,7 @@ The response matches the spec, with these notes:
 
 ### 1b. `GET /api/autopilot/reels/{media_id}/video`
 
-Streams the MP4 (`video/mp4`). A feed post, a foreign id or an unknown id answers 404 `reel_not_found`. When the CDN
+Streams the MP4 (`video/mp4`). A feed post, a foreign id or an unknown id answers 404 `reel_not_found`; a Graph answer that does not name the configured account as `owner` counts as foreign. When the CDN
 fails the route answers 503 `instagram_unavailable`.
 
 ## `POST /api/autopilot/assets` with `purpose`

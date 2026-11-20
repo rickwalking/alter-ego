@@ -200,6 +200,13 @@ async def test_post_repost_errors_use_the_envelope(api: _Api) -> None:
         missing.status_code == 400
         and missing.json()["error"]["field"] == "Idempotency-Key"
     )
+    short = await api.client.post(
+        "/api/autopilot/repost", json=_body(), headers=_key_headers("k-12345")
+    )
+    assert (short.status_code, short.json()["error"]["field"]) == (
+        400,
+        "Idempotency-Key",
+    )
     for body, field in (
         (_body(unknown=1), "unknown"),
         (_body(caption=None), "caption"),
@@ -283,9 +290,12 @@ async def test_get_and_list(api: _Api) -> None:
     ).status_code == 200
 
 
+# Scenario: Every reels and repost route needs the API key
 async def test_routes_require_the_key(api: _Api) -> None:
     for method, path in (
         ("GET", "/api/autopilot/reels"),
+        ("GET", f"/api/autopilot/reels/{MEDIA}/video"),
+        ("GET", f"/api/autopilot/repost/{uuid4()}"),
         ("POST", "/api/autopilot/repost"),
         ("GET", "/api/autopilot/reposts"),
     ):
@@ -374,6 +384,7 @@ async def test_public_files(api: _Api) -> None:
         assert (await api.client.get(path)).status_code == 404
 
 
+# Scenario: Too many calls answer the 429 envelope
 async def test_rate_limit_uses_the_envelope(api: _Api) -> None:
     statuses = [
         (await api.client.get("/api/autopilot/reposts", headers=_headers())).status_code

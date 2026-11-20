@@ -34,6 +34,14 @@ Feature: Repost drafts and the owner's Telegram decision (AE-0628)
       | collaborators          | 4 names or "@bad name"           |
       | publish_window.latest  | before earliest or in the past   |
 
+  Scenario: Every reels and repost route needs the API key
+    When a caller without X-Api-Key calls GET /reels, GET /reels/{media_id}/video, POST /repost or GET /reposts
+    Then the answer is 401 and nothing is read or stored
+
+  Scenario: Too many calls answer the 429 envelope
+    When the caller makes more than 10 calls in a minute
+    Then the answer is 429 with error code "rate_limited"
+
   Scenario: A foreign id or a non-Reel is not found
     When the scout posts a draft for a feed post or a foreign media id
     Then the answer is 404 "reel_not_found"

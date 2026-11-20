@@ -178,9 +178,10 @@ def parse_collaborators(payload: dict[str, object]) -> tuple[str, ...]:
 
 
 def _owned(payload: dict[str, object], ig_user_id: str) -> bool:
+    """True only when Graph names the configured account as the owner."""
     owner = payload.get(FIELD_OWNER)
     if not isinstance(owner, dict):
-        return True
+        return False
     return str(owner.get(FIELD_ID, "")) == ig_user_id
 
 

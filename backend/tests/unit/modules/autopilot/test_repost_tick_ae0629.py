@@ -378,7 +378,10 @@ async def test_container_error_and_timeout(tmp_path: Path) -> None:
     slow = _processing()
     world = _world(tmp_path, slow)
     assert await world.tick().run() == 0
-    world.clock.at = NOW + timedelta(minutes=31)
+    world.clock.at = NOW + timedelta(minutes=30)
+    assert await world.tick().run() == 0
+    assert world.store.rows[slow.id].status == STATUS_PROCESSING
+    world.clock.at = NOW + timedelta(minutes=30, seconds=1)
     await world.tick().run()
     assert world.store.rows[slow.id].error_code == "container_timeout"
 

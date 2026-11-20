@@ -161,6 +161,11 @@ def test_sort_orders() -> None:
         "1",
         "3",
     ]
+    no_views = [_item("4", None), _item("5", 0)]
+    assert [i.media.media_id for i in sort_items(no_views, "views_desc")] == ["5", "4"]
+    no_shares = [_item("4", None), _item("5", 10, 0)]
+    ranked = sort_items(no_shares, "shares_rate_desc")
+    assert [i.media.media_id for i in ranked] == ["5", "4"]
     assert [i.media.media_id for i in sort_items(items, "shares_rate_desc")] == [
         "1",
         "2",

@@ -217,7 +217,7 @@ async def test_reel_lookup_owner_and_not_found() -> None:
         gateway = GraphReelGateway(GraphJson(_config(), client))
         assert (await gateway.reel("111")) is not None
         assert await gateway.reel("222") is None
-        assert await gateway.reel("333") is not None
+        assert await gateway.reel("333") is None
         assert await gateway.reel("404") is None
         assert await gateway.reel("abc") is None
         with pytest.raises(InstagramCallError):

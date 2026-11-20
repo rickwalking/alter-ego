@@ -357,6 +357,13 @@ def test_publish_time_without_window_or_past_window_is_now() -> None:
     )
 
 
+def test_publish_time_with_an_empty_window_is_now() -> None:
+    at = NOW + timedelta(hours=2)
+    empty = PublishWindow(earliest=at, latest=at)
+    query = PublishTimeQuery(window=empty, now=NOW, signals=ScheduleSignals())
+    assert publish_time(query) == NOW
+
+
 def test_publish_time_narrow_window_without_slot_is_its_start() -> None:
     narrow = PublishWindow(
         earliest=NOW.replace(minute=5) + timedelta(hours=2),
