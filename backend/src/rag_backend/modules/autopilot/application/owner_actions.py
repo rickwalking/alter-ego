@@ -42,6 +42,10 @@ from rag_backend.modules.autopilot.application.publish_choice import (
     PublishChoiceActions,
 )
 from rag_backend.modules.autopilot.application.queue_actions import QueueOwnerActions
+from rag_backend.modules.autopilot.application.repost_actions import RepostOwnerActions
+from rag_backend.modules.autopilot.application.repost_tick_ports import (
+    OriginalMetrics,
+)
 from rag_backend.modules.autopilot.application.schedule_steps import is_schedule_reply
 from rag_backend.modules.autopilot.application.thesis_actions import (
     ThesisOwnerActions,
@@ -87,6 +91,7 @@ from rag_backend.modules.autopilot.domain.ports import (
 )
 from rag_backend.modules.autopilot.domain.queue_position import QueueControl
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
+from rag_backend.modules.autopilot.domain.repost_ports import RepostStore
 from rag_backend.modules.autopilot.domain.schedule_ports import ScheduleSignalsSource
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
 from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
@@ -167,6 +172,8 @@ class OwnerActionDeps:
     boost_limits: BoostLimits | None = None
     pauser: CampaignPauser | None = None
     carousel_retrier: CarouselRetrier | None = None
+    reposts: RepostStore | None = None
+    repost_metrics: OriginalMetrics | None = None
 
 
 class OwnerActionService(
@@ -175,6 +182,7 @@ class OwnerActionService(
     QueueOwnerActions,
     BoostOwnerActions,
     CarouselRetryOwnerActions,
+    RepostOwnerActions,
 ):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
@@ -216,7 +224,8 @@ class OwnerActionService(
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
-        handled = await self._boost_callback(update)
+        handled = await self._repost_callback(update)
+        handled = handled or await self._boost_callback(update)
         handled = handled or await self._thesis_callback(update)
         handled = handled or await self._cover_callback(update)
         handled = handled or await self._queue_callback(update)
@@ -306,7 +315,7 @@ class OwnerActionService(
 
     async def _on_text(self, update: WebhookUpdate) -> None:
         feedback = update.text.strip()
-        if not feedback:
+        if not feedback or await self._repost_caption_reply(update):
             return
         pending = await self._deps.pending.take(update.actor_id)
         if pending is None:

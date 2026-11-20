@@ -3,7 +3,9 @@
 The real bytes decide the format (PNG or JPEG only, never the declared type).
 An ``ai_image`` is centre-cropped to 4:5 and must be at least 1080x1350 after
 the crop; it is then scaled to exactly 1080x1350, the slide size. A
-``screenshot`` keeps its aspect and needs 600 px of width. Both are bounded by
+``screenshot`` keeps its aspect and needs 600 px of width. A Reel cover
+(``purpose=reel_cover``) is never cropped: it must already be 9:16 and at least
+1080x1920, and is scaled to exactly 1080x1920. Both are bounded by
 the creator-asset maxima and re-encoded to WebP, which drops EXIF and every
 other metadata block.
 """
@@ -35,10 +37,16 @@ from rag_backend.domain.constants.slide_cover import (
     COVER_AI_RATIO_HEIGHT,
     COVER_AI_RATIO_WIDTH,
     COVER_KIND_AI_IMAGE,
+    COVER_PURPOSE_CAROUSEL,
+    COVER_PURPOSE_REEL,
     COVER_SCREENSHOT_MIN_WIDTH,
+    ERR_COVER_ASSET_RATIO_INVALID,
     ERR_COVER_ASSET_TOO_LARGE,
     ERR_COVER_ASSET_TOO_SMALL,
     ERR_COVER_ASSET_TYPE_UNSUPPORTED,
+    REEL_COVER_HEIGHT,
+    REEL_COVER_RATIO_TOLERANCE,
+    REEL_COVER_WIDTH,
 )
 from rag_backend.domain.models.slide_cover import CoverAssetError
 
@@ -55,16 +63,19 @@ _TRANSPARENCY_KEY = "transparency"
 
 @dataclass(frozen=True)
 class CoverImageUpload:
-    """The uploaded bytes and the cover kind (already a known kind)."""
+    """The uploaded bytes, the cover kind and its purpose (both already known)."""
 
     content: bytes
     kind: str
+    purpose: str = COVER_PURPOSE_CAROUSEL
 
 
 def validate_cover_image(upload: CoverImageUpload) -> NormalizedCreatorAsset:
     """The re-encoded WebP of a valid cover; raises ``CoverAssetError``."""
     _check_bytes(upload.content)
     image = _decoded(upload.content)
+    if upload.purpose == COVER_PURPOSE_REEL:
+        return _normalized(_reel_image(image))
     shaped = _shaped(image, upload.kind)
     return _normalized(shaped)
 
@@ -127,6 +138,26 @@ def _ai_image(image: PilImage) -> PilImage:
     return cropped.resize(size, Image.Resampling.LANCZOS)
 
 
+def _reel_image(image: PilImage) -> PilImage:
+    """A 9:16 image of at least 1080x1920, scaled to exactly 1080x1920."""
+    from PIL import Image
+
+    if not is_reel_ratio(image.width, image.height):
+        raise CoverAssetError(ERR_COVER_ASSET_RATIO_INVALID)
+    if image.width < REEL_COVER_WIDTH or image.height < REEL_COVER_HEIGHT:
+        raise CoverAssetError(ERR_COVER_ASSET_TOO_SMALL)
+    size = (REEL_COVER_WIDTH, REEL_COVER_HEIGHT)
+    return image.convert(_MODE_RGB).resize(size, Image.Resampling.LANCZOS)
+
+
+def is_reel_ratio(width: int, height: int) -> bool:
+    """True when ``width / height`` is 9:16 within 1 %."""
+    if height <= 0:
+        return False
+    target = REEL_COVER_WIDTH / REEL_COVER_HEIGHT
+    return abs(width / height - target) <= target * REEL_COVER_RATIO_TOLERANCE
+
+
 def centre_crop_box(width: int, height: int) -> tuple[int, int, int, int]:
     """The largest centred 4:5 box inside ``width`` x ``height``."""
     if width * COVER_AI_RATIO_HEIGHT > height * COVER_AI_RATIO_WIDTH:
@@ -159,5 +190,6 @@ __all__ = [
     "CoverAssetError",
     "CoverImageUpload",
     "centre_crop_box",
+    "is_reel_ratio",
     "validate_cover_image",
 ]

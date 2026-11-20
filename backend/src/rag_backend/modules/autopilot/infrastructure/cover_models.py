@@ -2,7 +2,8 @@
 
 One row per GrokBot cover upload. ``id`` is the ``asset_id`` the scout gets;
 the image itself is a ``carousel_creator_assets`` row with role ``cover``.
-``topic_candidate_id`` is set when a stored topic uses the cover (one use);
+``topic_candidate_id`` is set when a stored topic uses the cover and
+``repost_id`` when a repost draft uses a Reel cover (one use either way);
 unused rows older than 6 hours are swept.
 """
 
@@ -14,7 +15,11 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from rag_backend.domain.constants.slide_cover import COVER_KIND_MAX_CHARS
+from rag_backend.domain.constants.slide_cover import (
+    COVER_KIND_MAX_CHARS,
+    COVER_PURPOSE_CAROUSEL,
+    COVER_PURPOSE_MAX_CHARS,
+)
 from rag_backend.modules.autopilot.constants import ON_DELETE_SET_NULL
 from rag_backend.modules.autopilot.cover_constants import (
     COVER_SOURCE_URL_MAX_CHARS,
@@ -53,6 +58,13 @@ class AutopilotCoverAssetModel(AutopilotOrmBase):
         ForeignKey(COVER_TOPIC_FK, name=FK_COVER_TOPIC, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
+    purpose: Mapped[str] = mapped_column(
+        String(COVER_PURPOSE_MAX_CHARS),
+        nullable=False,
+        default=COVER_PURPOSE_CAROUSEL,
+        server_default=COVER_PURPOSE_CAROUSEL,
+    )
+    repost_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

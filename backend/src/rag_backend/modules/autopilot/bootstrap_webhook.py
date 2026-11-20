@@ -13,6 +13,7 @@ from rag_backend.modules.autopilot.application.owner_actions import (
     OwnerActionService,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.bootstrap_repost import SnapshotMetrics
 from rag_backend.modules.autopilot.bootstrap_site_publish import (
     EditorialBuild,
     editorial_driver,
@@ -56,6 +57,7 @@ from rag_backend.modules.autopilot.infrastructure.queue_control import SqlQueueC
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
+from rag_backend.modules.autopilot.infrastructure.repost_store import SqlRepostStore
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
 )
@@ -121,6 +123,8 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         boost_limits=limits_from(build.settings),
         pauser=SettingsCampaignPauser(build.settings),
         carousel_retrier=QueueCarouselRetrier(build.session, build.engine_factory),
+        reposts=SqlRepostStore(build.session),
+        repost_metrics=SnapshotMetrics(build.session),
     )
     return OwnerActionService(deps)
 

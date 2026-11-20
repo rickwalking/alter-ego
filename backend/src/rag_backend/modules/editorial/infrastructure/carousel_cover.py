@@ -24,6 +24,7 @@ from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.creator_asset import CREATOR_ASSET_ROLE_COVER
+from rag_backend.domain.constants.slide_cover import COVER_PURPOSE_CAROUSEL
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.slide_cover import SlideCover
 from rag_backend.modules.editorial.domain.models import CarouselProject
@@ -45,12 +46,13 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True)
 class CoverImageRequest:
-    """One upload: the bytes, its kind and the user that owns the asset."""
+    """One upload: the bytes, its kind and purpose, and the owning user."""
 
     session: AsyncSession
     owner_id: str
     content: bytes
     kind: str
+    purpose: str = COVER_PURPOSE_CAROUSEL
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -83,7 +85,9 @@ async def store_cover_image(request: CoverImageRequest) -> StoredCoverImage:
     )
 
     normalized = validate_cover_image(
-        CoverImageUpload(content=request.content, kind=request.kind)
+        CoverImageUpload(
+            content=request.content, kind=request.kind, purpose=request.purpose
+        )
     )
     service = creator_asset_service(request.session)
     asset = await service.store_cover(request.owner_id, normalized)

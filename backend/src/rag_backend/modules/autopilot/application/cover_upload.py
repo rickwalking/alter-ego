@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.domain.cover import (
     CoverForm,
     clean_source,
     form_problem,
+    form_purpose,
 )
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverAssetStore,
@@ -57,16 +58,18 @@ class CoverUploadCommand:
     content: bytes
     kind: str | None
     source_url: str | None
+    purpose: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class CoverUploadResult:
-    """The 201 body: the asset id, its kind and final size."""
+    """The 201 body: the asset id, its kind, purpose and final size."""
 
     asset_id: UUID
     kind: str
     width: int
     height: int
+    purpose: str
 
 
 class CoverUploadService:
@@ -77,7 +80,9 @@ class CoverUploadService:
 
     async def upload(self, command: CoverUploadCommand) -> CoverUploadResult:
         """The stored cover; raises ``CoverAssetError`` or a missing owner."""
-        form = CoverForm(kind=command.kind, source_url=command.source_url)
+        form = CoverForm(
+            kind=command.kind, source_url=command.source_url, purpose=command.purpose
+        )
         problem = form_problem(form)
         if problem is not None:
             _log_rejected(problem)
@@ -86,10 +91,12 @@ class CoverUploadService:
         if not owner:
             raise CoverOwnerMissingError
         kind = str(command.kind)
+        purpose = form_purpose(form)
+        image = CoverImage(
+            owner_id=owner, content=command.content, kind=kind, purpose=purpose
+        )
         try:
-            stored = await self._deps.images.store_image(
-                CoverImage(owner_id=owner, content=command.content, kind=kind)
-            )
+            stored = await self._deps.images.store_image(image)
         except CoverAssetError as exc:
             _log_rejected(exc.code)
             raise
@@ -101,12 +108,17 @@ class CoverUploadService:
             width=stored.width,
             height=stored.height,
             created_at=self._deps.clock.now(),
+            purpose=purpose,
         )
         await self._deps.covers.add_cover(cover)
         await self._deps.covers.commit()
         logger.info(LOG_COVER, outcome=LOG_COVER_UPLOADED, asset_id=str(cover.asset_id))
         return CoverUploadResult(
-            asset_id=cover.asset_id, kind=kind, width=cover.width, height=cover.height
+            asset_id=cover.asset_id,
+            kind=kind,
+            width=cover.width,
+            height=cover.height,
+            purpose=purpose,
         )
 
 

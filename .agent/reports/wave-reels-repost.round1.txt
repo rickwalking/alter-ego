@@ -1,0 +1,80 @@
+Skill protocol loaded. Phase 0 + context loading now. Reading the four tickets and design docs.
+Tickets loaded. Now Phase 0 gate reproduction (single gates only, per rules) + CI status.
+Gates green. Checking CI jobs and reading the contract docs.
+CI: most jobs pass; Test & Coverage and backend-gate still pending → test/diff-cover/mutation = INCONCLUSIVE (CI will decide). Now the adversarial code review, starting with the API surface.
+# QA Validation Report — Wave "reels-repost" (iteration 1)
+
+Scope: `git diff origin/main...15a552090` (5fa59542c, 0973045e9, 15a552090) on `feat/autopilot-reels-repost`, PR #370. HEAD verified at `15a552090ad9e86a7e3b634671c4494d9ed9caf8`. All work read-only.
+
+## Overall Verdict: WARN (INCONCLUSIVE on material CI gates — CI will decide)
+
+Skill verdict policy: a material gate that could not run locally drops the verdict below PASS. `backend / Test & Coverage` (which carries test + diff-cover) and `backend-gate`/`backend / Mutation` were **still pending** on the PR head at review time. Nothing is red; several analytical findings below should be fixed or consciously accepted. Mapped to the required three-value line: **WARN**.
+
+## Gate Reproduction (source of truth: `scripts/ci/gates.sh`; single gates only per AE-0448/memory rules)
+
+| Gate | Status | Notes |
+|------|--------|-------|
+| backend:integrity | **PASS** (re-run) | 1 WARN: `integrity-ok: needs ffmpeg` hatch — audited, legitimate (see Integrity) |
+| backend:type | **PASS** (re-run) | mypy strict, clean |
+| backend:strict-diff | **PASS** (re-run) | args/complexity/20-line budgets on the diff |
+| backend:format, lint, lint-diff, blanket-ignore, imports, arch-ratchet, docstrings, dead-code, inline-prompts, gherkin-refs, comments, blog-v1-dead-code, redis-factory, autopilot-env, healthcheck-loopback, openapi-fresh, bandit, duplication | PASS (developer-run on 15a552090; not re-run — budget) | CI counterparts green: Lint & Format, Architecture, Dead Code, Docstrings, Duplication, Security, Strict Diff, Type Check, Integrity, Migrations (fresh DB) |
+| backend:mutation | **INCONCLUSIVE** | CI job pending on head commit — never run locally (AE-0448) |
+| backend:test / diff-cover | **INCONCLUSIVE** | `backend / Test & Coverage` pending — CI will decide. Local: 199/199 new unit tests pass (10 new suites, 6.8 s) |
+| pip-audit | FAIL (local, pre-existing) | dnspython CVE-2026-128089, opentelemetry-api CVE-2026-126360; PR does not touch `uv.lock`; CI Security job **pass** — accepted as pre-existing per scope |
+
+## Per-Dimension Results
+
+| Dimension | Status | Details |
+|-----------|--------|---------|
+| Security | ✅ PASS | 0 blockers, 1 minor, 1 info |
+| Code Quality | ✅ PASS | gates green; files ≤400 lines (largest new: repost_store.py 309); constants extracted (repost_constants.py 290); pure domain, early returns, ≤3 args enforced by strict-diff |
+| Mutation Testing | 🟠 WARN (analytical; CI decides) | pending CI job; likely survivors listed below |
+| Acceptance Criteria | ✅ PASS (28/28 ACs across 4 tickets) | 199 new unit tests pass; 46 new Gherkin scenarios; minor edge gaps listed |
+| Orphan/Unfinished | ✅ PASS | dead-code gate green; no TODO/stub density in new modules; nginx `/r/` locations + Dockerfile ffmpeg wired |
+| Integrity / Anti-Gaming | ✅ PASS | integrity gate green; commit 0973045e9 *removed* suppressions; single hatch audited and legitimate |
+
+## Findings
+
+### 🟠 W1 — Mutation-risk boundary assertions (ticket AE-0628/0629, CI mutation will decide)
+Likely surviving mutants and the assertions that kill each:
+- `domain/repost_rules.py:110` `recent_drafts >= WEEKLY_CAP` → `>`: killed only by a test with **exactly** 2 prior live drafts asserting 422 `weekly_cap_reached`.
+- `domain/repost_rules.py:106` `age_days(...) < MIN_AGE_DAYS` → `<=`: needs a Reel at **exactly** 60.0 days asserting it is eligible.
+- `domain/repost_rules.py:135` `FINAL_MIN_SECONDS <= end-start <= FINAL_MAX_SECONDS` → boundary mutants at exactly 3.0 s / 90.0 s (feature/tests cover 2.0/91.0 — off-by-boundary may survive).
+- `domain/repost_schedule.py:33` `start >= window.latest` → `>`: needs `now == window.latest` asserting "publish now, not in window".
+- `application/repost_tick.py:112,115` `budget.renders > 0` → `>=`: needs a test asserting **exactly** one render per tick when 2+ drafts are due (TICK_RENDER_LIMIT boundary).
+- `application/repost_tick.py:310` `> timedelta(minutes=30)` → `>=`: exact-30-min container timeout case.
+- `domain/reels.py:111` `-1.0` sentinel → `1.0`: killed only if a test asserts unknown-metrics items sort **last**.
+Fix: add boundary-value assertions in the corresponding suites.
+
+### 🟡 S1 — Ownership check fails open on a missing `owner` field — `infrastructure/reels_gateway.py:180-184`
+`_owned()` returns `True` when the Graph payload lacks `owner`. `MEDIA_FIELDS_ONE` does request `owner` (reels_constants.py:45-48) and the token is account-scoped, so this is defense-in-depth only — but "not Pedro's Reel → 404" would be stronger fail-closed. Fix: treat a missing `owner` as not owned, or document the reliance on Graph ACL.
+
+### 🟡 S2 — Gherkin edge gaps (AE-0626/0628 features)
+- No scenario for **401 without X-Api-Key** on the new `/reels`, `/reels/{id}/video`, `/repost*` routes (AC6 asserts "need the API key" — the dependency is router-level, `api/reels.py:75`, `api/repost.py:70`; middleware tests cover the mechanism, not these routes).
+- No scenario for the **429 `rate_limited` envelope** on these routes (contract §"errors … includes the 429").
+- No scenario for a **malformed Idempotency-Key** (length/charset) — covered by unit tests only.
+Fix: add one negative auth/rate-limit scenario per feature.
+
+### ⚪ Info
+- `/r/{id}/{file}` is keyless with no rate limit by design (ADR-0031; `api/repost_files.py`). Path traversal is impossible: `file_name` is whitelisted via `PUBLIC_FILES.get` before any path join, `repost_id` is a validated UUID, status-gated by `SERVED_STATUSES`, uniform 404 prevents enumeration beyond unguessable UUIDs. ffmpeg is argv-list only, hook text via `textfile=` + `expansion=none` + protocol whitelist (`domain/repost_render.py:33-34,80-81,132-141`) — injection surface closed. SSRF: no user-supplied URLs reach the downloader/probe; sources are Graph-origin, https-enforced, size/time-bounded (`infrastructure/repost_video.py:91,140,152-158`). Telegram: constant-time webhook secret + `is_owner(update.actor_id, owner_chat_id)` (`application/owner_actions.py:217`); all tick transitions are compare-and-set (`application/repost_tick.py:275-280`) — racing taps can't double-move a draft.
+- Integrity hatch `test_repost_render_ae0629.py:326` `skipif(not _HAS_FFMPEG)  # integrity-ok: needs ffmpeg` — **legitimate**: environmental skip of a real-ffmpeg integration test; the render logic is otherwise covered by fake-renderer tests (render_failed / duration boundaries parametrized at lines 305-318). Not a coverage dodge.
+
+## Top 3 Risks
+1. CI Test & Coverage / Mutation still pending — the verdict cannot be PASS until they are green on 15a552090.
+2. Boundary-value assertion gaps (W1) — if CI mutation goes red, these are the first suspects.
+3. Keyless `/r/` file route exposure is correct per ADR-0031 but has no abuse-rate guard; watch it after launch.
+
+## Recommended Next Steps
+- Wait for `backend / Test & Coverage` and the Mutation job; treat red as blocker per policy.
+- Add the W1 boundary assertions and S2 auth/429 scenarios as a fast-follow.
+- Optionally harden `_owned` to fail closed.
+
+```json
+{"verdict":"WARN","wave_id":"reels-repost","iteration":1,"findings":[
+ {"id":"W1","severity":"warning","ticket":"AE-0628/AE-0629","file":"backend/src/rag_backend/modules/autopilot/domain/repost_rules.py","line":110,"problem":"Likely surviving mutation-testing boundary mutants (weekly cap >=, min-age <, final-length 3-90 bounds, schedule window boundary, tick budgets, container 30-min timeout, sort sentinel -1.0) — exact-boundary assertions missing","fix":"Add boundary-value tests: exactly 2 prior drafts, exactly 60.0-day-old Reel, exactly 3.0s/90.0s final length, now==window.latest, exactly-one-render-per-tick, exactly 30-min container age, unknown-metrics-sort-last"},
+ {"id":"S1","severity":"minor","ticket":"AE-0626","file":"backend/src/rag_backend/modules/autopilot/infrastructure/reels_gateway.py","line":180,"problem":"_owned() fails open (returns True) when the Graph payload has no owner field; foreign-Reel 404 relies on Graph ACL","fix":"Treat a missing owner as not owned (fail closed), or document reliance on Graph permissions"},
+ {"id":"S2","severity":"minor","ticket":"AE-0626/AE-0628","file":"backend/tests/features/autopilot_reels_list_ae0626.feature","line":61,"problem":"Missing negative scenarios: 401 without X-Api-Key and 429 rate_limited envelope on the new routes; malformed Idempotency-Key only unit-covered","fix":"Add auth/rate-limit/429 scenarios to the AE-0626 and AE-0628 feature files"}
+],"summary":{"gates_run":["backend:integrity:PASS","backend:type:PASS","backend:strict-diff:PASS","199/199 new unit tests pass"],"gates_inconclusive":["backend:mutation (CI pending)","backend:test/diff-cover (CI pending)"],"security":"PASS - traversal/injection/SSRF/ownership checks verified in code","acceptance_criteria":"28/28 across AE-0626..0629, all tested and passing","integrity":"PASS - single integrity-ok hatch audited legitimate","blockers":0}}
+```
+
+QA_VERDICT: WARN

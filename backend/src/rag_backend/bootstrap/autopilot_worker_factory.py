@@ -46,6 +46,7 @@ class AutopilotWorkerSteps:
     credential_refresh: CredentialRefreshTickAdapter | None
     telegram_notify: TelegramNotifyTickAdapter
     boost: BoostRunAdapter | None
+    repost: RepostRunAdapter | None = None
 
 
 def autopilot_engine_factory(checkpointer: object | None) -> EngineFactory:
@@ -89,6 +90,7 @@ def build_autopilot_worker_steps(
             )
         ),
         boost=BoostRunAdapter(settings),
+        repost=RepostRunAdapter(settings),
     )
 
 
@@ -154,6 +156,27 @@ class BoostRunAdapter:
             return await _boost_tick(self._settings, db, ads).run()
         finally:
             await _close(client)
+
+
+class RepostRunAdapter:
+    """Render, notify, expire and publish Reel reposts."""
+
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+
+    async def tick(self, db: object) -> int:
+        import httpx
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        from rag_backend.modules.autopilot.bootstrap_repost import repost_tick
+        from rag_backend.modules.autopilot.reels_constants import (
+            REELS_HTTP_TIMEOUT_SECONDS,
+        )
+
+        if not isinstance(db, AsyncSession):
+            return 0
+        async with httpx.AsyncClient(timeout=REELS_HTTP_TIMEOUT_SECONDS) as client:
+            return await repost_tick(db, self._settings, client).run()
 
 
 def _boost_tick(settings: Settings, db: object, ads: object) -> BoostTick:

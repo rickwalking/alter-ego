@@ -45,12 +45,27 @@ def setup_rate_limiting(app, _settings: Settings) -> None:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-def _rate_limit_exceeded_handler(_request, exc):
-    """Handle rate limit exceeded errors."""
+ENVELOPE_PATH_PREFIXES = ("/api/autopilot/reels", "/api/autopilot/repost")
+ENVELOPE_RATE_LIMITED = {
+    "error": {
+        "code": "rate_limited",
+        "message": "Over the autopilot request limit.",
+        "field": None,
+    }
+}
+
+
+def _rate_limit_exceeded_handler(request, exc):
+    """Handle rate limit exceeded errors.
+
+    The Reels repost routes answer in their ``{"error": {...}}`` shape.
+    """
     from fastapi.responses import JSONResponse
 
     from rag_backend.api.schemas import ErrorResponse
 
+    if request.url.path.startswith(ENVELOPE_PATH_PREFIXES):
+        return JSONResponse(status_code=429, content=ENVELOPE_RATE_LIMITED)
     return JSONResponse(
         status_code=429,
         content=ErrorResponse(

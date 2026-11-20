@@ -194,6 +194,10 @@ def register_persistence_models() -> tuple[str, ...]:
         TopicCandidateModel,
         XBrowserSignalModel,
     )
+    from rag_backend.modules.autopilot.infrastructure.repost_models import (
+        ReelFactsModel,
+        RepostModel,
+    )
 
     return (
         AutopilotRunModel.__tablename__,
@@ -210,4 +214,6 @@ def register_persistence_models() -> tuple[str, ...]:
         IgMediaModel.__tablename__,
         BoostRequestModel.__tablename__,
         AutopilotCoverAssetModel.__tablename__,
+        RepostModel.__tablename__,
+        ReelFactsModel.__tablename__,
     )

@@ -101,6 +101,11 @@ from rag_backend.modules.autopilot.api.insights import (
     router as instagram_insights_router,
 )
 from rag_backend.modules.autopilot.api.queue_board import router as queue_board_router
+from rag_backend.modules.autopilot.api.reels import router as reels_router
+from rag_backend.modules.autopilot.api.repost import router as repost_router
+from rag_backend.modules.autopilot.api.repost_files import (
+    router as repost_files_router,
+)
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
@@ -165,6 +170,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     credential_refresh=autopilot.credential_refresh,
                     telegram_notify=autopilot.telegram_notify,
                     boost=autopilot.boost,
+                    repost=autopilot.repost,
                 ),
             )
         )
@@ -297,6 +303,9 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(autopilot_router, prefix="/api")
     app.include_router(boost_router, prefix="/api")
     app.include_router(ig_insights_router, prefix="/api")
+    app.include_router(reels_router, prefix="/api")
+    app.include_router(repost_router, prefix="/api")
+    app.include_router(repost_files_router)
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(queue_board_router, prefix="/api")
     app.include_router(manual_reprocess.router, prefix="/api")

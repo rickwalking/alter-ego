@@ -62,6 +62,7 @@ class EditorialCoverImages:
                 owner_id=image.owner_id,
                 content=image.content,
                 kind=image.kind,
+                purpose=image.purpose,
             )
         )
         return StoredImage(

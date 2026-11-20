@@ -84,7 +84,7 @@ class CredentialRefreshTick(Protocol):
 
 
 class BoostRunTick(Protocol):
-    """Expire boost requests and launch at most one when spending is on."""
+    """One isolated autopilot pass (boosts, reposts) on the tick's session."""
 
     async def tick(self, db: AsyncSession) -> int:
         """Return how many requests the pass touched."""
@@ -115,6 +115,7 @@ class WorkflowWorkerServices:
     blog_generation_reaper: BlogGenerationReaper | None = None
     carousel_auto_archiver: CarouselAutoArchiver | None = None
     boost: BoostRunTick | None = None
+    repost: BoostRunTick | None = None
 
 
 @dataclass(frozen=True)
@@ -134,6 +135,7 @@ class _TickCollaborators:
     blog_generation_reaper: BlogGenerationReaper | None = None
     carousel_auto_archiver: CarouselAutoArchiver | None = None
     boost: BoostRunTick | None = None
+    repost: BoostRunTick | None = None
 
 
 async def _run_tick(
@@ -228,6 +230,7 @@ async def _autopilot_steps(
         ("autopilot_runs", runner),
         ("telegram_notices", services.telegram_notify),
         ("boost", services.boost),
+        ("repost", services.repost),
     )
     return {name: await _isolated(name, step, db) for name, step in steps}
 
@@ -277,6 +280,7 @@ async def run_workflow_workers(
         blog_generation_reaper=services.blog_generation_reaper,
         carousel_auto_archiver=services.carousel_auto_archiver,
         boost=services.boost,
+        repost=services.repost,
     )
     interval = settings.workflow_worker_interval_seconds
 

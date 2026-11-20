@@ -36,6 +36,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     DETAIL_COVER_OWNER_UNCONFIGURED,
     FORM_FIELD_FILE,
     FORM_FIELD_KIND,
+    FORM_FIELD_PURPOSE,
     FORM_FIELD_SOURCE_URL,
     HTTP_UNAVAILABLE,
     HTTP_UNPROCESSABLE,
@@ -76,15 +77,35 @@ class _UploadForm:
     file: UploadFile | None
     kind: str | None
     source_url: str | None
+    purpose: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class _FormText:
+    """The text parts of the form."""
+
+    kind: str | None
+    source_url: str | None
+    purpose: str | None
+
+
+def form_text(
+    kind: Annotated[str | None, Form(alias=FORM_FIELD_KIND)] = None,
+    source_url: Annotated[str | None, Form(alias=FORM_FIELD_SOURCE_URL)] = None,
+    purpose: Annotated[str | None, Form(alias=FORM_FIELD_PURPOSE)] = None,
+) -> _FormText:
+    """The ``kind``, ``source_url`` and ``purpose`` parts as received."""
+    return _FormText(kind=kind, source_url=source_url, purpose=purpose)
 
 
 def upload_form(
+    text: Annotated[_FormText, Depends(form_text)],
     file: Annotated[UploadFile | None, File(alias=FORM_FIELD_FILE)] = None,
-    kind: Annotated[str | None, Form(alias=FORM_FIELD_KIND)] = None,
-    source_url: Annotated[str | None, Form(alias=FORM_FIELD_SOURCE_URL)] = None,
 ) -> _UploadForm:
     """Collect the parts; the use case decides what a missing one means."""
-    return _UploadForm(file=file, kind=kind, source_url=source_url)
+    return _UploadForm(
+        file=file, kind=text.kind, source_url=text.source_url, purpose=text.purpose
+    )
 
 
 @router.post(PATH_ASSETS, status_code=_HTTP_CREATED, response_model=CoverAssetResponse)
@@ -97,7 +118,10 @@ async def post_autopilot_asset(
     """Store one cover and return its ``asset_id`` and final size."""
     del request
     command = CoverUploadCommand(
-        content=await _read(form.file), kind=form.kind, source_url=form.source_url
+        content=await _read(form.file),
+        kind=form.kind,
+        source_url=form.source_url,
+        purpose=form.purpose,
     )
     try:
         result = await service.upload(command)
@@ -113,6 +137,7 @@ async def post_autopilot_asset(
         kind=result.kind,
         width=result.width,
         height=result.height,
+        purpose=result.purpose,
     )
 
 
