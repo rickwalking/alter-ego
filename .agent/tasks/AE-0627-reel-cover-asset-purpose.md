@@ -1,6 +1,6 @@
 # AE-0627 — `purpose=reel_cover` on POST /api/autopilot/assets
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

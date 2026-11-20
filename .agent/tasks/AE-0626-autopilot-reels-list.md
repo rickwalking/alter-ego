@@ -1,6 +1,6 @@
 # AE-0626 — Autopilot Reels list for the repost scout (GET /reels, /reels/{id}/video)
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

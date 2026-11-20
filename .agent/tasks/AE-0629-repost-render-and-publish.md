@@ -1,6 +1,6 @@
 # AE-0629 — Repost worker: render preview (ffmpeg), Telegram notice, Graph Reels publish, expiry
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

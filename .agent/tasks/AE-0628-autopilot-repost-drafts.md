@@ -1,6 +1,6 @@
 # AE-0628 — Repost drafts: POST /repost, GET /repost/{id}, GET /reposts, Telegram approval
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
