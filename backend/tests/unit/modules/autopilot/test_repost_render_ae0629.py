@@ -320,9 +320,10 @@ async def test_studio_render_failures(
     assert error.value.code == code
 
 
-@pytest.mark.skipif(
-    not _HAS_FFMPEG, reason="ffmpeg is not installed"
-)  # integrity-ok: needs the ffmpeg binary, present in the prod image and dev machines, not on CI runners
+_NO_FFMPEG = "ffmpeg is not installed"
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason=_NO_FFMPEG)  # integrity-ok: needs ffmpeg
 async def test_real_render_end_to_end(tmp_path: Path) -> None:
     source = tmp_path / "src.mp4"
     subprocess.run(
