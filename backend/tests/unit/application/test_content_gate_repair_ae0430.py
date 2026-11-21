@@ -1,4 +1,4 @@
-"""The content gate repairs only the failing fields, at most 2 rounds.
+"""The content gate repairs only the failing fields, at most 3 rounds.
 
 Gherkin: tests/features/content_gate_repair_ae0430.feature (section A + the
 residual shape mismatch of section C). The model is a fake; the validator and
@@ -135,8 +135,8 @@ class TestTargetedRepair:
         assert features[0]["body"] == PROD_ANSWERS["3:en:features[0].body"]
         assert len(repairer.calls) == 1
 
-    async def test_two_rounds_then_stop_with_violations_shown(self) -> None:
-        """Scenario: Two rounds then stop with the violations shown.
+    async def test_three_rounds_then_stop_with_violations_shown(self) -> None:
+        """Scenario: Three rounds then stop with the violations shown.
 
         The over-long answer is never truncated; it is kept whole for the owner.
         """
@@ -171,7 +171,8 @@ class TestTargetedRepair:
 
         outcome = await run_gate_repair(_command(repairer, slides))
 
-        assert len(repairer.calls) == 1
+        assert len(repairer.calls) == GATE_REPAIR_MAX_ROUNDS
+        assert repairer.calls[0] == repairer.calls[-1]
         assert outcome.slides == slides
         assert outcome.changed_indices == frozenset()
         assert outcome.report.blocking is True

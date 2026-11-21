@@ -143,6 +143,14 @@ def active_feedback_notes(state: Mapping[str, object], phase: str) -> list[str]:
     return _active_texts(state, phase)
 
 
+def active_note_sources(state: Mapping[str, object], phase: str) -> list[str]:
+    """Who wrote each active note of ``phase``, in order (untagged = human)."""
+    return [
+        active.tag["source"] if active.tag is not None else FEEDBACK_SOURCE_HUMAN
+        for active in _active_notes(state, phase)
+    ]
+
+
 def feedback_history(
     state: Mapping[str, object], phase: str
 ) -> list[FeedbackHistoryEntry]:
@@ -287,6 +295,7 @@ __all__ = [
     "FeedbackNote",
     "NewFeedbackNote",
     "active_feedback_notes",
+    "active_note_sources",
     "add_feedback_note",
     "consume_feedback_notes",
     "feedback_history",

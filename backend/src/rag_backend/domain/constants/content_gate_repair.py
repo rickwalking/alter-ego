@@ -3,7 +3,13 @@
 When the content gate blocks, the failing fields (and only those) go to the
 model with their slide/locale/field path, current text, exact limit and the
 rule they break; the answers are patched in by path and re-validated, at most
-``GATE_REPAIR_MAX_ROUNDS`` times.
+``GATE_REPAIR_MAX_ROUNDS`` times. A round whose model call fails or times out
+still counts and the next round asks again.
+
+``GATE_REPAIR_TIMEOUT_SECONDS`` bounds one round's model call. It must outlast the
+fast role's own call timeout plus its fallback model's (300 s + 300 s): a shorter
+bound cancelled slow calls before the fallback could answer, so the repair
+silently ended with nothing fixed (prod carousel 4223b53a).
 
 Each repair round after the gate blocks is one model call, and one round sends a bounded
 number of fields (the rest wait for the next round). The model answers ``{"fixes":
@@ -15,9 +21,9 @@ from __future__ import annotations
 
 from typing import Final
 
-GATE_REPAIR_MAX_ROUNDS: Final[int] = 2
+GATE_REPAIR_MAX_ROUNDS: Final[int] = 3
 GATE_REPAIR_MAX_TARGETS: Final[int] = 40
-GATE_REPAIR_TIMEOUT_SECONDS: Final[float] = 180.0
+GATE_REPAIR_TIMEOUT_SECONDS: Final[float] = 660.0
 
 GATE_REPAIR_PROMPT_DOMAIN: Final[str] = "carousel_gate_repair"
 GATE_REPAIR_PROMPT_NAME: Final[str] = "field_repair"
@@ -56,6 +62,7 @@ GATE_REVISION_NOTE_NO_LOCALE: Final[str] = "PT+EN"
 LOG_GATE_REPAIR_ROUND: Final[str] = "content_gate_repair_round"
 LOG_GATE_REPAIR_DONE: Final[str] = "content_gate_repair_done"
 LOG_GATE_REPAIR_MODEL_FAILED: Final[str] = "content_gate_repair_model_failed"
+LOG_CONTENT_FIX_REVISION: Final[str] = "content_fix_revision"
 
 __all__ = [
     "GATE_REPAIR_FIELD_LOCALE",
@@ -85,6 +92,7 @@ __all__ = [
     "GATE_REVISION_NOTE_LINE",
     "GATE_REVISION_NOTE_NO_LOCALE",
     "GATE_REVISION_NOTE_SLIDE_FIELD",
+    "LOG_CONTENT_FIX_REVISION",
     "LOG_GATE_REPAIR_DONE",
     "LOG_GATE_REPAIR_MODEL_FAILED",
     "LOG_GATE_REPAIR_ROUND",

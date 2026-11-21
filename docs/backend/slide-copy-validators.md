@@ -112,13 +112,23 @@ calls `content_gate_repair_flow.repair_blocked_content_gate`:
    pass are never sent, and answers for ids nobody asked for are ignored.
 3. **One model call per round** (fast role, `carousel_gate_repair/v1/field_repair.yaml`,
    Langfuse-traced through the orchestrator's runnable config), answers patched in by path,
-   re-validated. At most **2 rounds** (`GATE_REPAIR_MAX_ROUNDS`), at most 40 fields per round.
+   re-validated. At most **3 rounds** (`GATE_REPAIR_MAX_ROUNDS`), at most 40 fields per round.
+   One round's model call may take up to 660 s (`GATE_REPAIR_TIMEOUT_SECONDS`), longer than
+   the fast role's 300 s timeout plus its fallback's 300 s, so a slow model is not cut off
+   before the fallback answers. A failed or timed-out round still counts and the next round
+   asks again.
 4. The repaired slides are written back like owner edits (`apply_localized_slide_edits`):
    drafts, EN translations and both reports stay in step. Nothing is truncated and no rule
    is loosened; whatever still blocks stays visible. A failing model changes nothing.
+5. **Fix, not rework.** A content revision whose active notes are all system-written (an
+   owner Retry, an autopilot rework) while the gate blocks is a *fix*: no slide is
+   re-drafted, only steps 1-4 run on the stored slides (`content_fix_mode.is_fix_revision`,
+   log `content_fix_revision`). A note the owner writes is a *rework* and re-drafts as
+   before.
 
 Code: `content_gate_repair.py` (loop + model adapter), `content_gate_repair_targets.py`
-(fill, targets, patching), `content_gate_repair_flow.py` (runner hook, revision note).
+(fill, targets, patching), `content_gate_repair_flow.py` (runner hook, revision note),
+`content_fix_mode.py` (fix vs rework).
 Logs: `content_gate_repair_round`, `content_gate_repair_done`,
 `content_gate_repair_model_failed`.
 

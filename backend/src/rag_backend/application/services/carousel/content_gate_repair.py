@@ -10,8 +10,8 @@ lacks, send ONLY the failing
 fields (path, current text, exact limit, problems, slide heading, PT source)
 in one model call, patch the answers in by path, re-validate. At most
 ``GATE_REPAIR_MAX_ROUNDS`` rounds, then stop with what still blocks visible.
-Never truncates, never loosens a rule, never raises: a failing model leaves
-the copy as it was.
+Never truncates, never loosens a rule, never raises: a failing model call
+leaves the copy as it was and the next round asks again.
 
 The LangChain model and its Langfuse runnable config are injected by the
 orchestrator (agents layer), so this module adds no application ->
@@ -284,7 +284,10 @@ def _validate(
 async def _round(
     slides: list[dict[str, object]], command: GateRepairCommand
 ) -> tuple[list[dict[str, object]], tuple[str, ...]] | None:
-    """One round; None when there is nothing (more) to ask or the model failed."""
+    """One round; None when there is nothing (more) to ask.
+
+    A failed model call keeps the slides as they were, so the next round asks again.
+    """
     slides, filled = _fill_structure(slides, command)
     report = _validate(slides, command)
     if not report.blocking:
@@ -299,9 +302,7 @@ async def _round(
         LOG_GATE_REPAIR_ROUND, project_id=command.project_id, fields=len(ids), ids=ids
     )
     texts = await _ask(command, targets)
-    if texts is None:
-        return None
-    return apply_fixes(slides, targets, texts), ids
+    return apply_fixes(slides, targets, texts or {}), ids
 
 
 def _without_untranslated(
