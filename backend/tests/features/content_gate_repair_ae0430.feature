@@ -19,10 +19,10 @@ Feature: The content gate repairs only the failing fields (AE-0430)
     And the repaired text replaces only that field
     And the content gate report is no longer blocking
 
-  Scenario: Two rounds then stop with the violations shown
+  Scenario: Three rounds then stop with the violations shown
     Given the model always answers with text over the limit
     When the content gate runs its repair loop
-    Then the model is called exactly 2 times
+    Then the model is called exactly 3 times
     And the remaining violations stay in "content_gate_validation"
     And no field is truncated by the repair loop
 
@@ -35,7 +35,8 @@ Feature: The content gate repairs only the failing fields (AE-0430)
   Scenario: A failing model leaves the copy and the report as they were
     Given the field repair model raises an error
     When the content gate runs its repair loop
-    Then the localized slides are unchanged
+    Then every round asks again, 3 times in all
+    And the localized slides are unchanged
     And the report is still blocking
 
   Scenario: The regression fixture from prod ends green

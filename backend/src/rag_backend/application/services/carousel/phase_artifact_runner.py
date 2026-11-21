@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Protocol, TypedDict, runtime_checkable
 
+import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,9 @@ from rag_backend.application.services.carousel.content_fail_closed import (
 from rag_backend.application.services.carousel.content_feedback_lifecycle import (
     active_feedback_notes,
     consume_feedback_notes,
+)
+from rag_backend.application.services.carousel.content_fix_mode import (
+    is_fix_revision,
 )
 from rag_backend.application.services.carousel.content_gate_repair import (
     GateFieldRepairer,
@@ -81,6 +85,7 @@ from rag_backend.domain.constants.content_feedback import (
     FEEDBACK_STATUS_APPLIED,
     FEEDBACK_STATUS_UNCHANGED,
 )
+from rag_backend.domain.constants.content_gate_repair import LOG_CONTENT_FIX_REVISION
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
@@ -127,6 +132,8 @@ from .localized_rows_sync import sync_rows_to_localized
 from .outline_by_mode import ModeOutlineRequest
 from .outline_normalize import normalize_editorial_outline
 from .recent_hooks import load_recent_hooks
+
+logger = structlog.get_logger()
 
 
 @dataclass
@@ -453,6 +460,8 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {}
         outline, outline_updates = await self._resolve_outline(pending, state)
         updates.update(outline_updates)
+        if is_fix_revision(state):
+            return await self._fix_content_gate(state, updates, resolved)
         regen = await self._regen_inputs(state)
         should_regenerate = not state.get("slide_drafts") or bool(regen.revision_notes)
         regenerated = should_regenerate and isinstance(outline, list)
@@ -540,6 +549,18 @@ class PhaseArtifactRunner:
         await self._repair_content_gate(state, updates, resolved)
         if regenerated:
             updates.update(_settle_used_notes(state, updates))
+        return updates
+
+    async def _fix_content_gate(
+        self,
+        state: CarouselWorkflowState,
+        updates: dict[str, object],
+        resolved: EditorialWorkflowStartInput,
+    ) -> dict[str, object]:
+        """A fix revision: only the blocked fields are rewritten, nothing re-drafted."""
+        logger.info(LOG_CONTENT_FIX_REVISION, project_id=str(state.get("project_id")))
+        await self._repair_content_gate(state, updates, resolved)
+        updates.update(_settle_used_notes(state, updates))
         return updates
 
     def _style_guide(self, resolved: EditorialWorkflowStartInput) -> str:
