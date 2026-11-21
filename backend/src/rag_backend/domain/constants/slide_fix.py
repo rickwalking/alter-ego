@@ -9,6 +9,10 @@ A fixed slide the judge could not score keeps its old ``overall`` and is marked
 for a re-score on the next tick, with the unscored count; after
 ``PERSONA_UNSCORED_MAX_TICKS`` unscored ticks the run escalates
 ``persona_judge_unavailable``.
+
+``SLIDE_FIX_TIMEOUT_SECONDS`` bounds one rewrite call. It outlasts the reasoning
+role's own timeout plus its fallback's (360 s + 300 s): a shorter bound cancelled a
+slow call before the fallback could answer and counted it as a model error.
 """
 
 from __future__ import annotations
@@ -17,7 +21,7 @@ AUTOFIX_MODEL_ATTEMPTS = 3
 AUTOFIX_ESCALATION_ATTEMPTS = 2
 MODEL_ROLE_FAST = "fast"
 MODEL_ROLE_REASONING = "reasoning"
-SLIDE_FIX_TIMEOUT_SECONDS = 120.0
+SLIDE_FIX_TIMEOUT_SECONDS = 720.0
 
 SLIDE_FIX_PROMPT_DOMAIN = "carousel"
 SLIDE_FIX_PROMPT_NAME = "slide_fix"

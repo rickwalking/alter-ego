@@ -7,7 +7,8 @@ Runs after the deterministic gate repair, only for the autopilot:
    floor at the content gate;
 3. fix them in parallel (bounded by ``CONTENT_DRAFT_CONCURRENCY``), at most
    ``AUTOPILOT_AUTOFIX_ATTEMPTS`` model attempts each (``slide_fix_loop``);
-4. write the fixed slides once, through the reviewer-edit path
+4. write the fixed slides once, through the reviewer-edit path (an unfixed slide
+   whose best attempt breaks fewer copy rules is written too, so its fixes stay)
    (``apply_localized_slide_edits``) plus their new voice scores, under the
    project lock and the lock-version CAS. ``slide_drafts``,
    ``localized_slides``, ``translations_en``, ``presentation_validation``,
@@ -139,6 +140,11 @@ def fix_patch(
     return updates
 
 
+def _kept(results: tuple[SlideFixResult, ...]) -> list[SlideFixResult]:
+    """The slides to write: fixed ones and unfixed ones whose best copy improved."""
+    return [result for result in results if result.fixed or result.improved]
+
+
 class SlideFixService:
     """Fix, persist and report the failing slides of one carousel gate."""
 
@@ -158,8 +164,7 @@ class SlideFixService:
             return SlideFixOutcome(status=AUTOFIX_STATUS_NOTHING_TO_FIX)
         selection = self._select(source, command.phase)
         results = await self._run(source, selection)
-        fixed = [result for result in results if result.fixed]
-        if not fixed:
+        if not _kept(results):
             logger.info(LOG_SLIDE_FIX_NOOP, project_id=command.project_id)
             return SlideFixOutcome(
                 status=AUTOFIX_STATUS_NOTHING_TO_FIX,
@@ -206,7 +211,7 @@ class SlideFixService:
     ) -> SlideFixOutcome:
         results, selection = found
         fixed = [result for result in results if result.fixed]
-        updates = fix_patch(cast(Mapping[str, object], source.state), fixed)
+        updates = fix_patch(cast(Mapping[str, object], source.state), _kept(results))
         target = LockedWrite(
             project_id=command.project_id, expected_version=command.expected_version
         )
@@ -225,6 +230,7 @@ class SlideFixService:
             still_failing=[
                 result.slide_index for result in results if not result.fixed
             ],
+            improved=[result.slide_index for result in results if result.improved],
         )
         return SlideFixOutcome(
             status=AUTOFIX_STATUS_FIXED,

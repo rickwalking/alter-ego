@@ -71,7 +71,9 @@ Other fixes from the same run:
 See [`docs/architecture/grokbot-autopilot.md`](../architecture/grokbot-autopilot.md) "Model
 fix, then escalate". In short: deterministic repair, then up to 3 fast-model attempts per
 failing slide (blocking rule or voice score under 70), then up to 2 more on the reasoning model
-(AE-0407), then approve or escalate. Never a revise.
+(AE-0407), then approve or escalate. Never a revise. Each attempt builds on the best copy so
+far, and a slide no attempt fixed is still written with its best copy when that copy breaks
+fewer copy rules (`improved`).
 
 | Setting | Default | Meaning |
 |---|---|---|

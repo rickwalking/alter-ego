@@ -63,6 +63,7 @@ from rag_backend.modules.autopilot.domain.policy import decide
 from tests.unit.application.content_gate_fixtures_ae0392 import (
     GateSeed,
     RealGate,
+    emoji_body_3,
     seed_gate,
 )
 from tests.unit.application.copy_hygiene_fixtures_ae0401 import (
@@ -78,6 +79,7 @@ from tests.unit.application.owner_autofix_fixtures_ae0367 import (
 )
 
 REWRITTEN_2 = "O Argon resume o relatório em três números que eu confiro sempre."
+REWRITTEN_3 = "O Argon resiste a ataques que eu testo toda semana."
 
 
 @dataclass
@@ -139,7 +141,8 @@ class TestVoiceScoreFix:
         assert [r.slide_index for r in outcome.results] == [2]
         assert "voice_score_low" in rewriter.prompts[0]
         assert "G" in rewriter.prompts[0]
-        assert scorer.texts == [REWRITTEN_2]
+        assert len(scorer.texts) == 1
+        assert REWRITTEN_2 in scorer.texts[0]
         state = await engine.get_workflow_state(project_id)
         assert state is not None
         stored = cast(dict[str, dict[str, object]], state["persona_scores"])
@@ -149,6 +152,49 @@ class TestVoiceScoreFix:
         assert slides[1]["presentation_pt"]["body"] == REWRITTEN_2
         snapshot = await RealGate(db=db_session, engine=engine).read_gate(project_id)
         assert decide(snapshot).action is GateAction.APPROVE
+
+    async def test_an_improved_slide_is_written_even_when_not_fixed(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Scenario: A slide no attempt fixed keeps its best attempt
+
+        The rewrite clears the emoji rule but the voice stays under the floor:
+        the slide is still failing, yet its cleaner copy is written.
+        """
+        engine = build_engine(FakeChatModel())
+        seed = GateSeed(breaks=(emoji_body_3,))
+        project_id = await seed_gate(engine, db_session, seed)
+        scores = {f"slide_{n}": {"overall": 80.0} for n in range(1, 8)}
+        scores["slide_3"] = {"overall": 50.0}
+        await engine.update_workflow_state(project_id, {"persona_scores": scores})
+        rewriter = _Rewriter([_answer(body=REWRITTEN_3)])
+        service = SlideFixService(
+            SlideFixDeps(
+                db=db_session,
+                repo=PostgresCarouselRepository(session=db_session),
+                workflow=engine,
+                tools=SlideFixTools(rewriter=rewriter, scorer=_Scorer(60.0)),
+                settings=SlideFixSettings(escalation_attempts=0),
+            )
+        )
+        outcome = await service.fix(
+            SlideFixCommand(
+                project_id=project_id,
+                expected_version=LOCK_VERSION,
+                phase=PHASE_CONTENT,
+            )
+        )
+        assert outcome.status == AUTOFIX_STATUS_FIXED
+        result = next(r for r in outcome.results if r.slide_index == 3)
+        assert not result.fixed
+        assert result.improved
+        assert [issue.code for issue in result.issues] == ["voice_score_low"]
+        state = await engine.get_workflow_state(project_id)
+        assert state is not None
+        slides = cast(list[dict[str, dict[str, object]]], state["localized_slides"])
+        assert slides[2]["presentation_pt"]["body"] == REWRITTEN_3
+        stored = cast(dict[str, dict[str, object]], state["persona_scores"])
+        assert stored["slide_3"]["overall"] == 60.0
 
     async def test_voice_is_ignored_at_the_design_gate(
         self, db_session: AsyncSession

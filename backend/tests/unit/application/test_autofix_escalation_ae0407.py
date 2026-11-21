@@ -2,7 +2,9 @@
 
 Fakes only: the rewriters and the scorer are scripted, no model is built.
 
-Gherkin: tests/features/autofix_escalation_ae0407.feature
+Gherkin: tests/features/autofix_escalation_ae0407.feature and
+tests/features/slide_autofix_keep_best_ae0637.feature (keep the best, the judge
+text, the rewrite timeout).
 """
 
 from __future__ import annotations
@@ -14,6 +16,9 @@ import pytest
 
 from rag_backend.application.services.carousel.owner_autofix_plan import (
     AutofixContext,
+)
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    voice_text,
 )
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
@@ -30,6 +35,11 @@ from rag_backend.application.services.carousel.slide_fix_types import (
     SlideFixSettings,
     SlideFixTools,
     SlideTarget,
+)
+from rag_backend.domain.constants.slide_fix import SLIDE_FIX_TIMEOUT_SECONDS
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    LLM_TIMEOUT_FALLBACK_SECONDS,
+    LLM_TIMEOUT_REASONING_SECONDS,
 )
 from tests.unit.application.copy_hygiene_fixtures_ae0401 import POV, prod_deck, pt
 
@@ -206,21 +216,27 @@ class TestUnscoredJudge:
         result = await _fix(run)
         assert result.fixed
         assert result.score == 50.0
-        assert scorer.texts == [CLEAN_BODY]
+        assert len(scorer.texts) == 1
+        assert CLEAN_BODY in scorer.texts[0]
         patch = fix_patch({"persona_scores": {"slide_4": {"overall": 50.0}}}, [result])
         assert patch["persona_scores"] == {
             "slide_4": {"overall": 50.0, "rescore_pending": True, "unscored_ticks": 1}
         }
 
     async def test_a_low_judged_score_is_still_a_voice_issue(self) -> None:
-        """An unfixed slide keeps the target's score."""
+        """Scenario: A slide no attempt fixed keeps its best attempt
+
+        The rewrite clears the copy rule; only the voice floor is left, so the slide
+        is not fixed but its best copy and that copy's score are kept.
+        """
         run = _Run(
             fast=_Rewriter([CLEAN]), scorer=_Scorer([40.0]), escalation_attempts=0
         )
         result = await _fix(run)
         assert not result.fixed
+        assert result.improved
         assert [i.code for i in result.issues] == ["voice_score_low"]
-        assert result.score is None
+        assert result.score == 40.0
 
     async def test_a_good_judged_score_is_stored(self) -> None:
         result = await _fix(
@@ -235,3 +251,54 @@ class TestUnscoredJudge:
         assert result.score is None
         patch = fix_patch({"persona_scores": {"slide_2": {"overall": 80.0}}}, [result])
         assert patch["persona_scores"] == {"slide_2": {"overall": 80.0}}
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestKeepTheBest:
+    """A worse attempt is not built on; the best copy is what comes back."""
+
+    async def test_a_worse_attempt_is_not_built_on(self) -> None:
+        """Scenario: An attempt that makes the slide worse is dropped"""
+        fast = _Rewriter([CLEAN, EMOJI, EMOJI])
+        run = _Run(fast=fast, scorer=_Scorer([40.0]), escalation_attempts=0)
+        result = await _fix(run)
+        assert _trail(result) == [
+            (1, FAST, "still_failing"),
+            (2, FAST, "still_failing"),
+            (3, FAST, "still_failing"),
+        ]
+        assert result.attempts[1].rules_after == (
+            "visible_emoji_forbidden",
+            "voice_score_low",
+        )
+        assert result.attempts[2].rules_before == ("voice_score_low",)
+        assert EMOJI_BODY not in fast.prompts[2]
+        assert CLEAN_BODY in fast.prompts[2]
+        assert result.improved
+        assert pt([result.record], 1)["body"] == CLEAN_BODY
+
+    async def test_no_better_attempt_keeps_the_stored_slide(self) -> None:
+        """Scenario: A slide no attempt improved keeps its stored copy"""
+        result = await _fix(_Run(fast=_Rewriter([EMOJI]), escalation_attempts=0))
+        assert not result.fixed
+        assert not result.improved
+        assert pt([result.record], 1)["body"] == EMOJI_BODY
+
+    async def test_the_judge_reads_the_whole_slide(self) -> None:
+        """Scenario: The voice judge reads the slide's whole visible copy"""
+        scorer = _Scorer([82.0])
+        result = await _fix(_Run(fast=_Rewriter([CLEAN]), scorer=scorer))
+        heading = str(pt(_deck(), SLIDE)["heading"])
+        assert result.fixed
+        assert scorer.texts == [voice_text(result.record)]
+        assert heading in scorer.texts[0]
+        assert CLEAN_BODY in scorer.texts[0]
+
+
+@pytest.mark.unit
+def test_a_rewrite_outlasts_the_reasoning_model_and_its_fallback() -> None:
+    """Scenario: One rewrite waits longer than the reasoning model and its fallback"""
+    assert SLIDE_FIX_TIMEOUT_SECONDS > (
+        LLM_TIMEOUT_REASONING_SECONDS + LLM_TIMEOUT_FALLBACK_SECONDS
+    )

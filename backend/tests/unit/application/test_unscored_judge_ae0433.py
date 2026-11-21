@@ -230,7 +230,7 @@ class TestRescoreStale:
         assert result.fixed
         assert (result.score, result.unscored_ticks) == (85.0, 0)
         assert "Voice match score 50 is under 70" in rewriter.prompts[0]
-        assert scorer.texts[1] == CLEAN_BODY
+        assert CLEAN_BODY in scorer.texts[1]
         assert pt([result.record], 1)["body"] == CLEAN_BODY
 
     async def test_no_score_again_counts_one_more_tick(self) -> None:
