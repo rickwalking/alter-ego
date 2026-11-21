@@ -137,6 +137,14 @@ MESSAGE_BY_CODE: dict[str, str] = {
     ERR_WEEKLY_CAP: "Two repost drafts were already created in the last 7 days.",
     ERR_UNAVAILABLE: "Instagram could not be reached.",
     ERR_NOT_CONFIGURED: "Instagram is not configured.",
+    ERR_SOURCE_UNAVAILABLE: (
+        "Instagram does not share this Reel's video (usually licensed audio), "
+        "so it cannot be reposted."
+    ),
+    ERR_RENDER_FAILED: "ffmpeg could not render the preview.",
+    ERR_RENDER_UNAVAILABLE: "ffmpeg is not available on the server.",
+    ERR_RENDER_TOO_LARGE: "The rendered video is over 100 MB.",
+    ERR_RENDER_DURATION: "The rendered video does not last 3-90 s.",
 }
 
 FIELD_IDEMPOTENCY = "Idempotency-Key"
@@ -184,6 +192,12 @@ TEXT_METRICS = (
     "Salvos {saved} · Compartilhamentos {shares} · Seguidores {follows}"
 )
 TEXT_HOOK = "Gancho: {hook}"
+TEXT_SOURCE = "Fonte do vídeo: {width}x{height}"
+TEXT_SOURCE_LOW = (
+    "⚠️ Fonte do vídeo: {width}x{height}. O Instagram só entrega esta versão em baixa "
+    "qualidade, então o repost sai borrado."
+)
+SOURCE_LOW_HEIGHT = 720
 TEXT_REASON = "Motivo: {reason}"
 TEXT_WINDOW = "Janela: {earliest} → {latest}"
 TEXT_CAPTION = "Legenda:\n{caption}"
@@ -226,8 +240,8 @@ RENDER_FPS = 30
 RENDER_MAX_BYTES = 100 * 1024 * 1024
 RENDER_MAXRATE = "6M"
 RENDER_BUFSIZE = "12M"
-RENDER_CRF = "23"
-RENDER_PRESET = "veryfast"
+RENDER_CRF = "20"
+RENDER_PRESET = "medium"
 RENDER_AUDIO_BITRATE = "128k"
 RENDER_AUDIO_RATE = "44100"
 RENDER_THREADS = "2"
@@ -286,5 +300,7 @@ LOG_PROCESSING = "processing"
 LOG_PUBLISHED = "published"
 LOG_PUBLISH_FAILED = "publish_failed"
 LOG_TICK_FAILED = "tick_failed"
+
+NO_STORE_HEADERS: dict[str, str] = {"Cache-Control": "no-store"}
 
 __all__ = [name for name in dir() if name.isupper()]

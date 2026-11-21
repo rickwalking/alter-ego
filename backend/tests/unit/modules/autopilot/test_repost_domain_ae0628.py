@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     ERR_ASSET_INVALID,
     ERR_INVALID_FIELD,
     ERR_REEL_NOT_FOUND,
+    ERR_SOURCE_UNAVAILABLE,
     ERR_TOO_RECENT,
     ERR_WEEKLY_CAP,
     MESSAGE_BY_CODE,
@@ -160,6 +161,7 @@ def _facts(**changes: object) -> EligibilityFacts:
 
 # Scenario: A foreign id or a non-Reel is not found
 # Scenario: A Reel younger than 60 days is too recent
+# Scenario: A Reel whose video Instagram withholds is refused
 # Scenario: A Reel with a live repost in 90 days is refused
 # Scenario: The weekly cap
 @pytest.mark.parametrize(
@@ -168,6 +170,7 @@ def _facts(**changes: object) -> EligibilityFacts:
         (_facts(reel=None), ERR_REEL_NOT_FOUND, 404),
         (_facts(reel=reel(product="FEED")), ERR_REEL_NOT_FOUND, 404),
         (_facts(reel=reel(days_old=59)), ERR_TOO_RECENT, 422),
+        (_facts(reel=replace(reel(), video_url=None)), ERR_SOURCE_UNAVAILABLE, 422),
         (_facts(live_repost=True), ERR_ALREADY_REPOSTED, 409),
         (_facts(recent_drafts=2), ERR_WEEKLY_CAP, 422),
     ],

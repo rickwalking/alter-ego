@@ -80,7 +80,7 @@ class FileRepostStudio:
         """Render the preview and write both covers."""
         folder = repost_dir(self._config.root, job.repost.id)
         try:
-            preview = await self._preview(job, folder)
+            preview, size = await self._preview(job, folder)
         except RenderError as exc:
             raise RepostRenderError(exc.code) from None
         finally:
@@ -90,6 +90,7 @@ class FileRepostStudio:
             cover=await self._cover(job.repost, folder),
             original_cover=await self._original(job, folder),
             fits_telegram=fits_telegram(preview),
+            source_size=size,
         )
 
     def public_url(self, repost: Repost, file_name: str) -> str:
@@ -105,9 +106,12 @@ class FileRepostStudio:
         path = repost_dir(self._config.root, repost.id) / file_name
         return path if path.is_file() else None
 
-    async def _preview(self, job: StudioJob, folder: Path) -> Path:
+    async def _preview(
+        self, job: StudioJob, folder: Path
+    ) -> tuple[Path, tuple[int, int] | None]:
         source = folder / FILE_SOURCE
         await self._config.downloader.download(str(job.reel.video_url), source)
+        size = await self._config.renderer.size(str(source))
         output = folder / FILE_PREVIEW
         plan = RenderPlan(
             source=str(source),
@@ -118,7 +122,7 @@ class FileRepostStudio:
         )
         await self._config.renderer.render(plan)
         await self._check_length(output)
-        return output
+        return output, size
 
     def _hook(self, repost: Repost, folder: Path) -> HookOverlay | None:
         if not repost.hook_text:

@@ -56,6 +56,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     LOG_RENDER_FAILED,
     LOG_RENDERED,
     LOG_REPOST,
+    MESSAGE_BY_CODE,
     STATUS_APPROVED,
     STATUS_EXPIRED,
     STATUS_FAILED,
@@ -135,7 +136,10 @@ class RepostTick:
             files = await self._files(repost)
         except RepostRenderError as exc:
             logger.warning(LOG_REPOST, outcome=LOG_RENDER_FAILED, code=exc.code)
-            return await self._fail(repost, _Failure(code=exc.code, now=now))
+            failure = _Failure(
+                code=exc.code, now=now, message=MESSAGE_BY_CODE.get(exc.code)
+            )
+            return await self._fail(repost, failure)
         ready = replace(repost, preview_ready_at=now, updated_at=now)
         if not await self._save(repost, ready):
             return False
@@ -161,6 +165,7 @@ class RepostTick:
             repost=repost,
             metrics=await self._deps.metrics.metrics(repost.media_id),
             preview_link=link,
+            source_size=files.source_size,
         )
         message_id = await self._deps.prompts.deliver(
             PromptDelivery(files=files, notice=notice)

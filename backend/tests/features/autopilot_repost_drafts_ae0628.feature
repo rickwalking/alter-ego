@@ -42,6 +42,11 @@ Feature: Repost drafts and the owner's Telegram decision (AE-0628)
     When the caller makes more than 10 calls in a minute
     Then the answer is 429 with error code "rate_limited"
 
+  Scenario: A Reel whose video Instagram withholds is refused
+    Given Graph returns no media_url for the Reel (usually licensed audio)
+    When the scout posts a draft for it
+    Then the answer is 422 "source_unavailable" and no draft or quota is used
+
   Scenario: A foreign id or a non-Reel is not found
     When the scout posts a draft for a feed post or a foreign media id
     Then the answer is 404 "reel_not_found"

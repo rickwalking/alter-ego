@@ -19,6 +19,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     CALLBACK_ORIGINAL,
     CALLBACK_PREFIX,
     COVER_GROK,
+    SOURCE_LOW_HEIGHT,
     TEXT_CAPTION,
     TEXT_DECIDED_APPROVED,
     TEXT_EXPIRES,
@@ -29,6 +30,8 @@ from rag_backend.modules.autopilot.repost_constants import (
     TEXT_ORIGINAL,
     TEXT_PREVIEW_LINK,
     TEXT_REASON,
+    TEXT_SOURCE,
+    TEXT_SOURCE_LOW,
     TEXT_UNKNOWN,
     TEXT_WINDOW,
 )
@@ -44,6 +47,7 @@ class ApprovalNotice:
     repost: Repost
     metrics: InsightMetrics
     preview_link: str | None = None
+    source_size: tuple[int, int] | None = None
 
 
 def approval_text(notice: ApprovalNotice) -> str:
@@ -64,10 +68,19 @@ def approval_text(notice: ApprovalNotice) -> str:
                 latest=when_label(repost.window.latest),
             )
         )
+    if notice.source_size is not None:
+        parts.append(source_line(notice.source_size))
     if notice.preview_link:
         parts.append(TEXT_PREVIEW_LINK.format(url=notice.preview_link))
     parts += [TEXT_CAPTION.format(caption=repost.caption), TEXT_EXPIRES]
     return "\n\n".join(parts)
+
+
+def source_line(size: tuple[int, int]) -> str:
+    """The source video's size, with a warning below 720p."""
+    width, height = size
+    template = TEXT_SOURCE_LOW if min(size) < SOURCE_LOW_HEIGHT else TEXT_SOURCE
+    return template.format(width=width, height=height)
 
 
 def metrics_line(metrics: InsightMetrics) -> str:
