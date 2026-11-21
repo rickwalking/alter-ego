@@ -116,6 +116,8 @@ class SlideFixResult:
 
     A fixed slide whose copy the judge could not score keeps its
     old ``score`` and counts ``unscored_ticks`` (> 0) for a re-score.
+    ``improved``: not fixed, but ``record`` is the best attempt and breaks fewer
+    copy rules than the stored slide, so it is written too.
     """
 
     slide_index: int
@@ -125,6 +127,7 @@ class SlideFixResult:
     attempts: tuple[FixAttempt, ...]
     score: float | None = None
     unscored_ticks: int = 0
+    improved: bool = False
 
 
 @dataclass(frozen=True)

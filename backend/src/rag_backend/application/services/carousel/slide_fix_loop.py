@@ -5,8 +5,13 @@ the answer is read fence-aware, goes through the deterministic repair (the
 same plan as the owner "Fix issues"), is validated against the whole deck,
 and is voice-scored again only when its text changed. A model error, a
 timeout or an unparseable answer counts as an attempt. The next attempt
-starts from the last usable copy with the checks that copy still fails, so a
-fix that breaks another rule is retried with the new violations.
+starts from the best copy so far (fewest copy rules broken, then fewest checks)
+with the checks that copy still fails, so an attempt that makes the slide worse
+is dropped instead of built on. The voice judge reads the slide's whole visible PT
+copy (``voice_text``), as the content phase scores it.
+
+A slide no attempt fixed still returns its best copy, marked ``improved`` when it
+breaks fewer copy rules than the stored slide, so the fixes it did get are kept.
 
 After ``settings.attempts`` failed attempts on the fast model, up to
 ``settings.escalation_attempts`` more run on the reasoning model (numbered
@@ -33,6 +38,9 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
 )
 from rag_backend.application.services.carousel.owner_autofix_paths import text_at
 from rag_backend.application.services.carousel.owner_autofix_plan import plan_autofix
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    voice_text,
+)
 from rag_backend.application.services.carousel.slide_fix_casing import (
     MarkerClear,
     clear_rewritten_casing_markers,
@@ -104,6 +112,7 @@ class _State:
     attempts: tuple[FixAttempt, ...] = ()
     feedback: tuple[SlideIssue, ...] = ()
     base_ticks: int = 0
+    best: SlideTarget | None = None
 
     @property
     def codes(self) -> tuple[str, ...]:
@@ -148,7 +157,7 @@ async def _rescore(
         return state.target.score, True
     if not _copy_changed(state.target.record, candidate):
         return state.target.score, state.target.unscored_ticks == 0
-    score = await scorer.score(_score_text(candidate))
+    score = await scorer.score(voice_text(candidate))
     return (state.target.score, False) if score is None else (score, True)
 
 
@@ -227,7 +236,19 @@ async def _one_attempt(state: _State, ctx: LoopContext, stage: _Stage) -> _State
     outcome = ATTEMPT_STILL_FAILING if evaluated.issues else ATTEMPT_FIXED
     attempt = _attempt(state, stage.role, (after, outcome))
     attempts = (*state.attempts, attempt)
-    return replace(state, target=evaluated, attempts=attempts, feedback=())
+    best = _better(evaluated, state.best or state.target)
+    return replace(state, target=best, attempts=attempts, feedback=(), best=best)
+
+
+def _rank(target: SlideTarget) -> tuple[int, int]:
+    """Copy rules broken (the voice floor aside), then every check failed."""
+    rules = sum(1 for issue in target.issues if issue.code != ISSUE_VOICE_SCORE_LOW)
+    return rules, len(target.issues)
+
+
+def _better(candidate: SlideTarget, best: SlideTarget) -> SlideTarget:
+    """The candidate when it fails less than the best so far (ties: the newer)."""
+    return candidate if _rank(candidate) <= _rank(best) else best
 
 
 def _stages(ctx: LoopContext) -> tuple[_Stage, ...]:
@@ -248,7 +269,7 @@ async def _judge_stale(target: SlideTarget, ctx: LoopContext) -> float | None:
     if scorer is None:
         return None
     try:
-        return await scorer.score(_score_text(target.record))
+        return await scorer.score(voice_text(target.record))
     except Exception:
         return None
 
@@ -293,13 +314,30 @@ async def fix_slide(target: SlideTarget, ctx: LoopContext) -> SlideFixResult:
         state = await _one_attempt(state, ctx, stage)
         if state.attempts[-1].outcome == ATTEMPT_FIXED:
             return _fixed(state)
+    return _unfixed(rescored, state)
+
+
+def _unfixed(original: SlideTarget, state: _State) -> SlideFixResult:
+    """The best attempt when it breaks fewer copy rules, else the stored slide."""
+    best = state.best
+    if best is None or _rank(best)[0] >= _rank(original)[0]:
+        return SlideFixResult(
+            slide_index=original.slide_index,
+            fixed=False,
+            record=original.record,
+            issues=state.target.issues,
+            attempts=state.attempts,
+            score=original.score,
+        )
     return SlideFixResult(
-        slide_index=target.slide_index,
+        slide_index=original.slide_index,
         fixed=False,
-        record=target.record,
-        issues=state.target.issues,
+        record=best.record,
+        issues=best.issues,
         attempts=state.attempts,
-        score=target.score,
+        score=best.score,
+        unscored_ticks=best.unscored_ticks,
+        improved=True,
     )
 
 

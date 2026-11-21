@@ -597,7 +597,14 @@ fast-role model through the editorial facade `run_slide_fix`, in parallel
 attempt sends the slide's PT/EN copy, every check it still fails, the persona style guide and
 the copy rules (prompt `carousel/v1/slide_fix.yaml`); the strict JSON answer is read
 fence-aware, deterministically repaired, re-validated against the deck and re-scored only when
-its text changed. A model error or an unparseable answer counts as an attempt. Fixed slides are
+its text changed. A model error or an unparseable answer counts as an attempt. Each attempt
+starts from the best copy so far (fewest copy rules broken, then fewest checks), so an attempt
+that makes the slide worse is dropped instead of built on, and the judge reads the slide's whole
+visible PT copy (`voice_text`: heading, body, items, TL;DR), as the content phase scores it. One
+rewrite call may take up to 720 s (`SLIDE_FIX_TIMEOUT_SECONDS`), longer than the reasoning
+role's 360 s plus its fallback's 300 s. A slide no attempt fixed still returns its best copy;
+when that copy breaks fewer copy rules than the stored slide it is marked `improved` and written
+with the fixed ones, so only what is really left goes to the owner. Fixed slides are
 written once, through the reviewer-edit path plus their new voice score, under the project lock
 and the lock-version CAS (a lost CAS writes nothing: next tick). The gate is read again: clean
 is approved; anything left escalates at once with the Telegram detail "slide N: rules. Current
