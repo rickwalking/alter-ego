@@ -557,9 +557,21 @@ class PhaseArtifactRunner:
         updates: dict[str, object],
         resolved: EditorialWorkflowStartInput,
     ) -> dict[str, object]:
-        """A fix revision: only the blocked fields are rewritten, nothing re-drafted."""
+        """A fix revision: only the blocked fields are rewritten, nothing re-drafted.
+
+        The repaired slides are voice-scored again; a slide whose copy kept its
+        fingerprint keeps its score, so only the rewritten slides reach the judge.
+        """
         logger.info(LOG_CONTENT_FIX_REVISION, project_id=str(state.get("project_id")))
         await self._repair_content_gate(state, updates, resolved)
+        drafts = updates.get(STATE_FIELD_SLIDE_DRAFTS) or state.get(
+            STATE_FIELD_SLIDE_DRAFTS
+        )
+        updates.update(
+            await self._score_content_drafts(
+                resolved, drafts, state.get(STATE_FIELD_PERSONA_SCORES)
+            )
+        )
         updates.update(_settle_used_notes(state, updates))
         return updates
 

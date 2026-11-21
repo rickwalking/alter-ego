@@ -125,8 +125,9 @@ calls `content_gate_repair_flow.repair_blocked_content_gate`:
 5. **Fix, not rework.** A content revision whose active notes are all system-written (an
    owner Retry, an autopilot rework) while the gate blocks is a *fix*: no slide is
    re-drafted, only steps 1-4 run on the stored slides (`content_fix_mode.is_fix_revision`,
-   log `content_fix_revision`). A note the owner writes is a *rework* and re-drafts as
-   before.
+   log `content_fix_revision`). The rewritten slides are voice-scored again (a slide whose
+   copy keeps its text fingerprint keeps its score), so the gate never judges the new copy
+   on the old copy's score. A note the owner writes is a *rework* and re-drafts as before.
 
 Code: `content_gate_repair.py` (loop + model adapter), `content_gate_repair_targets.py`
 (fill, targets, patching), `content_gate_repair_flow.py` (runner hook, revision note),

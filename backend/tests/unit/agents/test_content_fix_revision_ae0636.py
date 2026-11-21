@@ -1,6 +1,7 @@
 """A system retry of a blocked content gate fixes fields, it does not re-draft.
 
-Gherkin: tests/features/content_fix_revision_ae0636.feature (section A).
+Gherkin: tests/features/content_fix_revision_ae0636.feature (section A) and
+tests/features/content_fix_rescore_ae0638.feature (the re-score after a fix).
 
 Real engine + real artifact runner (the content feedback harness); the drafting model
 and the field repairer are fakes. The drafts carry one over-long feature body on
@@ -10,6 +11,7 @@ slide 2, so the content gate blocks.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import dataclass, field, replace
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -28,6 +30,10 @@ from rag_backend.application.services.carousel.editorial_workflow_generators imp
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     EditorialWorkflowStartInput,
+)
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    SlideVoiceScoring,
+    score_slide_voices,
 )
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
@@ -49,6 +55,7 @@ from rag_backend.domain.constants.content_feedback import (
     FEEDBACK_STATUS_UNCHANGED,
     STRUCTURED_FEEDBACK_SOURCE_KEY,
 )
+from rag_backend.domain.models.persona import PersonaProfile
 from tests.unit.agents.content_feedback_flow_ae0405 import (
     GENERATE_TARGET,
     Review,
@@ -72,6 +79,9 @@ _LONG_BODY = (
 _SHORT_BODY = "Aplique no proximo ciclo e compare com o anterior."
 _SHORT_BODY_EN = "Apply it next cycle and compare it with the last one."
 _TARGET = "2:pt:features[0].body"
+_SCORE_TARGET = (
+    "rag_backend.application.services.carousel.phase_artifact_runner.score_slide_voices"
+)
 _ANSWERS = {_TARGET: _SHORT_BODY, "2:en:features[0].body": _SHORT_BODY_EN}
 
 
@@ -123,14 +133,16 @@ def drafter(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Drafter]:
     yield spy
 
 
-def _engine(drafter: _Drafter, repairer: _Repairer) -> CarouselWorkflowEngine:
+def _engine(
+    drafter: _Drafter, repairer: _Repairer, persona: PersonaProfile | None = None
+) -> CarouselWorkflowEngine:
     runner = PhaseArtifactRunner(
         PhaseArtifactRunnerConfig(
             outline_agent=MagicMock(),
             content_agent=MagicMock(),
             llm=MagicMock(),
             workflow_input=EditorialWorkflowStartInput(
-                topic="Agentes", audience="devs", brief="b", sources=[]
+                topic="Agentes", audience="devs", brief="b", sources=[], persona=persona
             ),
             slide_draft_retry=drafter.retry,
             gate_repairer=repairer,
@@ -157,8 +169,10 @@ def _history(state: CarouselWorkflowState) -> list[tuple[str, str]]:
     return [(entry["note"], entry["status"]) for entry in entries]
 
 
-async def _parked(drafter: _Drafter, repairer: _Repairer) -> CarouselWorkflowEngine:
-    engine = _engine(drafter, repairer)
+async def _parked(
+    drafter: _Drafter, repairer: _Repairer, persona: PersonaProfile | None = None
+) -> CarouselWorkflowEngine:
+    engine = _engine(drafter, repairer, persona)
     await park_at_content(engine)
     parked = await state_of(engine)
     assert parked["content_gate_validation"]["blocking"] is True
@@ -217,3 +231,48 @@ class TestFixNotRework:
 
         assert len(drafter.calls) == drafts_before + 1
         assert drafter.calls[-1][0] == OWNER_NOTE
+
+
+@dataclass
+class _Judge:
+    """Scores every judged text ``overall``; records the texts."""
+
+    overall: float
+    calls: list[str] = field(default_factory=list)
+
+    async def evaluate_match(self, content: str) -> dict[str, object]:
+        self.calls.append(content)
+        return {"overall": self.overall, "suggestions": []}
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestFixRescores:
+    async def test_a_fixed_slide_is_scored_again(
+        self, drafter: _Drafter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: A fix re-scores only the slides it rewrote"""
+        judge = _Judge(66.0)
+
+        async def scored(scoring: SlideVoiceScoring) -> dict[str, object]:
+            return await score_slide_voices(
+                replace(scoring, judge=judge, fallback=None)
+            )
+
+        monkeypatch.setattr(_SCORE_TARGET, scored)
+        repairer = _Repairer()
+        engine = await _parked(drafter, repairer, PersonaProfile(name="Pedro"))
+        before = await state_of(engine)
+        assert before["persona_scores"]["slide_2"]["overall"] == 66.0
+        judge.calls.clear()
+        judge.overall = 81.0
+        repairer.enabled = True
+
+        await review(engine, _system_retry())
+
+        state = await state_of(engine)
+        assert len(judge.calls) == 1
+        assert _SHORT_BODY in judge.calls[0]
+        scores = state["persona_scores"]
+        assert scores["slide_2"]["overall"] == 81.0
+        assert scores["slide_1"] == before["persona_scores"]["slide_1"]
