@@ -1,6 +1,7 @@
 """Unit tests for the autonomous carousel drift reconciler.
 
-Gherkin: tests/features/carousel_deterministic_repair.feature
+Gherkin: tests/features/carousel_deterministic_repair.feature and
+tests/features/drift_clears_content_gate_ae0639.feature
 """
 
 from __future__ import annotations
@@ -145,6 +146,39 @@ class TestDriftReconciler:
             events = {log["event"] for log in logs}
             assert LOG_EVENT_DRIFT_DETECTED in events
             assert LOG_EVENT_DRIFT_CONVERGED in events
+
+    async def test_a_stale_content_gate_alone_is_converged_and_cleared(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Scenario: A stale blocking content gate is converged and cleared"""
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            await _add(db, body=_CLEAN_BODY)
+            stale = _blocking_state()["presentation_validation"]
+            gateway = _FakeGateway({
+                "presentation_validation": {"blocking": False},
+                "content_gate_validation": stale,
+            })
+            converged = await CarouselDriftReconcilerRepository(gateway).reconcile(db)
+            assert converged == 1
+            assert gateway.writes[0]["content_gate_validation"] == {}
+
+    async def test_a_convergence_clears_the_content_gate(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Scenario: A convergence clears the content gate with the presentation report"""
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            await _add(db, body=_CLEAN_BODY)
+            state = _blocking_state()
+            state["content_gate_validation"] = state["presentation_validation"]
+            gateway = _FakeGateway(state)
+            converged = await CarouselDriftReconcilerRepository(gateway).reconcile(db)
+            assert converged == 1
+            written = gateway.writes[0]
+            assert written["content_gate_validation"] == {}
+            report = written["presentation_validation"]
+            assert isinstance(report, dict) and report["blocking"] is False
 
     async def test_genuine_blocking_projection_is_not_converged(
         self, test_engine: AsyncEngine

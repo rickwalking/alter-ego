@@ -1,7 +1,8 @@
 """Which content revisions fix the blocked fields instead of re-drafting.
 
 Gherkin: tests/features/content_fix_revision_ae0636.feature (section A outline,
-the first-draft scenario) and section B (the repair loop limits).
+the first-draft scenario) and section B (the repair loop limits);
+tests/features/drift_clears_content_gate_ae0639.feature (a retry of a clean gate).
 """
 
 from __future__ import annotations
@@ -37,7 +38,15 @@ _BLOCKING_GATE = {
         {"code": "body_too_long", "slide_index": 2, "severity": "blocker"},
     ],
 }
-_SOURCES = {"autopilot": _SYSTEM, "human": _OWNER}
+_NAMED = "Slide 6 (pt body): body_too_long"
+_PERSONA = "The content gate failed the autopilot check. Reason: persona_score_below_threshold."
+_SOURCES = {"autopilot": _SYSTEM, "human": _OWNER, "named": _NAMED, "persona": _PERSONA}
+_SOURCE_TAG = {
+    "autopilot": "autopilot",
+    "human": "human",
+    "named": "autopilot",
+    "persona": "autopilot",
+}
 
 
 def _state(
@@ -47,7 +56,7 @@ def _state(
         _SOURCES.get(source, f"legacy note {n}") for n, source in enumerate(sources)
     ]
     tagged = [
-        {"note": _SOURCES[source], "source": source, "added_at": ""}
+        {"note": _SOURCES[source], "source": _SOURCE_TAG[source], "added_at": ""}
         for source in sources
         if source in _SOURCES
     ]
@@ -69,7 +78,11 @@ class TestIsFixRevision:
             (["autopilot", "human"], True, False),
             (["human"], True, False),
             (["untagged"], True, False),
-            (["autopilot"], False, False),
+            (["autopilot"], False, True),
+            (["named"], False, False),
+            (["named"], True, True),
+            (["persona"], False, False),
+            (["persona"], True, True),
             ([], True, False),
         ],
     )
@@ -90,7 +103,7 @@ class TestIsFixRevision:
 
     def test_a_warning_only_gate_is_not_a_fix(self) -> None:
         """Scenario Outline: Only a blocked gate with system notes is a fix"""
-        state = _state(["autopilot"])
+        state = _state(["persona"])
         state["content_gate_validation"] = {
             "blocking": True,
             "violations": [{"slide_index": 2, "severity": "warning"}],
@@ -132,3 +145,34 @@ class TestRepairLoopLimits:
         assert GATE_REPAIR_TIMEOUT_SECONDS > (
             LLM_TIMEOUT_FAST_SECONDS + LLM_TIMEOUT_FALLBACK_SECONDS
         )
+
+
+@pytest.mark.unit
+class TestCleanGateRetry:
+    def test_system_retry_of_a_passing_gate_is_a_fix(self) -> None:
+        """Scenario: A system retry of a gate that passes re-drafts nothing"""
+        assert is_fix_revision(_state(["autopilot"], blocking=False)) is True
+
+    def test_named_system_note_keeps_the_rework(self) -> None:
+        """Scenario: A system note that names a slide keeps its scoped rework"""
+        assert is_fix_revision(_state(["named"], blocking=False)) is False
+
+
+def test_the_owner_retry_note_starts_with_the_prefix() -> None:
+    """Scenario: A system retry of a gate that passes re-drafts nothing"""
+    from rag_backend.agents.prompts.registry import render_prompt
+    from rag_backend.domain.constants.content_feedback import OWNER_RETRY_NOTE_PREFIX
+
+    text, _ = render_prompt(
+        "owner_retry",
+        "retry_feedback",
+        {"phase": "content", "reason": "gate_blocked", "detail": ""},
+        version="v1",
+    )
+    assert text.strip().startswith(OWNER_RETRY_NOTE_PREFIX)
+
+
+@pytest.mark.unit
+def test_autopilot_persona_revise_of_a_passing_gate_is_a_rework() -> None:
+    """Scenario: An autopilot persona revise of a passing gate keeps its rework"""
+    assert is_fix_revision(_state(["persona"], blocking=False)) is False

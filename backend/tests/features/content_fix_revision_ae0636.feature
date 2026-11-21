@@ -43,7 +43,8 @@ Feature: A system retry of a blocked content gate fixes fields, it does not re-d
       | autopilot,human   | true     | false |
       | human             | true     | false |
       | untagged          | true     | false |
-      | autopilot         | false    | false |
+      | autopilot         | false    | true  |
+      | autopilot persona | false    | false |
       | none              | true     | false |
 
   Scenario: A first draft is never a fix

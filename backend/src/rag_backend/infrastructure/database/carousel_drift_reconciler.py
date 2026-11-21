@@ -15,6 +15,11 @@ checkpoint is untouched by the reaper) is safe and epoch-fenced.
 
 ``_Recomputed`` is the repaired slides, the fresh report dict, and whether the
 projection still blocks after the (idempotent) re-repair.
+
+The fail-closed ``content_gate_validation`` counts as a blocking report too, and a
+convergence clears it (``{}``), as an owner edit does: prod carousel 4223b53a kept
+a stale blocking gate after its presentation report converged, and the autopilot
+escalated on a violation the slides no longer had.
 """
 
 from __future__ import annotations
@@ -53,6 +58,8 @@ from rag_backend.infrastructure.database.pg_lock_timeout import (
 logger = structlog.get_logger()
 
 _CHECKPOINT_VALIDATION_KEY = "presentation_validation"
+_CHECKPOINT_CONTENT_GATE_KEY = "content_gate_validation"
+_BLOCKING_REPORT_KEYS = (_CHECKPOINT_VALIDATION_KEY, _CHECKPOINT_CONTENT_GATE_KEY)
 _CHECKPOINT_LOCALIZED_KEY = "localized_slides"
 _CHECKPOINT_POLICY_KEY = "presentation_policy_version"
 _CHECKPOINT_PHASE_KEY = "current_phase"
@@ -248,10 +255,13 @@ def _parked_checkpoint_phase(state: dict[str, object] | None) -> str | None:
 
 
 def _checkpoint_blocks(state: dict[str, object] | None) -> bool:
-    """True when the checkpoint holds a blocking presentation report."""
+    """True when the presentation or the content-gate report blocks."""
     if not isinstance(state, dict):
         return False
-    report = state.get(_CHECKPOINT_VALIDATION_KEY)
+    return any(_blocks(state.get(key)) for key in _BLOCKING_REPORT_KEYS)
+
+
+def _blocks(report: object) -> bool:
     return isinstance(report, dict) and report.get(_REPORT_BLOCKING_KEY) is True
 
 
@@ -263,6 +273,7 @@ def _convergence_values(
     values: dict[str, object] = {
         _CHECKPOINT_LOCALIZED_KEY: repaired_slides,
         _CHECKPOINT_VALIDATION_KEY: report,
+        _CHECKPOINT_CONTENT_GATE_KEY: {},
     }
     if policy_version:
         values[_CHECKPOINT_POLICY_KEY] = policy_version
