@@ -95,11 +95,18 @@ same key with the same body returns the original 202. The same key with a differ
 | `collaborators` | at most 3 usernames (the Graph limit), without `@`. Defaults to the original Reel's |
 | `reason` | 10–600 characters |
 | `publish_window` | both bounds carry a timezone; `latest` is after `earliest` and in the future |
+| `override_weekly_cap` | boolean, default `false`. See the weekly cap below |
 
 The other refusals are listed in the spec's error table. Three codes are added: 503 `instagram_not_configured`, 503
 `instagram_unavailable`, and 422 `source_unavailable` for a Reel whose video Graph withholds (no `media_url`, usually
 licensed audio): such a Reel cannot be reposted, and it shows `video_url: null` in `GET /reels`, so skip it there.
 Failed drafts do not count toward the weekly cap.
+
+**Weekly cap.** At most two drafts a week count by default (pending, approved, processing, published, rejected or
+expired, created in the last 7 days). When Pedro explicitly asks for an extra repost, the scout sends
+`override_weekly_cap: true` and the cap is skipped for that draft. Every other rule still applies, and the draft still
+waits for Pedro's approval on Telegram. The `created` log line records `cap_override`. The flag is part of the request
+hash only when it is `true`, so the hash of a body without it is unchanged.
 
 The 202 body matches the spec. `preview_url` points to `/r/{id}/preview.mp4`, which answers 404 until the preview is
 rendered. Every `/r/` answer, 200 or 404, carries `Cache-Control: no-store`, so a CDN never keeps an early 404.

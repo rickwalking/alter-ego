@@ -99,7 +99,12 @@ class RepostDraftService:
         await self._check(draft, known, now)
         repost = _pending(draft, known, now)
         await self._store(repost)
-        logger.info(LOG_REPOST, outcome=LOG_CREATED, repost_id=str(repost.id))
+        logger.info(
+            LOG_REPOST,
+            outcome=LOG_CREATED,
+            repost_id=str(repost.id),
+            cap_override=draft.override_weekly_cap,
+        )
         return repost
 
     async def get(self, repost_id: UUID) -> Repost:

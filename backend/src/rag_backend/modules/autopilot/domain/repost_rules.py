@@ -110,7 +110,7 @@ def check_eligibility(draft: RepostDraft, facts: EligibilityFacts) -> None:
         raise _refuse(ERR_SOURCE_UNAVAILABLE, HTTP_UNPROCESSABLE)
     if facts.live_repost:
         raise _refuse(ERR_ALREADY_REPOSTED, HTTP_CONFLICT)
-    if facts.recent_drafts >= WEEKLY_CAP:
+    if facts.recent_drafts >= WEEKLY_CAP and not draft.override_weekly_cap:
         raise _refuse(ERR_WEEKLY_CAP, HTTP_UNPROCESSABLE)
     if draft.cover_asset_id is not None and not cover_usable(facts.cover, facts.now):
         raise _refuse(ERR_ASSET_INVALID, HTTP_UNPROCESSABLE)
