@@ -44,6 +44,7 @@ class RepostCreate(_Strict):
     reason: str = Field(max_length=2000)
     score: float | None = Field(default=None, allow_inf_nan=False)
     publish_window: WindowBody | None = None
+    override_weekly_cap: bool = False
 
 
 class RepostAccepted(BaseModel):

@@ -87,6 +87,7 @@ class RepostDraft:
     score: float | None
     window: PublishWindow | None
     idempotency_key: str
+    override_weekly_cap: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -173,6 +174,8 @@ def request_hash(draft: RepostDraft) -> str:
         "trim_end_s": draft.trim_end_s,
         "trim_start_s": draft.trim_start_s,
     }
+    if draft.override_weekly_cap:
+        body["override_weekly_cap"] = True
     raw = json.dumps(body, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode(ENCODING_UTF8)).hexdigest()
 
