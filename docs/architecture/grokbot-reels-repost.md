@@ -96,6 +96,7 @@ same key with the same body returns the original 202. The same key with a differ
 | `reason` | 10–600 characters |
 | `publish_window` | both bounds carry a timezone; `latest` is after `earliest` and in the future |
 | `override_weekly_cap` | boolean, default `false`. See the weekly cap below |
+| `source_asset_id` | a UUID from `POST /api/autopilot/assets/video`. See the source video below |
 
 The other refusals are listed in the spec's error table. Three codes are added: 503 `instagram_not_configured`, 503
 `instagram_unavailable`, and 422 `source_unavailable` for a Reel whose video Graph withholds (no `media_url`, usually
@@ -107,6 +108,22 @@ expired, created in the last 7 days). When Pedro explicitly asks for an extra re
 `override_weekly_cap: true` and the cap is skipped for that draft. Every other rule still applies, and the draft still
 waits for Pedro's approval on Telegram. The `created` log line records `cap_override`. The flag is part of the request
 hash only when it is `true`, so the hash of a body without it is unchanged.
+
+**Source video.** Graph only shares a low-quality copy of an old Reel (often 360p). When Pedro has the original take,
+the scout uploads it first and names it in the draft:
+
+1. `POST /api/autopilot/assets/video` (API key, multipart, one `file` part, at most 200 MB). The file must be an H.264
+   portrait video (height greater than width, at least 720 px wide) of 3–180 s. The answer is 201
+   `{"asset_id", "kind": "video", "width", "height", "duration_s", "size_bytes"}`. Refusals are `{"detail": "<code>"}`:
+   400 `source_file_missing`, 413 `source_too_large`, 422 `source_not_video`, `source_codec_unsupported`,
+   `source_not_portrait` or `source_duration_invalid`. nginx allows a 210 MB body on this route only.
+2. `POST /api/autopilot/repost` with `source_asset_id`. The upload must exist, be under 24 h old and unused by any other
+   draft, else 422 `source_asset_invalid`. The final-length check uses the upload's duration, and a Reel whose Graph
+   video is withheld can be reposted this way. The trim and hook apply to the upload. `source_asset_id` is part of
+   the request hash.
+
+The worker renders the preview from the upload instead of the Graph video, then deletes the upload. A draft whose
+upload is gone fails with `source_unavailable`. Uploads no draft used within 24 h are deleted on the next upload.
 
 The 202 body matches the spec. `preview_url` points to `/r/{id}/preview.mp4`, which answers 404 until the preview is
 rendered. Every `/r/` answer, 200 or 404, carries `Cache-Control: no-store`, so a CDN never keeps an early 404.

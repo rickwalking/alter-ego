@@ -113,6 +113,7 @@ ERR_RENDER_UNAVAILABLE = "render_unavailable"
 ERR_RENDER_TOO_LARGE = "render_too_large"
 ERR_RENDER_DURATION = "render_duration_invalid"
 ERR_SOURCE_UNAVAILABLE = "source_unavailable"
+ERR_SOURCE_ASSET_INVALID = "source_asset_invalid"
 ERR_CONTAINER_TIMEOUT = "container_timeout"
 ERR_CONTAINER_ERROR = "container_error"
 ERR_PUBLISH_FAILED = "publish_failed"
@@ -140,6 +141,9 @@ MESSAGE_BY_CODE: dict[str, str] = {
     ERR_SOURCE_UNAVAILABLE: (
         "Instagram does not share this Reel's video (usually licensed audio), "
         "so it cannot be reposted."
+    ),
+    ERR_SOURCE_ASSET_INVALID: (
+        "The source video asset is missing, expired or used by another draft."
     ),
     ERR_RENDER_FAILED: "ffmpeg could not render the preview.",
     ERR_RENDER_UNAVAILABLE: "ffmpeg is not available on the server.",

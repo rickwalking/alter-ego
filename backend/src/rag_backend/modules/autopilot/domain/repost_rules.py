@@ -21,6 +21,10 @@ from rag_backend.modules.autopilot.domain.repost import (
     RepostProblem,
     invalid,
 )
+from rag_backend.modules.autopilot.domain.repost_source import (
+    RepostSource,
+    source_usable,
+)
 from rag_backend.modules.autopilot.ig_media_constants import PRODUCT_REELS
 from rag_backend.modules.autopilot.repost_constants import (
     CAPTION_MAX,
@@ -28,6 +32,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     ERR_ALREADY_REPOSTED,
     ERR_ASSET_INVALID,
     ERR_REEL_NOT_FOUND,
+    ERR_SOURCE_ASSET_INVALID,
     ERR_SOURCE_UNAVAILABLE,
     ERR_TOO_RECENT,
     ERR_WEEKLY_CAP,
@@ -75,6 +80,7 @@ class EligibilityFacts:
     live_repost: bool
     recent_drafts: int
     cover: CoverAsset | None
+    source: RepostSource | None = None
 
 
 def check_fields(draft: RepostDraft, now: datetime) -> None:
@@ -106,8 +112,7 @@ def check_eligibility(draft: RepostDraft, facts: EligibilityFacts) -> None:
         raise _refuse(ERR_REEL_NOT_FOUND, HTTP_NOT_FOUND)
     if age_days(reel.posted_at, facts.now) < MIN_AGE_DAYS:
         raise _refuse(ERR_TOO_RECENT, HTTP_UNPROCESSABLE)
-    if not reel.video_url:
-        raise _refuse(ERR_SOURCE_UNAVAILABLE, HTTP_UNPROCESSABLE)
+    _check_source(draft, reel, facts)
     if facts.live_repost:
         raise _refuse(ERR_ALREADY_REPOSTED, HTTP_CONFLICT)
     if facts.recent_drafts >= WEEKLY_CAP and not draft.override_weekly_cap:
@@ -115,6 +120,16 @@ def check_eligibility(draft: RepostDraft, facts: EligibilityFacts) -> None:
     if draft.cover_asset_id is not None and not cover_usable(facts.cover, facts.now):
         raise _refuse(ERR_ASSET_INVALID, HTTP_UNPROCESSABLE)
     check_final_length(draft, facts.duration_s)
+
+
+def _check_source(draft: RepostDraft, reel: ReelMedia, facts: EligibilityFacts) -> None:
+    """An uploaded source must be fresh and unused; else Graph must share the video."""
+    if draft.source_asset_id is not None:
+        if not source_usable(facts.source, facts.now):
+            raise _refuse(ERR_SOURCE_ASSET_INVALID, HTTP_UNPROCESSABLE)
+        return
+    if not reel.video_url:
+        raise _refuse(ERR_SOURCE_UNAVAILABLE, HTTP_UNPROCESSABLE)
 
 
 def cover_usable(cover: CoverAsset | None, now: datetime) -> bool:

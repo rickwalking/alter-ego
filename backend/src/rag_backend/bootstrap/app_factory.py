@@ -106,6 +106,9 @@ from rag_backend.modules.autopilot.api.repost import router as repost_router
 from rag_backend.modules.autopilot.api.repost_files import (
     router as repost_files_router,
 )
+from rag_backend.modules.autopilot.api.repost_source import (
+    router as repost_source_router,
+)
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
@@ -305,6 +308,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(ig_insights_router, prefix="/api")
     app.include_router(reels_router, prefix="/api")
     app.include_router(repost_router, prefix="/api")
+    app.include_router(repost_source_router, prefix="/api")
     app.include_router(repost_files_router)
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(queue_board_router, prefix="/api")

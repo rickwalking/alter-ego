@@ -1,8 +1,9 @@
 """Turn a repost draft into files: preview.mp4, cover.jpg, original_cover.jpg.
 
-The source video is downloaded fresh (its CDN URL expires), rendered once and
-deleted. The preview is the exact file Graph will fetch, so the owner
-approves what gets published.
+The source video is the owner's upload when the draft has one, else it is
+downloaded fresh (its CDN URL expires). It is rendered once and deleted. The
+preview is the exact file Graph will fetch, so the owner approves what gets
+published.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from rag_backend.modules.autopilot.infrastructure.repost_video import (
 )
 from rag_backend.modules.autopilot.repost_constants import (
     ERR_RENDER_DURATION,
+    ERR_SOURCE_UNAVAILABLE,
     FILE_COVER,
     FILE_ORIGINAL_COVER,
     FILE_PREVIEW,
@@ -48,6 +50,14 @@ from rag_backend.modules.autopilot.repost_constants import (
 
 _DURATION_SLACK_SECONDS = 0.5
 _ORIGINAL_DOWNLOAD = "original_cover.src"
+
+
+class SourceFiles(Protocol):
+    """Where a draft's uploaded source video is stored."""
+
+    async def for_repost(self, repost_id: UUID) -> Path | None:
+        """The upload's path when the draft has one (it may be gone)."""
+        ...
 
 
 class CoverFiles(Protocol):
@@ -68,6 +78,7 @@ class StudioConfig:
     renderer: FfmpegRenderer
     covers: CoverFiles
     font_file: str = HOOK_FONT_FILE
+    sources: SourceFiles | None = None
 
 
 class FileRepostStudio:
@@ -79,12 +90,16 @@ class FileRepostStudio:
     async def prepare(self, job: StudioJob) -> RenderedFiles:
         """Render the preview and write both covers."""
         folder = repost_dir(self._config.root, job.repost.id)
+        upload = await self._upload(job.repost)
         try:
-            preview, size = await self._preview(job, folder)
+            source = await self._source(job, folder, upload)
+            preview, size = await self._preview(job, folder, source)
         except RenderError as exc:
             raise RepostRenderError(exc.code) from None
         finally:
             (folder / FILE_SOURCE).unlink(missing_ok=True)
+            if upload is not None:
+                upload.unlink(missing_ok=True)
         return RenderedFiles(
             preview=preview,
             cover=await self._cover(job.repost, folder),
@@ -106,11 +121,25 @@ class FileRepostStudio:
         path = repost_dir(self._config.root, repost.id) / file_name
         return path if path.is_file() else None
 
-    async def _preview(
-        self, job: StudioJob, folder: Path
-    ) -> tuple[Path, tuple[int, int] | None]:
+    async def _upload(self, repost: Repost) -> Path | None:
+        sources = self._config.sources
+        return None if sources is None else await sources.for_repost(repost.id)
+
+    async def _source(self, job: StudioJob, folder: Path, upload: Path | None) -> Path:
+        """The owner's upload when the draft has one, else the Graph video."""
+        if upload is not None:
+            if not upload.is_file():
+                raise RenderError(ERR_SOURCE_UNAVAILABLE)
+            return upload
+        if not job.reel.video_url:
+            raise RenderError(ERR_SOURCE_UNAVAILABLE)
         source = folder / FILE_SOURCE
-        await self._config.downloader.download(str(job.reel.video_url), source)
+        await self._config.downloader.download(job.reel.video_url, source)
+        return source
+
+    async def _preview(
+        self, job: StudioJob, folder: Path, source: Path
+    ) -> tuple[Path, tuple[int, int] | None]:
         size = await self._config.renderer.size(str(source))
         output = folder / FILE_PREVIEW
         plan = RenderPlan(

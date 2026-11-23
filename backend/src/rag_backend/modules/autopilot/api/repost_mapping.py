@@ -81,6 +81,7 @@ def draft_from(body: RepostCreate, key: str) -> RepostDraft:
         else PublishWindow(earliest=window.earliest, latest=window.latest),
         idempotency_key=key,
         override_weekly_cap=body.override_weekly_cap,
+        source_asset_id=body.source_asset_id,
     )
 
 

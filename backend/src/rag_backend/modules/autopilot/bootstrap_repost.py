@@ -14,6 +14,10 @@ from rag_backend.modules.autopilot.application.repost_drafts import (
     RepostDeps,
     RepostDraftService,
 )
+from rag_backend.modules.autopilot.application.repost_source_upload import (
+    RepostSourceUploads,
+    SourceUploadDeps,
+)
 from rag_backend.modules.autopilot.application.repost_tick import (
     RepostTick,
     RepostTickDeps,
@@ -46,6 +50,14 @@ from rag_backend.modules.autopilot.infrastructure.repost_notifier import (
     PreviewMessage,
     TelegramRepostMessenger,
 )
+from rag_backend.modules.autopilot.infrastructure.repost_source_files import (
+    FfprobeVideoProbe,
+    FileSourceFolder,
+    source_path,
+)
+from rag_backend.modules.autopilot.infrastructure.repost_source_store import (
+    SqlRepostSourceStore,
+)
 from rag_backend.modules.autopilot.infrastructure.repost_store import SqlRepostStore
 from rag_backend.modules.autopilot.infrastructure.repost_studio import (
     FileRepostStudio,
@@ -73,6 +85,19 @@ class SqlCoverFiles:
             return None
         found = await self._images.image_file(cover.creator_asset_id)
         return None if found is None else Path(found)
+
+
+class SqlSourceFiles:
+    """``SourceFiles`` over the source rows and the sources folder."""
+
+    def __init__(self, session: AsyncSession, root: Path) -> None:
+        self._sources = SqlRepostSourceStore(session)
+        self._root = root
+
+    async def for_repost(self, repost_id: UUID) -> Path | None:
+        """The upload's path when the draft has one."""
+        source = await self._sources.for_repost(repost_id)
+        return None if source is None else source_path(self._root, source)
 
 
 class SnapshotMetrics:
@@ -127,6 +152,21 @@ def repost_draft_service(
             reels=build_reel_gateway(settings, client),
             probe=FfprobeReelProbe(),
             clock=SystemClock(),
+            sources=SqlRepostSourceStore(session),
+        )
+    )
+
+
+def repost_source_uploads(
+    session: AsyncSession, settings: Settings
+) -> RepostSourceUploads:
+    """The source video upload for one request."""
+    return RepostSourceUploads(
+        SourceUploadDeps(
+            store=SqlRepostSourceStore(session),
+            prober=FfprobeVideoProbe(),
+            folder=FileSourceFolder(repost_files_root(settings)),
+            clock=SystemClock(),
         )
     )
 
@@ -163,6 +203,7 @@ def _studio(
             downloader=HttpDownloader(client),
             renderer=FfmpegRenderer(),
             covers=SqlCoverFiles(session),
+            sources=SqlSourceFiles(session, repost_files_root(settings)),
         )
     )
 
@@ -190,8 +231,10 @@ def _clock() -> Clock:
 __all__ = [
     "SnapshotMetrics",
     "SqlCoverFiles",
+    "SqlSourceFiles",
     "TelegramPrompts",
     "repost_draft_service",
     "repost_files_root",
+    "repost_source_uploads",
     "repost_tick",
 ]
