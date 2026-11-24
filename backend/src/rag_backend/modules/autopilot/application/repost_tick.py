@@ -153,7 +153,7 @@ class RepostTick:
             reel = None if reels is None else await reels.reel(repost.media_id)
         except InstagramCallError:
             raise RepostRenderError(ERR_SOURCE_UNAVAILABLE) from None
-        if reel is None or not reel.video_url:
+        if reel is None:
             raise RepostRenderError(ERR_SOURCE_UNAVAILABLE)
         return await self._deps.studio.prepare(StudioJob(repost=repost, reel=reel))
 

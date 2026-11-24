@@ -88,6 +88,7 @@ class RepostDraft:
     window: PublishWindow | None
     idempotency_key: str
     override_weekly_cap: bool = False
+    source_asset_id: UUID | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -176,6 +177,8 @@ def request_hash(draft: RepostDraft) -> str:
     }
     if draft.override_weekly_cap:
         body["override_weekly_cap"] = True
+    if draft.source_asset_id is not None:
+        body["source_asset_id"] = str(draft.source_asset_id)
     raw = json.dumps(body, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode(ENCODING_UTF8)).hexdigest()
 

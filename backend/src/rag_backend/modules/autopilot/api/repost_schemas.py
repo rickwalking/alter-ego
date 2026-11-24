@@ -45,6 +45,7 @@ class RepostCreate(_Strict):
     score: float | None = Field(default=None, allow_inf_nan=False)
     publish_window: WindowBody | None = None
     override_weekly_cap: bool = False
+    source_asset_id: UUID | None = None
 
 
 class RepostAccepted(BaseModel):
@@ -156,6 +157,17 @@ class ReelsView(BaseModel):
     generated_at: datetime
 
 
+class SourceVideoResponse(BaseModel):
+    """The stored upload."""
+
+    asset_id: str
+    kind: str
+    width: int
+    height: int
+    duration_s: float
+    size_bytes: int
+
+
 __all__ = [
     "CoverRef",
     "LastRepostView",
@@ -168,5 +180,6 @@ __all__ = [
     "RepostCreate",
     "RepostListView",
     "RepostView",
+    "SourceVideoResponse",
     "WindowBody",
 ]

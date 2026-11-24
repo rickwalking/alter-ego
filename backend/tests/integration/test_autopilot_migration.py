@@ -7,7 +7,7 @@ rejects); CI's migration gate runs that chain.
 
 Revision chain: the insights revision (per-post Instagram insights snapshots) sits on
 top of the POV thesis one, then the image bridge, the audience-hours cache and the
-pov_news quotes revisions; the GrokBot cover revision is the head.
+pov_news quotes revisions; the repost sources revision is the head.
 
 ``ALEMBIC_HEAD`` is the current single alembic head: a new migration bumps only that
 constant, while the per-revision tests keep asserting their own parent chain.
@@ -34,7 +34,8 @@ _IG_MEDIA_PARENT = "e7a91c4d2f60"
 _BOOSTS_REVISION = "a8b9c0d1e2f3"
 _FLAG_REVISION = "b9c0d1e2f3a4"
 _TOKEN_VERSION_REVISION = "c0d1e2f3a4b5"
-ALEMBIC_HEAD = "c3d4e5f6a7b9"
+ALEMBIC_HEAD = "d4e5f6a7b8c0"
+_REPOSTS_REVISION = "c3d4e5f6a7b9"
 _BASELINES_REVISION = "b2c3d4e5f6a8"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
@@ -100,7 +101,10 @@ def test_autopilot_revision_is_the_only_head() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     assert list(script.get_heads()) == [ALEMBIC_HEAD]
-    reposts = script.get_revision(ALEMBIC_HEAD)
+    sources = script.get_revision(ALEMBIC_HEAD)
+    assert sources is not None
+    assert sources.down_revision == _REPOSTS_REVISION
+    reposts = script.get_revision(_REPOSTS_REVISION)
     assert reposts is not None
     assert reposts.down_revision == _BASELINES_REVISION
     baselines = script.get_revision(_BASELINES_REVISION)

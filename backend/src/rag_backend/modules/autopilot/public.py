@@ -198,6 +198,9 @@ def register_persistence_models() -> tuple[str, ...]:
         ReelFactsModel,
         RepostModel,
     )
+    from rag_backend.modules.autopilot.infrastructure.repost_source_models import (
+        RepostSourceModel,
+    )
 
     return (
         AutopilotRunModel.__tablename__,
@@ -216,4 +219,5 @@ def register_persistence_models() -> tuple[str, ...]:
         AutopilotCoverAssetModel.__tablename__,
         RepostModel.__tablename__,
         ReelFactsModel.__tablename__,
+        RepostSourceModel.__tablename__,
     )

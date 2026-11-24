@@ -115,7 +115,11 @@ async def test_replay_of_a_stored_plain_draft_returns_it() -> None:
 
 # Scenario: The request body accepts the override flag
 def test_body_maps_the_override_and_defaults_to_false() -> None:
-    body = {"media_id": MEDIA, "caption": "Nova legenda", "reason": "Views 3x a mediana"}
+    body = {
+        "media_id": MEDIA,
+        "caption": "Nova legenda",
+        "reason": "Views 3x a mediana",
+    }
     plain = RepostCreate.model_validate(body)
     flagged = RepostCreate.model_validate({**body, "override_weekly_cap": True})
     assert draft_from(plain, "scout-key-0001").override_weekly_cap is False

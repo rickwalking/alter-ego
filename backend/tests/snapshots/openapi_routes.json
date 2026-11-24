@@ -104,6 +104,7 @@
   "POST /api/auth/logout",
   "POST /api/auth/token",
   "POST /api/autopilot/assets",
+  "POST /api/autopilot/assets/video",
   "POST /api/autopilot/boost-request",
   "POST /api/autopilot/repost",
   "POST /api/autopilot/scout-failed",

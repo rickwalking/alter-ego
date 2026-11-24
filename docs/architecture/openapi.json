@@ -1359,6 +1359,24 @@
         "title": "Body_post_autopilot_asset_api_autopilot_assets_post",
         "type": "object"
       },
+      "Body_post_source_video_api_autopilot_assets_video_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "title": "Body_post_source_video_api_autopilot_assets_video_post",
+        "type": "object"
+      },
       "Body_upload_creator_asset_api_carousels__project_id__creator_asset_upload_post": {
         "properties": {
           "file": {
@@ -11444,6 +11462,45 @@
         "title": "SlideValidationViolationResponse",
         "type": "object"
       },
+      "SourceVideoResponse": {
+        "description": "The stored upload.",
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "duration_s": {
+            "title": "Duration S",
+            "type": "number"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_id",
+          "kind",
+          "width",
+          "height",
+          "duration_s",
+          "size_bytes"
+        ],
+        "title": "SourceVideoResponse",
+        "type": "object"
+      },
       "StrategyInfo": {
         "description": "Strategy metadata returned in list responses.",
         "properties": {
@@ -12690,6 +12747,47 @@
           }
         },
         "summary": "Post Autopilot Asset",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/assets/video": {
+      "post": {
+        "description": "Store one source video and return its ``asset_id``.",
+        "operationId": "post_source_video_api_autopilot_assets_video_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_post_source_video_api_autopilot_assets_video_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceVideoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Source Video",
         "tags": [
           "autopilot"
         ]

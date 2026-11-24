@@ -37,6 +37,8 @@ from rag_backend.modules.autopilot.domain.repost_rules import (
     check_fields,
     recent_since,
 )
+from rag_backend.modules.autopilot.domain.repost_source import RepostSource
+from rag_backend.modules.autopilot.domain.repost_source_ports import RepostSourceStore
 from rag_backend.modules.autopilot.domain.topic_text import strip_controls
 from rag_backend.modules.autopilot.repost_constants import (
     APPROVAL_TTL_HOURS,
@@ -44,6 +46,7 @@ from rag_backend.modules.autopilot.repost_constants import (
     ERR_IDEMPOTENCY_CONFLICT,
     ERR_NOT_CONFIGURED,
     ERR_REPOST_NOT_FOUND,
+    ERR_SOURCE_ASSET_INVALID,
     ERR_UNAVAILABLE,
     HTTP_CONFLICT,
     HTTP_NOT_FOUND,
@@ -69,6 +72,7 @@ class RepostDeps:
     reels: ReelGateway | None
     probe: ReelProbe | None
     clock: Clock
+    sources: RepostSourceStore | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -98,12 +102,13 @@ class RepostDraftService:
         known = await self._known(draft.media_id, now)
         await self._check(draft, known, now)
         repost = _pending(draft, known, now)
-        await self._store(repost)
+        await self._store(repost, draft.source_asset_id)
         logger.info(
             LOG_REPOST,
             outcome=LOG_CREATED,
             repost_id=str(repost.id),
             cap_override=draft.override_weekly_cap,
+            source_video=draft.source_asset_id is not None,
         )
         return repost
 
@@ -165,19 +170,28 @@ class RepostDraftService:
         if draft.cover_asset_id is not None:
             found = await self._deps.covers.covers_by_ids((draft.cover_asset_id,))
             cover = found.get(draft.cover_asset_id)
+        source = await self._source(draft)
+        duration = None if known.facts is None else known.facts.duration_s
         facts = EligibilityFacts(
             now=now,
             reel=known.reel,
-            duration_s=None if known.facts is None else known.facts.duration_s,
+            duration_s=duration if source is None else source.probe.duration_s,
             live_repost=await store.live_since(
                 draft.media_id, recent_since(now, REPOST_WINDOW_DAYS)
             ),
             recent_drafts=await store.drafts_since(recent_since(now, WEEK_DAYS)),
             cover=cover,
+            source=source,
         )
         check_eligibility(draft, facts)
 
-    async def _store(self, repost: Repost) -> None:
+    async def _source(self, draft: RepostDraft) -> RepostSource | None:
+        sources = self._deps.sources
+        if draft.source_asset_id is None or sources is None:
+            return None
+        return await sources.get(draft.source_asset_id)
+
+    async def _store(self, repost: Repost, source_asset_id: UUID | None) -> None:
         await self._deps.store.insert(repost)
         asset = repost.cover_asset_id
         if asset is not None and not await self._deps.covers.claim_for_repost(
@@ -186,7 +200,17 @@ class RepostDraftService:
             raise RepostError(
                 RepostProblem(code=ERR_ASSET_INVALID, status=HTTP_UNPROCESSABLE)
             )
+        await self._claim_source(repost.id, source_asset_id)
         await self._deps.store.commit()
+
+    async def _claim_source(self, repost_id: UUID, asset: UUID | None) -> None:
+        if asset is None:
+            return
+        sources = self._deps.sources
+        if sources is None or not await sources.claim_for_repost(asset, repost_id):
+            raise RepostError(
+                RepostProblem(code=ERR_SOURCE_ASSET_INVALID, status=HTTP_UNPROCESSABLE)
+            )
 
 
 def cleaned(draft: RepostDraft) -> RepostDraft:
